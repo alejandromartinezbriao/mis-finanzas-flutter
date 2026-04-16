@@ -1,0 +1,39 @@
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "cuentaspersonales-36328",
+          "appId": "1:859816856959:android:825483d85d9c8ba1329e4a",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "cuentaspersonales-36328",
+          "configurations": {
+            "android": "1:859816856959:android:825483d85d9c8ba1329e4a",
+            "ios": "1:859816856959:ios:508c8f09dde43f7e329e4a",
+            "macos": "1:859816856959:ios:a47d4f78d736986d329e4a",
+            "web": "1:859816856959:web:14158c6007078376329e4a",
+            "windows": "1:859816856959:web:8abc986221fca5b6329e4a"
+          }
+        }
+      }
+    }
+  },
+  "hosting": {
+    "public": "build/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
+}

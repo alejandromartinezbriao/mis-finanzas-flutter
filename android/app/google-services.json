@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "859816856959",
+    "project_id": "cuentaspersonales-36328",
+    "storage_bucket": "cuentaspersonales-36328.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:859816856959:android:e6d4465406391e7f329e4a",
+        "android_client_info": {
+          "package_name": "com.cuentas"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBco4RRfqs-LnCb2tztf5a9j7jGv1K5xw8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:859816856959:android:825483d85d9c8ba1329e4a",
+        "android_client_info": {
+          "package_name": "com.example.cuentas_personales"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBco4RRfqs-LnCb2tztf5a9j7jGv1K5xw8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
