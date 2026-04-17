@@ -55,27 +55,16 @@ class FirebaseService {
   Stream<List<TransactionModel>> getTransactions({int? month, int? year}) {
     final ref = _transactionsRef;
     if (ref == null) return Stream.value([]);
-    
+
+    Query query = ref;
     if (month != null && year != null) {
-      final startQuery = DateTime(year, month, 1).subtract(const Duration(days: 2));
-      final endQuery = DateTime(year, month + 1, 1).add(const Duration(days: 2));
-      
-      return ref
-          .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startQuery))
-          .where('date', isLessThanOrEqualTo: Timestamp.fromDate(endQuery))
-          .snapshots()
-          .map((snapshot) {
-            return snapshot.docs.map((doc) {
-              return TransactionModel.fromMap(doc.data() as Map<String, dynamic>, doc.id);
-            }).where((t) => t.date.month == month && t.date.year == year).toList()
-              ..sort((a, b) => b.date.compareTo(a.date));
-          });
+      DateTime start = DateTime(year, month, 1);
+      DateTime end = DateTime(year, month + 1, 1).subtract(const Duration(milliseconds: 1));
+      query = query.where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(start)).where('date', isLessThanOrEqualTo: Timestamp.fromDate(end));
     }
 
-    return ref.snapshots().map((snapshot) {
-      return snapshot.docs.map((doc) {
-        return TransactionModel.fromMap(doc.data() as Map<String, dynamic>, doc.id);
-      }).toList()..sort((a, b) => b.date.compareTo(a.date));
+    return query.snapshots().map((snapshot) {
+      return snapshot.docs.map((doc) => TransactionModel.fromMap(doc.data() as Map<String, dynamic>, doc.id)).toList();
     });
   }
 
@@ -83,20 +72,14 @@ class FirebaseService {
     try {
       final ref = _transactionsRef;
       if (ref == null) return;
-      final start = DateTime(year, month, 1).subtract(const Duration(days: 2));
-      final end = DateTime(year, month + 1, 1).add(const Duration(days: 2));
-      final snapshot = await ref.where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(start)).where('date', isLessThanOrEqualTo: Timestamp.fromDate(end)).get();
+      DateTime start = DateTime(year, month, 1);
+      DateTime end = DateTime(year, month + 1, 1).subtract(const Duration(milliseconds: 1));
+      final docs = await ref.where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(start)).where('date', isLessThanOrEqualTo: Timestamp.fromDate(end)).get();
       final batch = _db.batch();
-      bool deletedAny = false;
-      for (var doc in snapshot.docs) {
-        final d = (doc.data() as Map<String, dynamic>)['date'] as Timestamp;
-        final date = d.toDate();
-        if (date.month == month && date.year == year) {
-          batch.delete(doc.reference);
-          deletedAny = true;
-        }
+      for (var doc in docs.docs) {
+        batch.delete(doc.reference);
       }
-      if (deletedAny) await batch.commit();
+      await batch.commit();
     } catch (e) {
       print("Error clearMonth: $e");
     }
@@ -107,15 +90,15 @@ class FirebaseService {
   Stream<List<Map<String, dynamic>>> getTemplates({String? type}) {
     final ref = _templatesRef;
     if (ref == null) return Stream.value([]);
-    return ref.snapshots().map((snapshot) {
-      var list = snapshot.docs.map((doc) {
-        var data = doc.data() as Map<String, dynamic>;
-        data['id'] = doc.id;
-        return data;
-      }).toList();
-      if (type != null) list = list.where((t) => t['type'] == type).toList();
-      return list;
-    });
+    Query query = ref;
+    if (type != null) {
+      query = query.where('type', isEqualTo: type);
+    }
+    return query.snapshots().map((snap) => snap.docs.map((doc) {
+      final data = doc.data() as Map<String, dynamic>;
+      data['id'] = doc.id;
+      return data;
+    }).toList());
   }
 
   Future<void> addTemplate(Map<String, dynamic> t) async {
@@ -197,6 +180,7 @@ class FirebaseService {
             'isCompleted': false,
             'type': data['type'] ?? 'EXPENSE',
             'description': initialDesc,
+            'brandLogo': data['brandLogo'], // Sincronizar el logo manual
           });
           addedAny = true;
           existingTitles.add(_norm(title));
@@ -214,8 +198,9 @@ class FirebaseService {
       final tRef = _templatesRef;
       if (ref == null || tRef == null) return;
 
-      // 1. Intentar obtener el día de vencimiento de la plantilla de esta tarjeta
+      // 1. Intentar obtener datos de la plantilla de esta tarjeta
       int? dueDay;
+      String? cardLogo;
       final templates = await tRef.get();
       final cardTemplate = templates.docs.where((doc) {
         final data = doc.data() as Map<String, dynamic>;
@@ -223,7 +208,9 @@ class FirebaseService {
       }).firstOrNull;
       
       if (cardTemplate != null) {
-        dueDay = (cardTemplate.data() as Map<String, dynamic>)['dueDay'];
+        final cardData = cardTemplate.data() as Map<String, dynamic>;
+        dueDay = cardData['dueDay'];
+        cardLogo = cardData['brandLogo'];
       }
 
       double amountPerMonth = totalAmount / installments;
@@ -258,7 +245,8 @@ class FirebaseService {
             'amount': currentAmount + amountPerMonth, 
             'description': newDesc, 
             'isCompleted': false,
-            'dueDate': dueDateTs // Aseguramos que tenga fecha de vencimiento al actualizar
+            'dueDate': dueDateTs,
+            'brandLogo': cardLogo // Aseguramos que tenga el logo
           });
         } else {
           await ref.add({
@@ -270,7 +258,8 @@ class FirebaseService {
             'currency': currency, 
             'type': 'EXPENSE', 
             'isCompleted': false,
-            'dueDate': dueDateTs // Ponemos la fecha de vencimiento al crear
+            'dueDate': dueDateTs,
+            'brandLogo': cardLogo // Ponemos el logo al crear
           });
         }
       }
@@ -340,6 +329,7 @@ class FirebaseService {
         'category': t.category == 'Extra' ? (t.type == 'EXPENSE' ? 'Fijo' : 'Ingreso') : t.category,
         'isCreditCard': false,
         'defaultAmount': t.amount, // Guardamos un monto por defecto
+        'brandLogo': t.brandLogo, // Sincronizamos también el logo si existe
       });
     } catch (e) {
       print("Error createTemplateFromTransaction: $e");

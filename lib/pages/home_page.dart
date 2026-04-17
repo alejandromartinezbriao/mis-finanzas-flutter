@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../models/transaction_model.dart';
 import '../services/firebase_service.dart';
 import '../services/auth_service.dart';
+import '../widgets/brand_icon.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -304,13 +305,26 @@ class _HomePageState extends State<HomePage> {
       onDismissed: (_) => _service.deleteTransaction(t.id),
       child: ListTile(
         dense: true,
-        leading: Icon(
-          isExpense ? (t.isCompleted ? Icons.check_circle : Icons.pending_actions) : Icons.add_circle,
-          color: isExpense ? (t.isCompleted ? Colors.green : Colors.orange) : Colors.teal,
+        leading: BrandIcon(
+          name: t.title, 
+          manualLogo: t.brandLogo, 
+          size: 32
         ),
         title: Text(t.title, style: const TextStyle(fontWeight: FontWeight.bold)),
         subtitle: t.dueDate != null ? Text('Vence: ${DateFormat('dd/MM').format(t.dueDate!)}', style: const TextStyle(fontSize: 11)) : null,
-        trailing: Text(format.format(t.amount), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: isExpense ? Colors.black : Colors.green)),
+        trailing: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(format.format(t.amount), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: isExpense ? Colors.black : Colors.green)),
+            if (isExpense)
+              Icon(
+                t.isCompleted ? Icons.check_circle : Icons.pending_actions,
+                size: 14,
+                color: t.isCompleted ? Colors.green : Colors.orange,
+              ),
+          ],
+        ),
         onTap: () => _showEditDialog(t),
       ),
     );

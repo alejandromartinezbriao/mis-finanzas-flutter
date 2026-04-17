@@ -12,6 +12,7 @@ class TransactionModel {
   final String currency;
   final bool isCompleted;
   final String type;
+  final String? brandLogo; // Nuevo campo para el logo manual
 
   TransactionModel({
     required this.id,
@@ -25,6 +26,7 @@ class TransactionModel {
     this.currency = 'UYU',
     this.isCompleted = false,
     this.type = 'EXPENSE',
+    this.brandLogo,
   });
 
   factory TransactionModel.fromMap(Map<String, dynamic> data, String id) {
@@ -40,6 +42,7 @@ class TransactionModel {
       currency: data['currency'] ?? 'UYU',
       isCompleted: data['isPaid'] ?? data['isCompleted'] ?? false,
       type: data['type'] ?? 'EXPENSE',
+      brandLogo: data['brandLogo'],
     );
   }
 
@@ -56,6 +59,7 @@ class TransactionModel {
       'isCompleted': isCompleted,
       'isPaid': isCompleted,
       'type': type,
+      'brandLogo': brandLogo,
     };
   }
 
@@ -70,6 +74,7 @@ class TransactionModel {
     String? currency,
     bool? isCompleted,
     String? type,
+    String? brandLogo,
   }) {
     return TransactionModel(
       id: id,
@@ -83,6 +88,7 @@ class TransactionModel {
       currency: currency ?? this.currency,
       isCompleted: isCompleted ?? this.isCompleted,
       type: type ?? this.type,
+      brandLogo: brandLogo ?? this.brandLogo,
     );
   }
 }

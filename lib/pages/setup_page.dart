@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/firebase_service.dart';
+import '../widgets/brand_icon.dart';
 
 class SetupPage extends StatefulWidget {
   const SetupPage({super.key});
@@ -123,8 +124,11 @@ class _SetupPageState extends State<SetupPage> with SingleTickerProviderStateMix
                 itemBuilder: (context, index) {
                   final t = templates[index];
                   return ListTile(
-                    leading: Icon(type == 'EXPENSE' ? Icons.remove_circle_outline : Icons.add_circle_outline, 
-                                 color: type == 'EXPENSE' ? Colors.red : Colors.green),
+                    leading: BrandIcon(
+                      name: t['title'], 
+                      manualLogo: t['brandLogo'], // Usar logo manual si existe
+                      size: 32
+                    ),
                     title: Text(t['title'], style: const TextStyle(fontWeight: FontWeight.bold)),
                     subtitle: Text('${t['currency']} ${t['defaultAmount'] != null ? "(${(t['defaultAmount'] as num).toStringAsFixed(0)}) " : ""}${t['dueDay'] != null ? "- Día: ${t['dueDay']}" : ""}'),
                     trailing: IconButton(
@@ -149,6 +153,24 @@ class _SetupPageState extends State<SetupPage> with SingleTickerProviderStateMix
     final defaultAmountController = TextEditingController(text: template?['defaultAmount']?.toString() ?? '');
     String selectedCurrency = template?['currency'] ?? 'UYU';
     bool isCreditCard = template?['isCreditCard'] ?? false;
+    String? selectedLogo = template?['brandLogo'];
+
+    // Lista de logos disponibles (basada en tu carpeta assets/logos)
+    final List<String> availableLogos = [
+      'alquiler.png',
+      'banco-republica.png',
+      'bbva.png',
+      'cabal.png',
+      'ces.png',
+      'gastos-comunes.png',
+      'imm.png',
+      'itau.png',
+      'oca.png',
+      'ose.png',
+      'santander.png',
+      'scotiabank.png',
+      'ute.png',
+    ];
     
     // Lista local de suscripciones para el diálogo
     List<Map<String, dynamic>> subscriptions = List<Map<String, dynamic>>.from(template?['subscriptions'] ?? []);
@@ -168,6 +190,62 @@ class _SetupPageState extends State<SetupPage> with SingleTickerProviderStateMix
                   children: [
                     TextField(controller: titleController, decoration: const InputDecoration(labelText: 'Concepto')),
                     const SizedBox(height: 10),
+                    
+                    // Selector de Logo
+                    const Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text('Logo Identificatorio:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      height: 50,
+                      child: ListView(
+                        scrollDirection: Axis.horizontal,
+                        children: [
+                          // Opción para quitar logo (usar automático)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 8.0),
+                            child: GestureDetector(
+                              onTap: () => setDialogState(() => selectedLogo = null),
+                              child: Container(
+                                width: 45,
+                                decoration: BoxDecoration(
+                                  color: selectedLogo == null ? Colors.blue.withOpacity(0.2) : Colors.transparent,
+                                  border: Border.all(color: selectedLogo == null ? Colors.blue : Colors.grey),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.auto_awesome, size: 20, color: Colors.grey),
+                              ),
+                            ),
+                          ),
+                          ...availableLogos.map((logoName) {
+                            final isSelected = selectedLogo == logoName;
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 8.0),
+                              child: GestureDetector(
+                                onTap: () => setDialogState(() => selectedLogo = logoName),
+                                child: Container(
+                                  width: 45,
+                                  decoration: BoxDecoration(
+                                    color: isSelected ? Colors.blue.withOpacity(0.2) : Colors.white,
+                                    border: Border.all(color: isSelected ? Colors.blue : Colors.grey.withOpacity(0.3)),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: ClipOval(
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(4.0),
+                                      child: Image.asset('assets/logos/$logoName', fit: BoxFit.contain),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 15),
+
                     Row(
                       children: [
                         Expanded(
@@ -273,6 +351,7 @@ class _SetupPageState extends State<SetupPage> with SingleTickerProviderStateMix
                       'type': type,
                       'category': isCreditCard ? 'Tarjeta' : (type == 'EXPENSE' ? 'Fijo' : 'Ingreso'),
                       'isCreditCard': isCreditCard,
+                      'brandLogo': selectedLogo, // Guardar el logo seleccionado
                       'subscriptions': isCreditCard ? subscriptions : [],
                     };
                     if (isEdit) {
