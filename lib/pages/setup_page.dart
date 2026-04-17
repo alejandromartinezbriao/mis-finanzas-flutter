@@ -34,7 +34,7 @@ class _SetupPageState extends State<SetupPage> with SingleTickerProviderStateMix
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Configuración Maestra'),
+        title: const Text('Configuración Maestra', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         backgroundColor: Theme.of(context).colorScheme.primaryContainer,
         actions: [
           IconButton(
@@ -61,6 +61,8 @@ class _SetupPageState extends State<SetupPage> with SingleTickerProviderStateMix
         ],
         bottom: TabBar(
           controller: _tabController,
+          labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+          unselectedLabelStyle: const TextStyle(fontSize: 12),
           tabs: const [
             Tab(icon: Icon(Icons.money_off), text: 'Gastos'),
             Tab(icon: Icon(Icons.attach_money), text: 'Ingresos'),
@@ -106,8 +108,8 @@ class _SetupPageState extends State<SetupPage> with SingleTickerProviderStateMix
             return Card(
               child: ListTile(
                 leading: BrandIcon(name: acc['accountName'], manualLogo: acc['brandLogo'], size: 32),
-                title: Text(acc['accountName'], style: const TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: Text('Moneda: ${acc['currency']}'),
+                title: Text(acc['accountName'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                subtitle: Text('Moneda: ${acc['currency']}', style: const TextStyle(fontSize: 13)),
                 trailing: IconButton(
                   icon: const Icon(Icons.delete_outline, color: Colors.red),
                   onPressed: () => _service.deleteBalanceAccount(acc['id']),
@@ -296,8 +298,11 @@ class _SetupPageState extends State<SetupPage> with SingleTickerProviderStateMix
                   final t = templates[index];
                   return ListTile(
                     leading: BrandIcon(name: t['title'], manualLogo: t['brandLogo'], size: 32),
-                    title: Text(t['title'], style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text('${t['currency']} ${t['defaultAmount'] != null ? "(${(t['defaultAmount'] as num).toStringAsFixed(0)}) " : ""}'),
+                    title: Text(t['title'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    subtitle: Text(
+                      '${t['currency']} ${t['defaultAmount'] != null ? "(${(t['defaultAmount'] as num).toStringAsFixed(0)}) " : ""}',
+                      style: const TextStyle(fontSize: 13),
+                    ),
                     trailing: IconButton(icon: const Icon(Icons.delete_outline), onPressed: () => _service.deleteTemplate(t['id'])),
                     onTap: () => _showEditTemplateDialog(t, type),
                   );

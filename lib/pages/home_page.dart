@@ -26,6 +26,7 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
+        toolbarHeight: 50,
         title: const Text('MIS FINANZAS', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, letterSpacing: 1.2)),
         centerTitle: false,
         elevation: 0,
@@ -195,13 +196,21 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildMonthSelector(String label) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          IconButton(icon: const Icon(Icons.chevron_left), onPressed: () => setState(() => _viewingDate = DateTime(_viewingDate.year, _viewingDate.month - 1))),
-          Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.blueGrey)),
-          IconButton(icon: const Icon(Icons.chevron_right), onPressed: () => setState(() => _viewingDate = DateTime(_viewingDate.year, _viewingDate.month + 1))),
+          IconButton(
+            visualDensity: VisualDensity.compact,
+            icon: const Icon(Icons.chevron_left, size: 24), 
+            onPressed: () => setState(() => _viewingDate = DateTime(_viewingDate.year, _viewingDate.month - 1))
+          ),
+          Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.blueGrey)),
+          IconButton(
+            visualDensity: VisualDensity.compact,
+            icon: const Icon(Icons.chevron_right, size: 24), 
+            onPressed: () => setState(() => _viewingDate = DateTime(_viewingDate.year, _viewingDate.month + 1))
+          ),
         ],
       ),
     );
@@ -209,15 +218,18 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildQuickAddButton() {
     return Padding(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.all(12.0),
       child: SizedBox(
         width: double.infinity,
-        height: 50,
+        height: 42,
         child: FilledButton.icon(
           onPressed: _showQuickAddDialog,
-          icon: const Icon(Icons.add_circle_outline),
-          label: const Text('REGISTRAR MOVIMIENTO', style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1)),
-          style: FilledButton.styleFrom(backgroundColor: Colors.blueGrey.shade800, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+          icon: const Icon(Icons.add_circle_outline, size: 20),
+          label: const Text('REGISTRAR MOVIMIENTO', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, letterSpacing: 1)),
+          style: FilledButton.styleFrom(
+            backgroundColor: Colors.blueGrey.shade800, 
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))
+          ),
         ),
       ),
     );
@@ -257,7 +269,7 @@ class _HomePageState extends State<HomePage> {
         return Column(
           children: [
             if (MediaQuery.of(context).size.width <= 900) ...[
-              _buildBalanceCard(inUYU, outUYU, inUSD, outUSD),
+              _buildBalanceCard(inUYU, outUYU, inUSD, outUSD, isCompact: true),
               StreamBuilder<List<Map<String, dynamic>>>(
                 stream: _service.getBalances(),
                 builder: (context, balSnap) {
@@ -268,7 +280,7 @@ class _HomePageState extends State<HomePage> {
                 }
               ),
               _buildRealBalancesRow(),
-              const Divider(),
+              const Divider(height: 1),
             ],
             Expanded(
               child: ListView.builder(
@@ -311,16 +323,16 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildBalanceCard(double inUYU, double outUYU, double inUSD, double outUSD, {bool isVertical = false}) {
+  Widget _buildBalanceCard(double inUYU, double outUYU, double inUSD, double outUSD, {bool isVertical = false, bool isCompact = false}) {
     return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      margin: EdgeInsets.symmetric(horizontal: 16, vertical: isCompact ? 4 : 8),
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(color: Colors.grey.shade200),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.all(isCompact ? 12 : 20),
         child: isVertical 
           ? Column(
               children: [
@@ -334,9 +346,9 @@ class _HomePageState extends State<HomePage> {
             )
           : Row(
               children: [
-                Expanded(child: _balanceSmallRow('UYU', inUYU, outUYU, _uyuFormat)),
+                Expanded(child: _balanceSmallRow('UYU', inUYU, outUYU, _uyuFormat, isCompact: isCompact)),
                 const VerticalDivider(width: 32),
-                Expanded(child: _balanceSmallRow('USD', inUSD, outUSD, _usdFormat)),
+                Expanded(child: _balanceSmallRow('USD', inUSD, outUSD, _usdFormat, isCompact: isCompact)),
               ],
             ),
       ),
@@ -421,26 +433,26 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildComparisonCard(double realUYU, double debtUYU, double realUSD, double debtUSD, {bool isMobile = false}) {
     return Card(
-      margin: EdgeInsets.symmetric(horizontal: 16, vertical: isMobile ? 8 : 0),
+      margin: EdgeInsets.symmetric(horizontal: 16, vertical: isMobile ? 4 : 0),
       color: Colors.blueGrey.shade900,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(isMobile ? 12 : 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Row(
+            Row(
               children: [
-                Icon(Icons.compare_arrows, color: Colors.amber, size: 16),
-                SizedBox(width: 8),
-                Text('COBERTURA DE DEUDAS (PENDIENTES)', style: TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                const Icon(Icons.compare_arrows, color: Colors.amber, size: 14),
+                const SizedBox(width: 8),
+                Text('COBERTURA DE DEUDAS', style: TextStyle(color: Colors.white70, fontSize: isMobile ? 11 : 12, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
               ],
             ),
-            const SizedBox(height: 16),
-            _comparisonRow('Pesos (UYU)', realUYU, debtUYU, _uyuFormat),
+            SizedBox(height: isMobile ? 8 : 16),
+            _comparisonRow('Pesos (UYU)', realUYU, debtUYU, _uyuFormat, isMobile: isMobile),
             if (debtUSD > 0 || realUSD > 0) ...[
-              const Divider(color: Colors.white10, height: 24),
-              _comparisonRow('Dólares (USD)', realUSD, debtUSD, _usdFormat),
+              Divider(color: Colors.white10, height: isMobile ? 12 : 24),
+              _comparisonRow('Dólares (USD)', realUSD, debtUSD, _usdFormat, isMobile: isMobile),
             ],
           ],
         ),
@@ -448,9 +460,9 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _comparisonRow(String label, double real, double debt, NumberFormat format) {
+  Widget _comparisonRow(String label, double real, double debt, NumberFormat format, {bool isMobile = false}) {
     double maxVal = real > debt ? real : debt;
-    if (maxVal == 0) maxVal = 1; // Evitar división por cero
+    if (maxVal == 0) maxVal = 1;
 
     double realProgress = real / maxVal;
     double debtProgress = debt / maxVal;
@@ -463,7 +475,7 @@ class _HomePageState extends State<HomePage> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(label, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+            Text(label, style: TextStyle(color: Colors.white, fontSize: isMobile ? 12 : 13, fontWeight: FontWeight.bold)),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
@@ -472,16 +484,16 @@ class _HomePageState extends State<HomePage> {
               ),
               child: Text(
                 isCovered ? 'CUBIERTO' : 'FALTANTE: ${format.format(debt - real)}',
-                style: TextStyle(color: isCovered ? Colors.greenAccent : Colors.redAccent, fontSize: 9, fontWeight: FontWeight.bold),
+                style: TextStyle(color: isCovered ? Colors.greenAccent : Colors.redAccent, fontSize: 11, fontWeight: FontWeight.bold),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: isMobile ? 4 : 12),
         // Barra de Dinero Real
         Row(
           children: [
-            const SizedBox(width: 80, child: Text('Dinero Real', style: TextStyle(color: Colors.white54, fontSize: 9))),
+            SizedBox(width: isMobile ? 65 : 80, child: Text('Disponible', style: TextStyle(color: Colors.white54, fontSize: isMobile ? 10 : 9))),
             Expanded(
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(2),
@@ -489,19 +501,19 @@ class _HomePageState extends State<HomePage> {
                   value: realProgress,
                   backgroundColor: Colors.white10,
                   color: Colors.tealAccent,
-                  minHeight: 4,
+                  minHeight: isMobile ? 2 : 4,
                 ),
               ),
             ),
             const SizedBox(width: 8),
-            SizedBox(width: 70, child: Text(format.format(real), textAlign: TextAlign.end, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold))),
+            SizedBox(width: 75, child: Text(format.format(real), textAlign: TextAlign.end, style: TextStyle(color: Colors.white, fontSize: isMobile ? 11 : 11, fontWeight: FontWeight.bold))),
           ],
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 4),
         // Barra de Deuda
         Row(
           children: [
-            const SizedBox(width: 80, child: Text('Pendiente', style: TextStyle(color: Colors.white54, fontSize: 9))),
+            SizedBox(width: isMobile ? 65 : 80, child: Text('Deuda', style: TextStyle(color: Colors.white54, fontSize: isMobile ? 10 : 9))),
             Expanded(
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(2),
@@ -509,12 +521,12 @@ class _HomePageState extends State<HomePage> {
                   value: debtProgress,
                   backgroundColor: Colors.white10,
                   color: Colors.orangeAccent,
-                  minHeight: 4,
+                  minHeight: isMobile ? 2 : 4,
                 ),
               ),
             ),
             const SizedBox(width: 8),
-            SizedBox(width: 70, child: Text(format.format(debt), textAlign: TextAlign.end, style: const TextStyle(color: Colors.orangeAccent, fontSize: 11, fontWeight: FontWeight.bold))),
+            SizedBox(width: 75, child: Text(format.format(debt), textAlign: TextAlign.end, style: TextStyle(color: Colors.orangeAccent, fontSize: isMobile ? 11 : 11, fontWeight: FontWeight.bold))),
           ],
         ),
       ],
@@ -536,33 +548,33 @@ class _HomePageState extends State<HomePage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Padding(
-              padding: EdgeInsets.only(left: 20, top: 12, bottom: 8),
-              child: Text('SALDOS REALES (ARQUEO)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.blueGrey, letterSpacing: 1)),
+              padding: EdgeInsets.only(left: 20, top: 4, bottom: 4),
+              child: Text('SALDOS REALES', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.blueGrey, letterSpacing: 1)),
             ),
             SizedBox(
-              height: 70,
+              height: 55,
               child: ListView(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 children: [
                   // CARD DE SUMA TOTAL (MÓVIL)
                   Container(
-                    width: 160,
-                    margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                    padding: const EdgeInsets.all(8),
+                    width: 140, // Un poco más ancho para texto más grande
+                    margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                    padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(colors: [Colors.teal.shade600, Colors.teal.shade400]),
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [BoxShadow(color: Colors.teal.withOpacity(0.2), blurRadius: 4, offset: const Offset(0, 2))],
+                      borderRadius: BorderRadius.circular(8),
+                      boxShadow: [BoxShadow(color: Colors.teal.withOpacity(0.1), blurRadius: 2, offset: const Offset(0, 1))],
                     ),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('TOTAL DISPONIBLE', style: TextStyle(color: Colors.white70, fontSize: 8, fontWeight: FontWeight.bold)),
-                        Text(_uyuFormat.format(totalUYU), style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+                        const Text('TOTAL DISPONIBLE', style: TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold)),
+                        Text(_uyuFormat.format(totalUYU), style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
                         if (totalUSD > 0)
-                          Text(_usdFormat.format(totalUSD), style: const TextStyle(color: Colors.white, fontSize: 10)),
+                          Text(_usdFormat.format(totalUSD), style: const TextStyle(color: Colors.white, fontSize: 11)),
                       ],
                     ),
                   ),
@@ -572,25 +584,25 @@ class _HomePageState extends State<HomePage> {
                     return GestureDetector(
                       onTap: () => _showUpdateBalanceDialog(b),
                       child: Container(
-                        width: 140,
-                        margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                        padding: const EdgeInsets.all(8),
+                        width: 130, // Un poco más ancho para texto más grande
+                        margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                        padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(8),
                           border: Border.all(color: Colors.grey.shade200),
-                          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 4, offset: const Offset(0, 2))],
+                          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 2, offset: const Offset(0, 1))],
                         ),
                         child: Row(
                           children: [
-                            BrandIcon(name: b['accountName'], manualLogo: b['brandLogo'], size: 28),
-                            const SizedBox(width: 8),
+                            BrandIcon(name: b['accountName'], manualLogo: b['brandLogo'], size: 24),
+                            const SizedBox(width: 6),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Text(b['accountName'], style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, overflow: TextOverflow.ellipsis)),
+                                  Text(b['accountName'], style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, overflow: TextOverflow.ellipsis)),
                                   Text(format.format(b['amount'] ?? 0), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.teal)),
                                 ],
                               ),
@@ -641,46 +653,48 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _balanceSmallRow(String label, double income, double expense, NumberFormat format) {
+  Widget _balanceSmallRow(String label, double income, double expense, NumberFormat format, {bool isCompact = false}) {
     double balance = income - expense;
     double progress = (income > 0) ? (expense / income).clamp(0.0, 1.0) : (expense > 0 ? 1.0 : 0.0);
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.blueGrey)),
-        const SizedBox(height: 12),
-        _miniAmount('Ingresos', income, Colors.teal, format),
-        const SizedBox(height: 4),
-        _miniAmount('Egresos', expense, Colors.deepOrange, format),
-        const SizedBox(height: 12),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(10),
-          child: LinearProgressIndicator(
-            value: progress,
-            backgroundColor: Colors.grey.shade100,
-            color: progress > 0.9 ? Colors.red : (progress > 0.5 ? Colors.orange : Colors.teal),
-            minHeight: 8,
+        Text(label, style: TextStyle(fontSize: isCompact ? 13 : 14, fontWeight: FontWeight.bold, color: Colors.blueGrey)),
+        SizedBox(height: isCompact ? 4 : 12),
+        _miniAmount('Ingresos', income, Colors.teal, format, isCompact: isCompact),
+        SizedBox(height: isCompact ? 2 : 4),
+        _miniAmount('Egresos', expense, Colors.deepOrange, format, isCompact: isCompact),
+        if (!isCompact) ...[
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: LinearProgressIndicator(
+              value: progress,
+              backgroundColor: Colors.grey.shade100,
+              color: progress > 0.9 ? Colors.red : (progress > 0.5 ? Colors.orange : Colors.teal),
+              minHeight: 8,
+            ),
           ),
-        ),
-        const SizedBox(height: 12),
+        ],
+        SizedBox(height: isCompact ? 8 : 12),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text('Disponible', style: TextStyle(fontSize: 11, color: Colors.grey)),
-            Text(format.format(balance), style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: balance >= 0 ? Colors.teal : Colors.red)),
+            Text('Disponible', style: TextStyle(fontSize: isCompact ? 12 : 13, color: Colors.grey)),
+            Text(format.format(balance), style: TextStyle(fontSize: isCompact ? 16 : 18, fontWeight: FontWeight.bold, color: balance >= 0 ? Colors.teal : Colors.red)),
           ],
         ),
       ],
     );
   }
 
-  Widget _miniAmount(String label, double amount, Color color, NumberFormat format) {
+  Widget _miniAmount(String label, double amount, Color color, NumberFormat format, {bool isCompact = false}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
-        Text(format.format(amount), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: color)),
+        Text(label, style: TextStyle(fontSize: isCompact ? 12 : 13, color: Colors.grey)),
+        Text(format.format(amount), style: TextStyle(fontSize: isCompact ? 13 : 14, fontWeight: FontWeight.w600, color: color)),
       ],
     );
   }
