@@ -30,14 +30,30 @@ class BrandIcon extends StatelessWidget {
         assetPath = 'assets/logos/scotiabank.png';
       } else if (label.contains('republica') || label.contains('brou')) {
         assetPath = 'assets/logos/banco-republica.png';
+      } else if (label.contains('oca-blue')) {
+        assetPath = 'assets/logos/oca-blue.png';
       } else if (label.contains('oca')) {
         assetPath = 'assets/logos/oca.png';
+      } else if (label.contains('prex')) {
+        assetPath = 'assets/logos/prex.png';
+      } else if (label.contains('dinero') || label.contains('midinero')) {
+        assetPath = 'assets/logos/midinero.png';
+      } else if (label.contains('srpffaa') || label.contains('militar')) {
+        assetPath = 'assets/logos/srpffaa.png';
+      } else if (label.contains('queen')) {
+        assetPath = 'assets/logos/queen.png';
+      } else if (label.contains('bodyguard')) {
+        assetPath = 'assets/logos/bodyguard.png';
+      } else if (label.contains('ahorros')) {
+        assetPath = 'assets/logos/ahorros.png';
       } else if (label.contains('cabal')) {
         assetPath = 'assets/logos/cabal.png';
       } else if (label.contains('ose')) {
         assetPath = 'assets/logos/ose.png';
       } else if (label.contains('ute')) {
         assetPath = 'assets/logos/ute.png';
+      } else if (label.contains('antel')) {
+        assetPath = 'assets/logos/antel.png';
       } else if (label.contains('imm') || label.contains('intendencia') || label.contains('montevideo')) {
         assetPath = 'assets/logos/imm.png';
       } else if (label.contains('ces')) {

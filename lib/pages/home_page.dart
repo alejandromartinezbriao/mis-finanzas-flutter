@@ -14,69 +14,74 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final FirebaseService _service = FirebaseService();
-  
-  // Estado para controlar el mes y año que estamos viendo
   DateTime _viewingDate = DateTime.now();
 
   final NumberFormat _uyuFormat = NumberFormat.currency(locale: 'es_UY', symbol: '\$', decimalDigits: 0);
-  final NumberFormat _usdFormat = NumberFormat.currency(locale: 'en_US', symbol: 'U\$S', decimalDigits: 2);
-
-  void _changeMonth(int delta) {
-    setState(() {
-      _viewingDate = DateTime(_viewingDate.year, _viewingDate.month + delta, 1);
-    });
-  }
+  final NumberFormat _usdFormat = NumberFormat.currency(locale: 'en_US', symbol: 'U\$S', decimalDigits: 0);
 
   @override
   Widget build(BuildContext context) {
-    // Formatear el mes y año para el título
-    String monthYearLabel = DateFormat('MMMM yyyy', 'es_ES').format(_viewingDate);
-    monthYearLabel = monthYearLabel[0].toUpperCase() + monthYearLabel.substring(1);
+    final monthYearLabel = DateFormat('MMMM yyyy', 'es_ES').format(_viewingDate).toUpperCase();
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
-        title: const Text('Mis Cuentas'),
-        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+        title: const Text('MIS FINANZAS', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, letterSpacing: 1.2)),
+        centerTitle: false,
+        elevation: 0,
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
         actions: [
           IconButton(
-            icon: const Icon(Icons.settings),
+            icon: const Icon(Icons.settings_outlined),
+            tooltip: 'Configuración rápida',
             onPressed: () => Navigator.pushNamed(context, '/setup'),
-            tooltip: 'Configuración Maestra',
           ),
           PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
             onSelected: (value) async {
-              if (value == 'clear') {
+              if (value == 'logout') {
                 final confirm = await showDialog<bool>(
                   context: context,
-                  builder: (context) => AlertDialog(
-                    title: const Text('¿Limpiar este mes?'),
-                    content: const Text('Se borrarán TODOS los movimientos de este mes. Esta acción no se puede deshacer.'),
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('Cerrar Sesión'),
+                    content: const Text('¿Estás seguro de que quieres salir?'),
                     actions: [
-                      TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
-                      TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Borrar Todo', style: TextStyle(color: Colors.red))),
+                      TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
+                      FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Salir')),
+                    ],
+                  ),
+                );
+                if (confirm == true) {
+                  await AuthService().signOut();
+                }
+              } else if (value == 'setup') {
+                Navigator.pushNamed(context, '/setup');
+              } else if (value == 'clear') {
+                final confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('Limpiar Mes'),
+                    content: Text('¿Borrar todos los movimientos de $monthYearLabel? (No borra las plantillas)'),
+                    actions: [
+                      TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
+                      TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Limpiar', style: TextStyle(color: Colors.red))),
                     ],
                   ),
                 );
                 if (confirm == true) {
                   await _service.clearMonth(_viewingDate.month, _viewingDate.year);
                 }
-              } else if (value == 'generate') {
-                await _service.generateMonthlyTransactions(_viewingDate.month, _viewingDate.year);
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Plantillas cargadas para ' + DateFormat('MMMM', 'es_ES').format(_viewingDate))),
-                  );
-                }
               }
             },
             itemBuilder: (context) => [
               const PopupMenuItem(
-                value: 'generate',
+                value: 'setup',
                 child: Row(
                   children: [
-                    Icon(Icons.auto_awesome, size: 20, color: Colors.blue),
-                    SizedBox(width: 8),
-                    Text('Cargar Plantillas'),
+                    Icon(Icons.settings, size: 20),
+                    SizedBox(width: 12),
+                    Text('Panel de Control'),
                   ],
                 ),
               ),
@@ -84,191 +89,598 @@ class _HomePageState extends State<HomePage> {
                 value: 'clear',
                 child: Row(
                   children: [
-                    Icon(Icons.delete_sweep, size: 20, color: Colors.red),
-                    SizedBox(width: 8),
-                    Text('Limpiar todo este mes'),
+                    Icon(Icons.delete_sweep_outlined, size: 20, color: Colors.orange),
+                    SizedBox(width: 12),
+                    Text('Limpiar este Mes'),
+                  ],
+                ),
+              ),
+              const PopupMenuDivider(),
+              const PopupMenuItem(
+                value: 'logout',
+                child: Row(
+                  children: [
+                    Icon(Icons.logout, size: 20, color: Colors.redAccent),
+                    SizedBox(width: 12),
+                    Text('Cerrar Sesión', style: TextStyle(color: Colors.redAccent)),
                   ],
                 ),
               ),
             ],
           ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () => AuthService().signOut(),
-            tooltip: 'Cerrar Sesión',
-          ),
+          const SizedBox(width: 8),
         ],
       ),
-      body: Column(
-        children: [
-          // SELECTOR DE MES
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-            color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final bool isWide = constraints.maxWidth > 900;
+          
+          if (isWide) {
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                IconButton(
-                  icon: const Icon(Icons.chevron_left),
-                  onPressed: () => _changeMonth(-1),
-                ),
-                Text(
-                  monthYearLabel,
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.chevron_right),
-                  onPressed: () => _changeMonth(1),
-                ),
-              ],
-            ),
-          ),
-
-          // LISTADO DE TRANSACCIONES FILTRADO POR MES
-          Expanded(
-            child: StreamBuilder<List<TransactionModel>>(
-              stream: _service.getTransactions(month: _viewingDate.month, year: _viewingDate.year),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-
-                final transactions = snapshot.data ?? [];
-                
-                if (transactions.isEmpty) {
-                  return Center(
+                // PANEL IZQUIERDO (Resumen y Arqueo)
+                SizedBox(
+                  width: 400,
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(16),
                     child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.calendar_today_outlined, size: 60, color: Colors.grey),
-                        const SizedBox(height: 16),
-                        Text('No hay movimientos en $monthYearLabel.'),
+                        _buildMonthSelector(monthYearLabel),
                         const SizedBox(height: 20),
-                        FilledButton.icon(
-                          onPressed: () async {
-                            // GENERAR EL MES QUE ESTAMOS VIENDO
-                            await _service.generateMonthlyTransactions(_viewingDate.month, _viewingDate.year);
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Mes de $monthYearLabel generado con éxito')),
-                              );
-                            }
-                          },
-                          icon: const Icon(Icons.auto_awesome),
-                          label: const Text('Cargar Plantillas de este Mes'),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-                
-                // Cálculo de Totales
-                double incomeUYU = transactions.where((t) => t.type == 'INCOME' && t.currency == 'UYU').fold(0, (sum, t) => sum + t.amount);
-                double expenseUYU = transactions.where((t) => t.type == 'EXPENSE' && t.currency == 'UYU').fold(0, (sum, t) => sum + t.amount);
-                double incomeUSD = transactions.where((t) => t.type == 'INCOME' && t.currency == 'USD').fold(0, (sum, t) => sum + t.amount);
-                double expenseUSD = transactions.where((t) => t.type == 'EXPENSE' && t.currency == 'USD').fold(0, (sum, t) => sum + t.amount);
+                        StreamBuilder<List<TransactionModel>>(
+                          stream: _service.getTransactions(month: _viewingDate.month, year: _viewingDate.year),
+                          builder: (context, txSnapshot) {
+                            final txs = txSnapshot.data ?? [];
+                            double inUYU = txs.where((t) => t.type == 'INCOME' && t.currency == 'UYU').fold(0, (sum, t) => sum + t.amount);
+                            double outUYU = txs.where((t) => t.type == 'EXPENSE' && t.currency == 'UYU').fold(0, (sum, t) => sum + t.amount);
+                            double inUSD = txs.where((t) => t.type == 'INCOME' && t.currency == 'USD').fold(0, (sum, t) => sum + t.amount);
+                            double outUSD = txs.where((t) => t.type == 'EXPENSE' && t.currency == 'USD').fold(0, (sum, t) => sum + t.amount);
+                            
+                            // Obtener deudas (no pagas)
+                            double debtUYU = txs.where((t) => t.type == 'EXPENSE' && t.currency == 'UYU' && !t.isCompleted).fold(0, (sum, t) => sum + t.amount);
+                            double debtUSD = txs.where((t) => t.type == 'EXPENSE' && t.currency == 'USD' && !t.isCompleted).fold(0, (sum, t) => sum + t.amount);
 
-                // --- LÓGICA DE AGRUPACIÓN Y ORDENAMIENTO ---
-                final incomes = transactions
-                    .where((t) => t.type == 'INCOME')
-                    .toList()
-                  ..sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
+                            return StreamBuilder<List<Map<String, dynamic>>>(
+                              stream: _service.getBalances(),
+                              builder: (context, balSnapshot) {
+                                final balances = balSnapshot.data ?? [];
+                                double realUYU = balances.where((b) => b['currency'] == 'UYU').fold(0, (sum, b) => sum + (b['amount'] ?? 0));
+                                double realUSD = balances.where((b) => b['currency'] == 'USD').fold(0, (sum, b) => sum + (b['amount'] ?? 0));
 
-                final expenses = transactions
-                    .where((t) => t.type == 'EXPENSE')
-                    .toList()
-                  ..sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
-
-                // Creamos una lista combinada con encabezados
-                final sortedItems = [
-                  if (incomes.isNotEmpty) 'INGRESOS',
-                  ...incomes,
-                  if (expenses.isNotEmpty) 'GASTOS',
-                  ...expenses,
-                ];
-
-                return Column(
-                  children: [
-                    _buildBalanceCard(incomeUYU, expenseUYU, incomeUSD, expenseUSD),
-                    const Divider(),
-                    Expanded(
-                      child: ListView.builder(
-                        itemCount: sortedItems.length,
-                        itemBuilder: (context, index) {
-                          final item = sortedItems[index];
-
-                          if (item is String) {
-                            return Padding(
-                              padding: const EdgeInsets.only(left: 16, top: 16, bottom: 8),
-                              child: Text(
-                                item,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: item == 'INGRESOS' ? Colors.teal : Colors.deepOrange,
-                                  letterSpacing: 1.2,
-                                ),
-                              ),
+                                return Column(
+                                  children: [
+                                    _buildBalanceCard(inUYU, outUYU, inUSD, outUSD, isVertical: true),
+                                    const SizedBox(height: 20),
+                                    _buildComparisonCard(realUYU, debtUYU, realUSD, debtUSD),
+                                  ],
+                                );
+                              }
                             );
                           }
-
-                          return _buildTransactionTile(item as TransactionModel);
-                        },
-                      ),
+                        ),
+                        const SizedBox(height: 20),
+                        _buildRealBalancesGrid(), 
+                      ],
                     ),
-                  ],
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showQuickAddDialog(),
-        label: const Text('Extra'),
-        icon: const Icon(Icons.add),
+                  ),
+                ),
+                const VerticalDivider(width: 1),
+                // PANEL DERECHO (Lista de movimientos)
+                Expanded(
+                  child: Column(
+                    children: [
+                      _buildQuickAddButton(),
+                      Expanded(child: _buildTransactionList(monthYearLabel)),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          }
+
+          // DISEÑO MÓVIL
+          return Column(
+            children: [
+              _buildMonthSelector(monthYearLabel),
+              Expanded(child: _buildTransactionList(monthYearLabel)),
+              _buildQuickAddButton(),
+            ],
+          );
+        },
       ),
     );
   }
 
-  Widget _buildBalanceCard(double inUYU, double outUYU, double inUSD, double outUSD) {
+  Widget _buildMonthSelector(String label) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          IconButton(icon: const Icon(Icons.chevron_left), onPressed: () => setState(() => _viewingDate = DateTime(_viewingDate.year, _viewingDate.month - 1))),
+          Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.blueGrey)),
+          IconButton(icon: const Icon(Icons.chevron_right), onPressed: () => setState(() => _viewingDate = DateTime(_viewingDate.year, _viewingDate.month + 1))),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickAddButton() {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: SizedBox(
+        width: double.infinity,
+        height: 50,
+        child: FilledButton.icon(
+          onPressed: _showQuickAddDialog,
+          icon: const Icon(Icons.add_circle_outline),
+          label: const Text('REGISTRAR MOVIMIENTO', style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1)),
+          style: FilledButton.styleFrom(backgroundColor: Colors.blueGrey.shade800, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTransactionList(String label) {
+    return StreamBuilder<List<TransactionModel>>(
+      stream: _service.getTransactions(month: _viewingDate.month, year: _viewingDate.year),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+        final transactions = snapshot.data!;
+        
+        if (transactions.isEmpty) {
+          return _buildEmptyState(label);
+        }
+
+        // Totales para móvil (se calculan aquí si no es web)
+        double inUYU = transactions.where((t) => t.type == 'INCOME' && t.currency == 'UYU').fold(0, (sum, t) => sum + t.amount);
+        double outUYU = transactions.where((t) => t.type == 'EXPENSE' && t.currency == 'UYU').fold(0, (sum, t) => sum + t.amount);
+        double inUSD = transactions.where((t) => t.type == 'INCOME' && t.currency == 'USD').fold(0, (sum, t) => sum + t.amount);
+        double outUSD = transactions.where((t) => t.type == 'EXPENSE' && t.currency == 'USD').fold(0, (sum, t) => sum + t.amount);
+
+        // Deudas (no pagas)
+        double debtUYU = transactions.where((t) => t.type == 'EXPENSE' && t.currency == 'UYU' && !t.isCompleted).fold(0, (sum, t) => sum + t.amount);
+        double debtUSD = transactions.where((t) => t.type == 'EXPENSE' && t.currency == 'USD' && !t.isCompleted).fold(0, (sum, t) => sum + t.amount);
+
+        final incomes = transactions.where((t) => t.type == 'INCOME').toList()..sort((a, b) => a.title.compareTo(b.title));
+        final expenses = transactions.where((t) => t.type == 'EXPENSE').toList()..sort((a, b) => a.title.compareTo(b.title));
+
+        final sortedItems = [
+          if (incomes.isNotEmpty) 'INGRESOS',
+          ...incomes,
+          if (expenses.isNotEmpty) 'GASTOS',
+          ...expenses,
+        ];
+
+        return Column(
+          children: [
+            if (MediaQuery.of(context).size.width <= 900) ...[
+              _buildBalanceCard(inUYU, outUYU, inUSD, outUSD),
+              StreamBuilder<List<Map<String, dynamic>>>(
+                stream: _service.getBalances(),
+                builder: (context, balSnap) {
+                  final balances = balSnap.data ?? [];
+                  double realUYU = balances.where((b) => b['currency'] == 'UYU').fold(0, (sum, b) => sum + (b['amount'] ?? 0));
+                  double realUSD = balances.where((b) => b['currency'] == 'USD').fold(0, (sum, b) => sum + (b['amount'] ?? 0));
+                  return _buildComparisonCard(realUYU, debtUYU, realUSD, debtUSD, isMobile: true);
+                }
+              ),
+              _buildRealBalancesRow(),
+              const Divider(),
+            ],
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: sortedItems.length,
+                itemBuilder: (context, index) {
+                  final item = sortedItems[index];
+                  if (item is String) {
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 16, bottom: 8),
+                      child: Text(item, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.blueGrey, letterSpacing: 1)),
+                    );
+                  }
+                  return _buildTransactionTile(item as TransactionModel);
+                },
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildEmptyState(String label) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.calendar_today_outlined, size: 60, color: Colors.grey),
+          const SizedBox(height: 16),
+          Text('No hay movimientos en $label.'),
+          const SizedBox(height: 20),
+          FilledButton.icon(
+            onPressed: () => _service.generateMonthlyTransactions(_viewingDate.month, _viewingDate.year),
+            icon: const Icon(Icons.auto_awesome),
+            label: const Text('Cargar Plantillas de este Mes'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBalanceCard(double inUYU, double outUYU, double inUSD, double outUSD, {bool isVertical = false}) {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      elevation: 2,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: Colors.grey.shade200),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
+        padding: const EdgeInsets.all(20),
+        child: isVertical 
+          ? Column(
+              children: [
+                _balanceSmallRow('Resumen Pesos (UYU)', inUYU, outUYU, _uyuFormat),
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 20),
+                  child: Divider(),
+                ),
+                _balanceSmallRow('Resumen Dólares (USD)', inUSD, outUSD, _usdFormat),
+              ],
+            )
+          : Row(
+              children: [
+                Expanded(child: _balanceSmallRow('UYU', inUYU, outUYU, _uyuFormat)),
+                const VerticalDivider(width: 32),
+                Expanded(child: _balanceSmallRow('USD', inUSD, outUSD, _usdFormat)),
+              ],
+            ),
+      ),
+    );
+  }
+
+  Widget _buildRealBalancesGrid() {
+    return StreamBuilder<List<Map<String, dynamic>>>(
+      stream: _service.getBalances(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData || snapshot.data!.isEmpty) return const SizedBox.shrink();
+        final balances = snapshot.data!;
+        
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('DETALLE DE CUENTAS', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.blueGrey, letterSpacing: 1)),
+                  TextButton.icon(
+                    onPressed: () => Navigator.pushNamed(context, '/setup'),
+                    icon: const Icon(Icons.edit, size: 14),
+                    label: const Text('Gestionar', style: TextStyle(fontSize: 11)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 10,
+                  childAspectRatio: 2.2,
+                ),
+                itemCount: balances.length,
+                itemBuilder: (context, index) {
+                  final b = balances[index];
+                  final format = b['currency'] == 'UYU' ? _uyuFormat : _usdFormat;
+                  return GestureDetector(
+                    onTap: () => _showUpdateBalanceDialog(b),
+                    child: Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey.shade200),
+                        boxShadow: [
+                          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 4, offset: const Offset(0, 2)),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          BrandIcon(name: b['accountName'], manualLogo: b['brandLogo'], size: 28),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(b['accountName'], style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, overflow: TextOverflow.ellipsis)),
+                                Text(format.format(b['amount'] ?? 0), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.teal)),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildComparisonCard(double realUYU, double debtUYU, double realUSD, double debtUSD, {bool isMobile = false}) {
+    return Card(
+      margin: EdgeInsets.symmetric(horizontal: 16, vertical: isMobile ? 8 : 0),
+      color: Colors.blueGrey.shade900,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(child: _balanceSmallRow('Pesos (UYU)', inUYU, outUYU, _uyuFormat)),
-            const VerticalDivider(width: 20),
-            Expanded(child: _balanceSmallRow('Dólares (USD)', inUSD, outUSD, _usdFormat)),
+            const Row(
+              children: [
+                Icon(Icons.compare_arrows, color: Colors.amber, size: 16),
+                SizedBox(width: 8),
+                Text('COBERTURA DE DEUDAS (PENDIENTES)', style: TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _comparisonRow('Pesos (UYU)', realUYU, debtUYU, _uyuFormat),
+            if (debtUSD > 0 || realUSD > 0) ...[
+              const Divider(color: Colors.white10, height: 24),
+              _comparisonRow('Dólares (USD)', realUSD, debtUSD, _usdFormat),
+            ],
           ],
         ),
       ),
     );
   }
 
-  Widget _balanceSmallRow(String label, double income, double expense, NumberFormat format) {
-    double balance = income - expense;
+  Widget _comparisonRow(String label, double real, double debt, NumberFormat format) {
+    double maxVal = real > debt ? real : debt;
+    if (maxVal == 0) maxVal = 1; // Evitar división por cero
+
+    double realProgress = real / maxVal;
+    double debtProgress = debt / maxVal;
+    
+    bool isCovered = real >= debt;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey)),
-        const SizedBox(height: 4),
-        _miniAmount('En: ', income, Colors.green, format),
-        _miniAmount('Out: ', expense, Colors.red, format),
-        const Divider(height: 8),
-        Text(format.format(balance), style: TextStyle(fontWeight: FontWeight.bold, color: balance >= 0 ? Colors.teal : Colors.red)),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(label, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: isCovered ? Colors.green.withOpacity(0.2) : Colors.red.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                isCovered ? 'CUBIERTO' : 'FALTANTE: ${format.format(debt - real)}',
+                style: TextStyle(color: isCovered ? Colors.greenAccent : Colors.redAccent, fontSize: 9, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        // Barra de Dinero Real
+        Row(
+          children: [
+            const SizedBox(width: 80, child: Text('Dinero Real', style: TextStyle(color: Colors.white54, fontSize: 9))),
+            Expanded(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(2),
+                child: LinearProgressIndicator(
+                  value: realProgress,
+                  backgroundColor: Colors.white10,
+                  color: Colors.tealAccent,
+                  minHeight: 4,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            SizedBox(width: 70, child: Text(format.format(real), textAlign: TextAlign.end, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold))),
+          ],
+        ),
+        const SizedBox(height: 6),
+        // Barra de Deuda
+        Row(
+          children: [
+            const SizedBox(width: 80, child: Text('Pendiente', style: TextStyle(color: Colors.white54, fontSize: 9))),
+            Expanded(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(2),
+                child: LinearProgressIndicator(
+                  value: debtProgress,
+                  backgroundColor: Colors.white10,
+                  color: Colors.orangeAccent,
+                  minHeight: 4,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            SizedBox(width: 70, child: Text(format.format(debt), textAlign: TextAlign.end, style: const TextStyle(color: Colors.orangeAccent, fontSize: 11, fontWeight: FontWeight.bold))),
+          ],
+        ),
       ],
     );
   }
 
-  Widget _miniAmount(String prefix, double amount, Color color, NumberFormat format) {
+  Widget _buildRealBalancesRow() {
+    return StreamBuilder<List<Map<String, dynamic>>>(
+      stream: _service.getBalances(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData || snapshot.data!.isEmpty) return const SizedBox.shrink();
+        final balances = snapshot.data!;
+        
+        // Calcular sumas totales por moneda
+        double totalUYU = balances.where((b) => b['currency'] == 'UYU').fold(0, (sum, b) => sum + (b['amount'] ?? 0));
+        double totalUSD = balances.where((b) => b['currency'] == 'USD').fold(0, (sum, b) => sum + (b['amount'] ?? 0));
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Padding(
+              padding: EdgeInsets.only(left: 20, top: 12, bottom: 8),
+              child: Text('SALDOS REALES (ARQUEO)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.blueGrey, letterSpacing: 1)),
+            ),
+            SizedBox(
+              height: 70,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                children: [
+                  // CARD DE SUMA TOTAL (MÓVIL)
+                  Container(
+                    width: 160,
+                    margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(colors: [Colors.teal.shade600, Colors.teal.shade400]),
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [BoxShadow(color: Colors.teal.withOpacity(0.2), blurRadius: 4, offset: const Offset(0, 2))],
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('TOTAL DISPONIBLE', style: TextStyle(color: Colors.white70, fontSize: 8, fontWeight: FontWeight.bold)),
+                        Text(_uyuFormat.format(totalUYU), style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+                        if (totalUSD > 0)
+                          Text(_usdFormat.format(totalUSD), style: const TextStyle(color: Colors.white, fontSize: 10)),
+                      ],
+                    ),
+                  ),
+                  // LISTA DE CUENTAS INDIVIDUALES
+                  ...balances.map((b) {
+                    final format = b['currency'] == 'UYU' ? _uyuFormat : _usdFormat;
+                    return GestureDetector(
+                      onTap: () => _showUpdateBalanceDialog(b),
+                      child: Container(
+                        width: 140,
+                        margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey.shade200),
+                          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 4, offset: const Offset(0, 2))],
+                        ),
+                        child: Row(
+                          children: [
+                            BrandIcon(name: b['accountName'], manualLogo: b['brandLogo'], size: 28),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(b['accountName'], style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, overflow: TextOverflow.ellipsis)),
+                                  Text(format.format(b['amount'] ?? 0), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.teal)),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showUpdateBalanceDialog(Map<String, dynamic> b) {
+    final controller = TextEditingController(text: b['amount'].toString());
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Actualizar ${b['accountName']}'),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          autofocus: true,
+          decoration: InputDecoration(
+            labelText: 'Saldo Actual (${b['currency']})',
+            prefixIcon: const Icon(Icons.account_balance_wallet),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+          FilledButton(
+            onPressed: () {
+              final val = double.tryParse(controller.text);
+              if (val != null) {
+                _service.updateBalance(b['id'], val);
+                Navigator.pop(ctx);
+              }
+            },
+            child: const Text('Actualizar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _balanceSmallRow(String label, double income, double expense, NumberFormat format) {
+    double balance = income - expense;
+    double progress = (income > 0) ? (expense / income).clamp(0.0, 1.0) : (expense > 0 ? 1.0 : 0.0);
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.blueGrey)),
+        const SizedBox(height: 12),
+        _miniAmount('Ingresos', income, Colors.teal, format),
+        const SizedBox(height: 4),
+        _miniAmount('Egresos', expense, Colors.deepOrange, format),
+        const SizedBox(height: 12),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: LinearProgressIndicator(
+            value: progress,
+            backgroundColor: Colors.grey.shade100,
+            color: progress > 0.9 ? Colors.red : (progress > 0.5 ? Colors.orange : Colors.teal),
+            minHeight: 8,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('Disponible', style: TextStyle(fontSize: 11, color: Colors.grey)),
+            Text(format.format(balance), style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: balance >= 0 ? Colors.teal : Colors.red)),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _miniAmount(String label, double amount, Color color, NumberFormat format) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(prefix, style: const TextStyle(fontSize: 10)),
-        Text(format.format(amount), style: TextStyle(fontSize: 11, color: color)),
+        Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+        Text(format.format(amount), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: color)),
       ],
     );
   }
@@ -276,7 +688,6 @@ class _HomePageState extends State<HomePage> {
   Widget _buildTransactionTile(TransactionModel t) {
     final format = t.currency == 'UYU' ? _uyuFormat : _usdFormat;
     final isExpense = t.type == 'EXPENSE';
-
     return Dismissible(
       key: Key(t.id),
       direction: DismissDirection.endToStart,
@@ -294,10 +705,7 @@ class _HomePageState extends State<HomePage> {
             content: Text('¿Estás seguro de que quieres eliminar "${t.title}"?'),
             actions: [
               TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
-              TextButton(
-                onPressed: () => Navigator.pop(context, true), 
-                child: const Text('Eliminar', style: TextStyle(color: Colors.red)),
-              ),
+              TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Eliminar', style: TextStyle(color: Colors.red))),
             ],
           ),
         );
@@ -305,11 +713,7 @@ class _HomePageState extends State<HomePage> {
       onDismissed: (_) => _service.deleteTransaction(t.id),
       child: ListTile(
         dense: true,
-        leading: BrandIcon(
-          name: t.title, 
-          manualLogo: t.brandLogo, 
-          size: 32
-        ),
+        leading: BrandIcon(name: t.title, manualLogo: t.brandLogo, size: 32),
         title: Text(t.title, style: const TextStyle(fontWeight: FontWeight.bold)),
         subtitle: t.dueDate != null ? Text('Vence: ${DateFormat('dd/MM').format(t.dueDate!)}', style: const TextStyle(fontSize: 11)) : null,
         trailing: Column(
@@ -317,12 +721,7 @@ class _HomePageState extends State<HomePage> {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Text(format.format(t.amount), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: isExpense ? Colors.black : Colors.green)),
-            if (isExpense)
-              Icon(
-                t.isCompleted ? Icons.check_circle : Icons.pending_actions,
-                size: 14,
-                color: t.isCompleted ? Colors.green : Colors.orange,
-              ),
+            if (isExpense) Icon(t.isCompleted ? Icons.check_circle : Icons.pending_actions, size: 14, color: t.isCompleted ? Colors.green : Colors.orange),
           ],
         ),
         onTap: () => _showEditDialog(t),
@@ -332,16 +731,12 @@ class _HomePageState extends State<HomePage> {
 
   void _showEditDialog(TransactionModel t) {
     final TextEditingController amountController = TextEditingController(text: t.amount.toString());
-    
     showDialog(
       context: context,
       barrierDismissible: true,
       builder: (BuildContext dialogContext) {
         final String rawDesc = t.description ?? '';
-        final List<String> items = rawDesc.isEmpty 
-            ? [] 
-            : rawDesc.split(', ').where((s) => s.trim().isNotEmpty).toList();
-
+        final List<String> items = rawDesc.isEmpty ? [] : rawDesc.split(', ').where((s) => s.trim().isNotEmpty).toList();
         return AlertDialog(
           title: Text(t.title),
           scrollable: true,
@@ -352,11 +747,7 @@ class _HomePageState extends State<HomePage> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 if (items.isNotEmpty) ...[
-                  const Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text('Consumos (clic para borrar cuotas):', 
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.blueGrey)),
-                  ),
+                  const Align(alignment: Alignment.centerLeft, child: Text('Consumos (clic para borrar cuotas):', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.blueGrey))),
                   const SizedBox(height: 8),
                   ...items.map((item) => ListTile(
                     dense: true,
@@ -364,23 +755,9 @@ class _HomePageState extends State<HomePage> {
                     title: Text(item, style: const TextStyle(fontSize: 12)),
                     trailing: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
                     onTap: () async {
-                      final bool? ok = await showDialog<bool>(
-                        context: dialogContext,
-                        builder: (ctx) => AlertDialog(
-                          title: const Text('¿Eliminar cuotas?'),
-                          content: Text('Se borrará "$item" de todos los meses.'),
-                          actions: [
-                            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('No')),
-                            TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Sí, borrar todo')),
-                          ],
-                        ),
-                      );
+                      final bool? ok = await showDialog<bool>(context: dialogContext, builder: (ctx) => AlertDialog(title: const Text('¿Eliminar cuotas?'), content: Text('Se borrará "$item" de todos los meses.'), actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('No')), TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Sí, borrar todo'))]));
                       if (ok == true) {
-                        await _service.removeCreditCardExpense(
-                          cardName: t.title,
-                          fullItemText: item,
-                          startDate: t.date,
-                        );
+                        await _service.removeCreditCardExpense(cardName: t.title, fullItemText: item, startDate: t.date);
                         if (dialogContext.mounted) Navigator.pop(dialogContext);
                       }
                     },
@@ -388,84 +765,27 @@ class _HomePageState extends State<HomePage> {
                   const Divider(),
                 ],
                 const SizedBox(height: 10),
-                TextField(
-                  controller: amountController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Monto Total',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.attach_money),
-                  ),
-                ),
+                TextField(controller: amountController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Monto Total', border: OutlineInputBorder(), prefixIcon: Icon(Icons.attach_money))),
               ],
             ),
           ),
           actions: [
-            // Botones simples sin Spacer para evitar errores de layout en Web
-            TextButton(
-              onPressed: () async {
-                final bool? confirm = await showDialog<bool>(
-                  context: dialogContext,
-                  builder: (ctx) => AlertDialog(
-                    title: const Text('¿Borrar ítem?'),
-                    actions: [
-                      TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
-                      TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Borrar', style: TextStyle(color: Colors.red))),
-                    ],
-                  ),
-                );
-                if (confirm == true) {
-                  _service.deleteTransaction(t.id);
-                  if (dialogContext.mounted) Navigator.pop(dialogContext);
-                }
-              },
-              child: const Text('Eliminar', style: TextStyle(color: Colors.red)),
-            ),
-            TextButton(
-              onPressed: () {
-                _service.updateTransaction(t.copyWith(isCompleted: !t.isCompleted));
-                Navigator.pop(dialogContext);
-              },
-              child: Text(t.isCompleted ? 'Pendiente' : 'Pagado'),
-            ),
-            // Botón para convertir en recurrente (solo si no es tarjeta directamente)
-            if (t.category != 'Tarjeta')
-              IconButton(
-                icon: const Icon(Icons.autorenew, color: Colors.blue),
-                tooltip: 'Hacer recurrente',
-                onPressed: () async {
-                  final confirm = await showDialog<bool>(
-                    context: dialogContext,
-                    builder: (ctx) => AlertDialog(
-                      title: const Text('¿Hacer recurrente?'),
-                      content: const Text('Este gasto se guardará como plantilla y aparecerá automáticamente en los próximos meses.'),
-                      actions: [
-                        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
-                        TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Hacer Fijo')),
-                      ],
-                    ),
-                  );
-                  if (confirm == true) {
-                    await _service.createTemplateFromTransaction(t);
-                    if (dialogContext.mounted) {
-                      Navigator.pop(dialogContext);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Guardado como gasto fijo para el futuro')),
-                      );
-                    }
-                  }
-                },
-              ),
-            FilledButton(
-              onPressed: () {
-                final double? val = double.tryParse(amountController.text);
-                if (val != null) {
-                  _service.updateTransaction(t.copyWith(amount: val));
-                  Navigator.pop(dialogContext);
-                }
-              },
-              child: const Text('Guardar'),
-            ),
+            TextButton(onPressed: () async {
+              final bool? confirm = await showDialog<bool>(context: dialogContext, builder: (ctx) => AlertDialog(title: const Text('¿Borrar ítem?'), actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')), TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Borrar', style: TextStyle(color: Colors.red)))]));
+              if (confirm == true) {
+                _service.deleteTransaction(t.id);
+                if (dialogContext.mounted) Navigator.pop(dialogContext);
+              }
+            }, child: const Text('Eliminar', style: TextStyle(color: Colors.red))),
+            TextButton(onPressed: () { _service.updateTransaction(t.copyWith(isCompleted: !t.isCompleted)); Navigator.pop(dialogContext); }, child: Text(t.isCompleted ? 'Pendiente' : 'Pagado')),
+            if (t.category != 'Tarjeta') IconButton(icon: const Icon(Icons.autorenew, color: Colors.blue), tooltip: 'Hacer recurrente', onPressed: () async {
+              final confirm = await showDialog<bool>(context: dialogContext, builder: (ctx) => AlertDialog(title: const Text('¿Hacer recurrente?'), content: const Text('Este gasto se guardará como plantilla y aparecerá automáticamente en los próximos meses.'), actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')), TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Hacer Fijo'))]));
+              if (confirm == true) {
+                await _service.createTemplateFromTransaction(t);
+                if (dialogContext.mounted) { Navigator.pop(dialogContext); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Guardado como gasto fijo para el futuro'))); }
+              }
+            }),
+            FilledButton(onPressed: () { final double? val = double.tryParse(amountController.text); if (val != null) { _service.updateTransaction(t.copyWith(amount: val)); Navigator.pop(dialogContext); } }, child: const Text('Guardar')),
           ],
         );
       },
@@ -480,25 +800,9 @@ class _HomePageState extends State<HomePage> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            ListTile(
-              leading: const Icon(Icons.add_circle, color: Colors.teal),
-              title: const Text('Ingreso o Gasto Simple'),
-              subtitle: const Text('Movimiento puntual en este mes'),
-              onTap: () {
-                Navigator.pop(context);
-                _showSimpleTransactionDialog();
-              },
-            ),
+            ListTile(leading: const Icon(Icons.add_circle, color: Colors.teal), title: const Text('Ingreso o Gasto Simple'), subtitle: const Text('Movimiento puntual en este mes'), onTap: () { Navigator.pop(context); _showSimpleTransactionDialog(); }),
             const Divider(),
-            ListTile(
-              leading: const Icon(Icons.credit_card, color: Colors.blue),
-              title: const Text('Compra con Tarjeta'),
-              subtitle: const Text('Suma al total de la tarjeta y permite cuotas'),
-              onTap: () {
-                Navigator.pop(context);
-                _showCreditCardDialog();
-              },
-            ),
+            ListTile(leading: const Icon(Icons.credit_card, color: Colors.blue), title: const Text('Compra con Tarjeta'), subtitle: const Text('Suma al total de la tarjeta y permite cuotas'), onTap: () { Navigator.pop(context); _showCreditCardDialog(); }),
           ],
         ),
       ),
@@ -511,7 +815,6 @@ class _HomePageState extends State<HomePage> {
     String type = 'EXPENSE';
     String currency = 'UYU';
     DateTime selectedDate = _viewingDate;
-
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
@@ -520,65 +823,17 @@ class _HomePageState extends State<HomePage> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              SegmentedButton<String>(
-                segments: const [
-                  ButtonSegment(value: 'EXPENSE', label: Text('Gasto'), icon: Icon(Icons.remove_circle)),
-                  ButtonSegment(value: 'INCOME', label: Text('Ingreso'), icon: Icon(Icons.add_circle)),
-                ],
-                selected: {type},
-                onSelectionChanged: (val) => setS(() => type = val.first),
-              ),
+              SegmentedButton<String>(segments: const [ButtonSegment(value: 'EXPENSE', label: Text('Gasto'), icon: Icon(Icons.remove_circle)), ButtonSegment(value: 'INCOME', label: Text('Ingreso'), icon: Icon(Icons.add_circle))], selected: {type}, onSelectionChanged: (val) => setS(() => type = val.first)),
               const SizedBox(height: 10),
               TextField(controller: titleController, decoration: const InputDecoration(labelText: 'Concepto')),
-              Row(
-                children: [
-                  Expanded(child: TextField(controller: amountController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Monto'))),
-                  const SizedBox(width: 10),
-                  DropdownButton<String>(
-                    value: currency,
-                    onChanged: (v) => setS(() => currency = v!),
-                    items: ['UYU', 'USD'].map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
-                  ),
-                ],
-              ),
+              Row(children: [Expanded(child: TextField(controller: amountController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Monto'))), const SizedBox(width: 10), DropdownButton<String>(value: currency, onChanged: (v) => setS(() => currency = v!), items: ['UYU', 'USD'].map((c) => DropdownMenuItem(value: c, child: Text(c))).toList())]),
               const SizedBox(height: 10),
-              ListTile(
-                dense: true,
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.calendar_today),
-                title: Text('Mes de imputación: ${DateFormat('MMMM yyyy', 'es_ES').format(selectedDate)}'),
-                onTap: () async {
-                  final DateTime? picked = await showDatePicker(
-                    context: context,
-                    initialDate: selectedDate,
-                    firstDate: DateTime(2020),
-                    lastDate: DateTime(2100),
-                  );
-                  if (picked != null) setS(() => selectedDate = picked);
-                },
-              ),
+              ListTile(dense: true, contentPadding: EdgeInsets.zero, leading: const Icon(Icons.calendar_today), title: Text('Mes de imputación: ${DateFormat('MMMM yyyy', 'es_ES').format(selectedDate)}'), onTap: () async { final DateTime? picked = await showDatePicker(context: context, initialDate: selectedDate, firstDate: DateTime(2020), lastDate: DateTime(2100)); if (picked != null) setS(() => selectedDate = picked); }),
             ],
           ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
-            FilledButton(
-              onPressed: () {
-                if (titleController.text.isNotEmpty && amountController.text.isNotEmpty) {
-                  _service.addTransaction(TransactionModel(
-                    id: '', 
-                    title: titleController.text, 
-                    amount: double.parse(amountController.text),
-                    date: selectedDate, 
-                    category: 'Extra', 
-                    currency: currency, 
-                    type: type, 
-                    isCompleted: true
-                  ));
-                  Navigator.pop(context);
-                }
-              },
-              child: const Text('Añadir'),
-            ),
+            FilledButton(onPressed: () { if (titleController.text.isNotEmpty && amountController.text.isNotEmpty) { _service.addTransaction(TransactionModel(id: '', title: titleController.text, amount: double.parse(amountController.text), date: selectedDate, category: 'Extra', currency: currency, type: type, isCompleted: true)); Navigator.pop(context); } }, child: const Text('Añadir')),
           ],
         ),
       ),
@@ -592,112 +847,19 @@ class _HomePageState extends State<HomePage> {
     String? selectedCard;
     String currency = 'UYU';
     DateTime selectedDate = _viewingDate;
-
     showDialog(
       context: context,
       builder: (context) => StreamBuilder<List<Map<String, dynamic>>>(
         stream: _service.getTemplates(type: 'EXPENSE'),
         builder: (context, snapshot) {
           final cards = snapshot.data?.where((t) => t['isCreditCard'] == true).toList() ?? [];
-
           return StatefulBuilder(
             builder: (context, setS) => AlertDialog(
-              title: const Row(
-                children: [
-                  Icon(Icons.credit_card, color: Colors.blue),
-                  SizedBox(width: 10),
-                  Text('Compra con Tarjeta'),
-                ],
-              ),
-              content: cards.isEmpty 
-                ? const Text('Primero debes marcar alguna de tus plantillas de gastos como "Tarjeta de Crédito" en Configuración.')
-                : SingleChildScrollView(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        DropdownButtonFormField<String>(
-                          value: selectedCard,
-                          hint: const Text('Seleccionar Tarjeta'),
-                          items: cards.map((c) => DropdownMenuItem<String>(
-                            value: c['title'],
-                            child: Text(c['title']),
-                          )).toList(),
-                          onChanged: (v) => setS(() => selectedCard = v),
-                          decoration: const InputDecoration(labelText: 'Tarjeta'),
-                        ),
-                        const SizedBox(height: 10),
-                        TextField(
-                          controller: conceptController,
-                          decoration: const InputDecoration(
-                            labelText: 'Concepto',
-                            hintText: 'Ej: Televisor, Supermercado',
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: TextField(
-                                controller: amountController, 
-                                keyboardType: TextInputType.number, 
-                                decoration: const InputDecoration(labelText: 'Monto Total'),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            DropdownButton<String>(
-                              value: currency,
-                              onChanged: (v) => setS(() => currency = v!),
-                              items: ['UYU', 'USD'].map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        TextField(
-                          controller: installmentsController, 
-                          keyboardType: TextInputType.number, 
-                          decoration: const InputDecoration(labelText: 'Cantidad de Cuotas'),
-                        ),
-                        const SizedBox(height: 10),
-                        ListTile(
-                          dense: true,
-                          contentPadding: EdgeInsets.zero,
-                          leading: const Icon(Icons.calendar_today),
-                          title: Text('Mes de inicio: ${DateFormat('MMMM yyyy', 'es_ES').format(selectedDate)}'),
-                          onTap: () async {
-                            final DateTime? picked = await showDatePicker(
-                              context: context,
-                              initialDate: selectedDate,
-                              firstDate: DateTime(2020),
-                              lastDate: DateTime(2100),
-                            );
-                            if (picked != null) setS(() => selectedDate = picked);
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
+              title: const Row(children: [Icon(Icons.credit_card, color: Colors.blue), SizedBox(width: 10), Text('Compra con Tarjeta')]),
+              content: cards.isEmpty ? const Text('Primero debes marcar alguna de tus plantillas de gastos como "Tarjeta de Crédito" en Configuración.') : SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [DropdownButtonFormField<String>(value: selectedCard, hint: const Text('Seleccionar Tarjeta'), items: cards.map((c) => DropdownMenuItem<String>(value: c['title'], child: Text(c['title']))).toList(), onChanged: (v) => setS(() => selectedCard = v), decoration: const InputDecoration(labelText: 'Tarjeta')), const SizedBox(height: 10), TextField(controller: conceptController, decoration: const InputDecoration(labelText: 'Concepto', hintText: 'Ej: Televisor, Supermercado')), const SizedBox(height: 10), Row(children: [Expanded(child: TextField(controller: amountController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Monto Total'))), const SizedBox(width: 10), DropdownButton<String>(value: currency, onChanged: (v) => setS(() => currency = v!), items: ['UYU', 'USD'].map((c) => DropdownMenuItem(value: c, child: Text(c))).toList())]), const SizedBox(height: 10), TextField(controller: installmentsController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Cantidad de Cuotas')), const SizedBox(height: 10), ListTile(dense: true, contentPadding: EdgeInsets.zero, leading: const Icon(Icons.calendar_today), title: Text('Mes de inicio: ${DateFormat('MMMM yyyy', 'es_ES').format(selectedDate)}'), onTap: () async { final DateTime? picked = await showDatePicker(context: context, initialDate: selectedDate, firstDate: DateTime(2020), lastDate: DateTime(2100)); if (picked != null) setS(() => selectedDate = picked); })])),
               actions: [
                 TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
-                if (cards.isNotEmpty)
-                  FilledButton(
-                    onPressed: () {
-                      if (selectedCard != null && amountController.text.isNotEmpty) {
-                        _service.addCreditCardExpense(
-                          cardName: selectedCard!,
-                          totalAmount: double.parse(amountController.text),
-                          installments: int.parse(installmentsController.text),
-                          currency: currency,
-                          startDate: selectedDate,
-                          concept: conceptController.text.isNotEmpty ? conceptController.text : null,
-                        );
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Procesando gasto de tarjeta...')),
-                        );
-                      }
-                    },
-                    child: const Text('Registrar Compra'),
-                  ),
+                if (cards.isNotEmpty) FilledButton(onPressed: () { if (selectedCard != null && amountController.text.isNotEmpty) { _service.addCreditCardExpense(cardName: selectedCard!, totalAmount: double.parse(amountController.text), installments: int.parse(installmentsController.text), currency: currency, startDate: selectedDate, concept: conceptController.text.isNotEmpty ? conceptController.text : null); Navigator.pop(context); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Procesando gasto de tarjeta...'))); } }, child: const Text('Registrar Compra')),
               ],
             ),
           );

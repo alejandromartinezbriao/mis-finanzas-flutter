@@ -18,7 +18,74 @@ class FirebaseService {
     return _db.collection('users').doc(uid).collection('templates');
   }
 
+  CollectionReference? get _balancesRef {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return null;
+    return _db.collection('users').doc(uid).collection('balances');
+  }
+
   String _norm(String text) => text.trim().toLowerCase();
+
+  // --- BALANCES REALES (ARQUEO) ---
+
+  Stream<List<Map<String, dynamic>>> getBalances() {
+    final ref = _balancesRef;
+    if (ref == null) return Stream.value([]);
+    return ref.orderBy('accountName').snapshots().map((snap) => snap.docs.map((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          data['id'] = doc.id;
+          return data;
+        }).toList());
+  }
+
+  Future<void> updateBalance(String id, double amount) async {
+    try {
+      final ref = _balancesRef;
+      if (ref == null) return;
+      await ref.doc(id).update({
+        'amount': amount,
+        'updatedAt': Timestamp.now(),
+      });
+    } catch (e) {
+      print("Error updateBalance: $e");
+    }
+  }
+
+  Future<void> updateBalanceAccountDetails(String id, Map<String, dynamic> data) async {
+    try {
+      final ref = _balancesRef;
+      if (ref == null) return;
+      await ref.doc(id).update(data);
+    } catch (e) {
+      print("Error updateBalanceAccountDetails: $e");
+    }
+  }
+
+  Future<void> addBalanceAccount(String name, String currency, {String? logo}) async {
+    try {
+      final ref = _balancesRef;
+      if (ref == null) return;
+      await ref.add({
+        'accountName': name,
+        'amount': 0.0,
+        'currency': currency,
+        'updatedAt': Timestamp.now(),
+        'brandLogo': logo,
+      });
+    } catch (e) {
+      print("Error addBalanceAccount: $e");
+    }
+  }
+
+  Future<void> deleteBalanceAccount(String id) async {
+    try {
+      final ref = _balancesRef;
+      if (ref == null) return;
+      await ref.doc(id).delete();
+    } catch (e) {
+      print("Error deleteBalanceAccount: $e");
+    }
+  }
 
   // --- TRANSACCIONES ---
 
