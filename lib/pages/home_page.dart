@@ -73,6 +73,24 @@ class _HomePageState extends State<HomePage> {
                 if (confirm == true) {
                   await _service.clearMonth(_viewingDate.month, _viewingDate.year);
                 }
+              } else if (value == 'generate') {
+                final confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('Cargar Plantillas'),
+                    content: Text('¿Deseas cargar los gastos e ingresos fijos para $monthYearLabel?\n\nNota: No se duplicarán los conceptos que ya existan.'),
+                    actions: [
+                      TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
+                      FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Cargar')),
+                    ],
+                  ),
+                );
+                if (confirm == true) {
+                  await _service.generateMonthlyTransactions(_viewingDate.month, _viewingDate.year);
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Plantillas procesadas correctamente')));
+                  }
+                }
               }
             },
             itemBuilder: (context) => [
@@ -83,6 +101,16 @@ class _HomePageState extends State<HomePage> {
                     Icon(Icons.settings, size: 20),
                     SizedBox(width: 12),
                     Text('Panel de Control'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'generate',
+                child: Row(
+                  children: [
+                    Icon(Icons.auto_awesome, size: 20, color: Colors.teal),
+                    SizedBox(width: 12),
+                    Text('Cargar Plantillas'),
                   ],
                 ),
               ),
