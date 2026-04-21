@@ -66,11 +66,21 @@ class BrandIcon extends StatelessWidget {
     }
 
     Widget content;
-    if (assetPath != null) {
+    if (manualLogo != null && (manualLogo!.startsWith('http') || manualLogo!.startsWith('https'))) {
+      // Es una URL externa
+      content = Image.network(
+        manualLogo!,
+        width: size * 0.8,
+        height: size * 0.8,
+        fit: BoxFit.contain,
+        errorBuilder: (context, error, stackTrace) => _defaultIcon(label),
+      );
+    } else if (assetPath != null) {
+      // Es un asset local
       content = Image.asset(
         assetPath,
-        width: size * 0.7,
-        height: size * 0.7,
+        width: size * 0.8,
+        height: size * 0.8,
         fit: BoxFit.contain,
         errorBuilder: (context, error, stackTrace) => _defaultIcon(label),
       );
@@ -82,19 +92,39 @@ class BrandIcon extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: Colors.white,
         shape: BoxShape.circle,
-        border: Border.all(color: Colors.grey.withOpacity(0.2), width: 1),
+        gradient: RadialGradient(
+          colors: [
+            Colors.white,
+            Colors.grey.shade100,
+            Colors.grey.shade300,
+          ],
+          center: const Alignment(-0.3, -0.3),
+          radius: 0.7,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
+            color: Colors.black.withOpacity(0.2), // Sombra más fuerte para Web
+            blurRadius: size * 0.2,
+            offset: Offset(0, size * 0.1),
+          ),
+          BoxShadow(
+            color: Colors.white.withOpacity(0.9),
+            blurRadius: size * 0.08,
+            offset: Offset(-size * 0.05, -size * 0.05),
+            spreadRadius: -1,
           ),
         ],
+        border: Border.all(
+          color: Colors.grey.shade300,
+          width: 0.5,
+        ),
       ),
       child: Center(
-        child: content,
+        child: Padding(
+          padding: EdgeInsets.all(size * 0.15),
+          child: content,
+        ),
       ),
     );
   }

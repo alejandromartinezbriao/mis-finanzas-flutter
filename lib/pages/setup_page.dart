@@ -137,7 +137,11 @@ class _SetupPageState extends State<SetupPage> with SingleTickerProviderStateMix
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Nombre (ej: Banco Santander)')),
+              TextField(
+                controller: nameCtrl,
+                decoration: const InputDecoration(labelText: 'Nombre (ej: Banco Santander)'),
+                onChanged: (_) => setS(() {}),
+              ),
               const SizedBox(height: 10),
               DropdownButtonFormField<String>(
                 value: currency,
@@ -146,7 +150,7 @@ class _SetupPageState extends State<SetupPage> with SingleTickerProviderStateMix
                 decoration: const InputDecoration(labelText: 'Moneda'),
               ),
               const SizedBox(height: 15),
-              _buildLogoSelector(selectedLogo, (logo) => setS(() => selectedLogo = logo)),
+              _buildLogoSelector(selectedLogo, (logo) => setS(() => selectedLogo = logo), nameCtrl.text),
             ],
           ),
           actions: [
@@ -175,81 +179,228 @@ class _SetupPageState extends State<SetupPage> with SingleTickerProviderStateMix
     );
   }
 
-  Widget _buildLogoSelector(String? selectedLogo, Function(String?) onSelect) {
+  Widget _buildLogoSelector(String? selectedLogo, Function(String?) onSelect, String currentName) {
     final List<String> availableLogos = [
-      'banco-republica.png',
-      'itau.png',
-      'santander.png',
-      'bbva.png',
-      'scotiabank.png',
-      'oca.png',
-      'oca-blue.png',
-      'prex.png',
-      'midinero.png',
-      'ahorros.png',
-      'cabal.png',
-      'srpffaa.png',
-      'dinero.png',
-      'queen.png',
-      'bodyguard.png',
-      'alquiler.png',
-      'ose.png',
-      'ute.png',
-      'imm.png',
-      'ces.png',
-      'gastos-comunes.png',
+      'banco-republica.png', 'itau.png', 'santander.png', 'bbva.png', 'scotiabank.png',
+      'oca.png', 'oca-blue.png', 'prex.png', 'midinero.png', 'ahorros.png', 'cabal.png',
+      'srpffaa.png', 'dinero.png', 'queen.png', 'bodyguard.png', 'alquiler.png',
+      'ose.png', 'ute.png', 'imm.png', 'ces.png', 'gastos-comunes.png',
     ];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Logo Identificatorio:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('Logo Identificatorio:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+            TextButton.icon(
+              onPressed: () => _showLogoSearchDialog(currentName, onSelect),
+              icon: const Icon(Icons.search, size: 16, color: Colors.teal),
+              label: Text(
+                currentName.isEmpty ? 'Buscar por nombre' : 'Buscar Online',
+                style: const TextStyle(fontSize: 11, color: Colors.teal, fontWeight: FontWeight.bold),
+              ),
+              style: TextButton.styleFrom(
+                visualDensity: VisualDensity.compact,
+                backgroundColor: Colors.teal.withOpacity(0.05),
+              ),
+            ),
+          ],
+        ),
         const SizedBox(height: 8),
         SizedBox(
-          height: 50,
+          height: 60,
           child: ListView(
             scrollDirection: Axis.horizontal,
             children: [
-              // Opción Automática / Genérica
-              GestureDetector(
-                onTap: () => onSelect(null),
-                child: Container(
-                  width: 45,
-                  margin: const EdgeInsets.only(right: 8),
-                  decoration: BoxDecoration(
-                    color: selectedLogo == null ? Colors.blue.withOpacity(0.2) : Colors.transparent,
-                    border: Border.all(color: selectedLogo == null ? Colors.blue : Colors.grey.withOpacity(0.3)),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.auto_awesome, size: 20, color: Colors.grey),
-                ),
-              ),
+              // Vista previa del logo actual (si es URL)
+              if (selectedLogo != null && selectedLogo.startsWith('http'))
+                _logoItem(selectedLogo, true, () => onSelect(null), isUrl: true),
+
+              // Opción Automática
+              _logoItem(null, selectedLogo == null, () => onSelect(null), isAuto: true),
+              
               ...availableLogos.map((logoName) {
-                final isSelected = selectedLogo == logoName;
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8.0),
-                  child: GestureDetector(
-                    onTap: () => onSelect(logoName),
-                    child: Container(
-                      width: 45,
-                      decoration: BoxDecoration(
-                        color: isSelected ? Colors.blue.withOpacity(0.1) : Colors.white,
-                        border: Border.all(color: isSelected ? Colors.blue : Colors.grey.withOpacity(0.2), width: isSelected ? 2 : 1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: ClipOval(
-                        child: Padding(
-                          padding: const EdgeInsets.all(6.0),
-                          child: Image.asset('assets/logos/$logoName', fit: BoxFit.contain),
-                        ),
-                      ),
-                    ),
-                  ),
-                );
+                return _logoItem(logoName, selectedLogo == logoName, () => onSelect(logoName));
               }).toList(),
             ],
           ),
         ),
       ],
+    );
+  }
+
+  Widget _logoItem(String? logo, bool isSelected, VoidCallback onTap, {bool isAuto = false, bool isUrl = false}) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 10.0),
+      child: GestureDetector(
+        onTap: onTap,
+        child: Column(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: isSelected ? Colors.teal.withOpacity(0.1) : Colors.white,
+                shape: BoxShape.circle,
+                border: Border.all(color: isSelected ? Colors.teal : Colors.grey.withOpacity(0.2), width: isSelected ? 2 : 1),
+                boxShadow: isSelected ? [BoxShadow(color: Colors.teal.withOpacity(0.2), blurRadius: 4)] : null,
+              ),
+              child: Center(
+                child: isAuto 
+                  ? const Icon(Icons.auto_awesome, size: 20, color: Colors.grey)
+                  : ClipOval(
+                      child: Padding(
+                        padding: const EdgeInsets.all(6.0),
+                        child: isUrl 
+                          ? Image.network(logo!, fit: BoxFit.contain, errorBuilder: (c, e, s) => const Icon(Icons.broken_image))
+                          : Image.asset('assets/logos/$logo', fit: BoxFit.contain),
+                      ),
+                    ),
+              ),
+            ),
+            if (isUrl) const Text('Web', style: TextStyle(fontSize: 8, color: Colors.teal, fontWeight: FontWeight.bold)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showLogoSearchDialog(String initialName, Function(String?) onSelect) {
+    String predictDomain(String name) {
+      String d = name.toLowerCase().trim().replaceAll(' ', '');
+      if (d.isEmpty) return "";
+
+      if (d.contains('itau')) return "itau.com.uy";
+      if (d.contains('santander')) return "santander.com.uy";
+      if (d.contains('brou')) return "brou.com.uy";
+      if (d.contains('oca')) return "oca.com.uy";
+      if (d.contains('bbva')) return "bbva.com.uy";
+      if (d.contains('scotia')) return "scotiabank.com.uy";
+      if (d.contains('hsbc')) return "hsbc.com.uy";
+      if (d.contains('prex')) return "prexcard.com";
+      if (d.contains('visa')) return "visa.com";
+      if (d.contains('master')) return "mastercard.com";
+      if (d.contains('antel')) return "antel.com.uy";
+      if (d.contains('ose')) return "ose.com.uy";
+      if (d.contains('ute')) return "ute.com.uy";
+      if (d.contains('banco')) return "$d.com.uy";
+      
+      return d.contains('.') ? d : "$d.com";
+    }
+
+    final domainCtrl = TextEditingController(text: predictDomain(initialName));
+
+    // Usamos una variable para rastrear qué logo funcionó realmente
+    String effectiveLogoUrl = "";
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          final currentDomain = domainCtrl.text.trim();
+          
+          String getPrimaryUrl(String input) {
+            if (input.isEmpty) return "";
+            String target;
+            if (input.startsWith('http')) {
+              target = input;
+            } else {
+              final d = input.toLowerCase();
+              if (d.contains('antel')) target = "https://www.antel.com.uy/image/layout_set_logo?img_id=3960533";
+              else if (d.contains('ute')) target = "https://www.ute.com.uy/sites/default/files/logo_ute.png";
+              else if (d.contains('prex')) target = "https://www.prexcard.com/images/logo-prex.png";
+              else if (d.contains('brou') || d.contains('republica')) target = "https://www.brou.com.uy/documents/20124/38202/logo-brou.png";
+              else if (d.contains('hsbc')) target = "https://www.hsbc.com.uy/content/dam/hsbc/uy/images/logos/logo-hsbc.png";
+              else target = "https://logo.clearbit.com/${input.contains('.') ? input : '$input.com'}";
+            }
+            return "https://images.weserv.nl/?url=${Uri.encodeComponent(target)}&n=1&il";
+          }
+
+          final primaryUrl = getPrimaryUrl(currentDomain);
+          // Por defecto la efectiva es la primaria
+          if (effectiveLogoUrl == "") effectiveLogoUrl = primaryUrl;
+
+          return AlertDialog(
+            title: const Text('Buscador de Logos'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: domainCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Empresa o dominio',
+                    hintText: 'ej: Santander, Itaú, OCA, Pepsi',
+                  ),
+                  onChanged: (v) {
+                    effectiveLogoUrl = ""; // Reset al escribir
+                    setDialogState(() {});
+                  },
+                ),
+                const SizedBox(height: 20),
+                if (currentDomain.isNotEmpty)
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.teal.withOpacity(0.3)),
+                    ),
+                    child: Column(
+                      children: [
+                        SizedBox(
+                          height: 80,
+                          width: 80,
+                          child: Image.network(
+                            primaryUrl,
+                            key: ValueKey('p_$primaryUrl'),
+                            fit: BoxFit.contain,
+                            frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+                              if (frame != null) effectiveLogoUrl = primaryUrl;
+                              return child;
+                            },
+                            errorBuilder: (ctx, err, st) {
+                              final domain = currentDomain.contains('.') ? currentDomain : '$currentDomain.com';
+                              final fallback = "https://images.weserv.nl/?url=${Uri.encodeComponent('https://www.google.com/s2/favicons?domain=$domain&sz=128')}&il";
+                              
+                              return Image.network(
+                                fallback,
+                                key: ValueKey('f_$fallback'),
+                                fit: BoxFit.contain,
+                                frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+                                  if (frame != null) effectiveLogoUrl = fallback;
+                                  return child;
+                                },
+                                errorBuilder: (ctx, err2, st2) {
+                                  effectiveLogoUrl = "";
+                                  return const Icon(Icons.business_rounded, size: 40, color: Colors.teal);
+                                },
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text('Vista previa para: $currentDomain', 
+                          style: TextStyle(fontSize: 10, color: Colors.grey.shade600, fontStyle: FontStyle.italic)),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+              FilledButton(
+                onPressed: currentDomain.isEmpty ? null : () {
+                  onSelect(effectiveLogoUrl != "" ? effectiveLogoUrl : primaryUrl);
+                  Navigator.pop(ctx);
+                },
+                child: const Text('Usar este Logo'),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 
@@ -334,9 +485,13 @@ class _SetupPageState extends State<SetupPage> with SingleTickerProviderStateMix
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(controller: titleController, decoration: const InputDecoration(labelText: 'Concepto')),
+              TextField(
+                controller: titleController,
+                decoration: const InputDecoration(labelText: 'Concepto'),
+                onChanged: (_) => setS(() {}),
+              ),
               const SizedBox(height: 15),
-              _buildLogoSelector(selectedLogo, (logo) => setS(() => selectedLogo = logo)),
+              _buildLogoSelector(selectedLogo, (logo) => setS(() => selectedLogo = logo), titleController.text),
               const SizedBox(height: 15),
               Row(
                 children: [
