@@ -6,6 +6,8 @@ import 'firebase_options.dart';
 import 'pages/home_page.dart';
 import 'pages/login_page.dart';
 import 'pages/setup_page.dart';
+import 'pages/budgets_page.dart';
+import 'pages/goals_page.dart';
 import 'services/auth_service.dart';
 
 void main() async {
@@ -48,9 +50,19 @@ class MyApp extends StatelessWidget {
           brightness: Brightness.light,
         ),
       ),
+      darkTheme: ThemeData(
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.teal,
+          brightness: Brightness.dark,
+        ),
+      ),
+      themeMode: ThemeMode.system,
       routes: {
         '/home': (context) => const HomePage(),
         '/setup': (context) => const SetupPage(),
+        '/budgets': (context) => const BudgetsPage(),
+        '/goals': (context) => const GoalsPage(),
         '/login': (context) => const LoginPage(),
       },
       home: StreamBuilder<User?>(

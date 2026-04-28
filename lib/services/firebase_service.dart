@@ -24,7 +24,118 @@ class FirebaseService {
     return _db.collection('users').doc(uid).collection('balances');
   }
 
+  CollectionReference? get _categoriesRef {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return null;
+    return _db.collection('users').doc(uid).collection('categories');
+  }
+
+  CollectionReference? get _budgetsRef {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return null;
+    return _db.collection('users').doc(uid).collection('budgets');
+  }
+
+  CollectionReference? get _goalsRef {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return null;
+    return _db.collection('users').doc(uid).collection('goals');
+  }
+
   String _norm(String text) => text.trim().toLowerCase();
+
+  // --- PRESUPUESTOS ---
+
+  Stream<List<Map<String, dynamic>>> getBudgets(int month, int year) {
+    final ref = _budgetsRef;
+    if (ref == null) return Stream.value([]);
+    return ref.where('month', isEqualTo: month).where('year', isEqualTo: year).snapshots().map((snap) => snap.docs.map((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          data['id'] = doc.id;
+          return data;
+        }).toList());
+  }
+
+  Future<void> setBudget(String categoryName, double amount, int month, int year, String currency) async {
+    try {
+      final ref = _budgetsRef;
+      if (ref == null) return;
+      
+      final existing = await ref
+          .where('categoryName', isEqualTo: categoryName)
+          .where('month', isEqualTo: month)
+          .where('year', isEqualTo: year)
+          .get();
+
+      if (existing.docs.isNotEmpty) {
+        await ref.doc(existing.docs.first.id).update({'amount': amount, 'currency': currency});
+      } else {
+        await ref.add({
+          'categoryName': categoryName,
+          'amount': amount,
+          'month': month,
+          'year': year,
+          'currency': currency,
+        });
+      }
+    } catch (e) {
+      print("Error setBudget: $e");
+    }
+  }
+
+  // --- CATEGORÍAS ---
+
+  Stream<List<Map<String, dynamic>>> getCategories({String? type}) {
+    final ref = _categoriesRef;
+    if (ref == null) return Stream.value([]);
+    
+    Query query = ref;
+    if (type != null) {
+      query = query.where('type', isEqualTo: type);
+    }
+    
+    return query.snapshots().map((snap) {
+      final list = snap.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        data['id'] = doc.id;
+        return data;
+      }).toList();
+      
+      // Ordenar en memoria para evitar requerir índices compuestos en Firestore
+      list.sort((a, b) => (a['name'] as String).toLowerCase().compareTo((b['name'] as String).toLowerCase()));
+      return list;
+    });
+  }
+
+  Future<void> addCategory(Map<String, dynamic> data) async {
+    try {
+      final ref = _categoriesRef;
+      if (ref == null) return;
+      await ref.add(data);
+    } catch (e) {
+      print("Error addCategory: $e");
+    }
+  }
+
+  Future<void> updateCategory(String id, Map<String, dynamic> data) async {
+    try {
+      final ref = _categoriesRef;
+      if (ref == null) return;
+      await ref.doc(id).update(data);
+    } catch (e) {
+      print("Error updateCategory: $e");
+    }
+  }
+
+  Future<void> deleteCategory(String id) async {
+    try {
+      final ref = _categoriesRef;
+      if (ref == null) return;
+      await ref.doc(id).delete();
+    } catch (e) {
+      print("Error deleteCategory: $e");
+    }
+  }
 
   // --- BALANCES REALES (ARQUEO) ---
 
@@ -342,7 +453,7 @@ class FirebaseService {
       final parts = fullItemText.split(' - ');
       if (parts.length < 2) return;
       final conceptWithInstallment = parts[0];
-      final amountStr = parts[1].replaceAll('\$', '').replaceAll('U\$S', '').replaceAll(',', '');
+      final amountStr = parts[1].replaceAll(r'$', '').replaceAll(r'U$S', '').replaceAll(',', '');
       final double amountToSubtract = double.tryParse(amountStr) ?? 0;
       final conceptBase = conceptWithInstallment.contains(' (') ? conceptWithInstallment.substring(0, conceptWithInstallment.lastIndexOf(' (')) : conceptWithInstallment;
       for (int i = 0; i < 24; i++) {
@@ -379,8 +490,8 @@ class FirebaseService {
   }
 
   String _formatAmount(double amount, String currency) {
-    if (currency == 'UYU') return "\$${amount.toStringAsFixed(0)}";
-    return "U\$S${amount.toStringAsFixed(2)}";
+    if (currency == 'UYU') return r'$' + amount.toStringAsFixed(0);
+    return r'U$S' + amount.toStringAsFixed(2);
   }
 
   Future<void> createTemplateFromTransaction(TransactionModel t) async {
@@ -400,6 +511,52 @@ class FirebaseService {
       });
     } catch (e) {
       print("Error createTemplateFromTransaction: $e");
+    }
+  }
+
+  // --- METAS / GOALS ---
+
+  Stream<List<Map<String, dynamic>>> getGoals() {
+    final ref = _goalsRef;
+    if (ref == null) return Stream.value([]);
+    return ref.snapshots().map((snap) => snap.docs.map((doc) {
+      final data = doc.data() as Map<String, dynamic>;
+      data['id'] = doc.id;
+      return data;
+    }).toList());
+  }
+
+  Future<void> addGoal(Map<String, dynamic> data) async {
+    try {
+      final ref = _goalsRef;
+      if (ref == null) return;
+      await ref.add({
+        ...data,
+        'currentAmount': data['currentAmount'] ?? 0.0,
+        'createdAt': Timestamp.now(),
+      });
+    } catch (e) {
+      print("Error addGoal: $e");
+    }
+  }
+
+  Future<void> updateGoal(String id, Map<String, dynamic> data) async {
+    try {
+      final ref = _goalsRef;
+      if (ref == null) return;
+      await ref.doc(id).update(data);
+    } catch (e) {
+      print("Error updateGoal: $e");
+    }
+  }
+
+  Future<void> deleteGoal(String id) async {
+    try {
+      final ref = _goalsRef;
+      if (ref == null) return;
+      await ref.doc(id).delete();
+    } catch (e) {
+      print("Error deleteGoal: $e");
     }
   }
 }

@@ -108,7 +108,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(32.0),
@@ -117,9 +117,9 @@ class _LoginPageState extends State<LoginPage> {
             children: [
               Image.asset('assets/icono.png', width: 150, height: 150),
               const SizedBox(height: 10),
-              const Text(
+              Text(
                 'Cuentas Personales',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.teal),
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary),
               ),
               const SizedBox(height: 40),
               
@@ -153,13 +153,13 @@ class _LoginPageState extends State<LoginPage> {
                   Checkbox(
                     value: _rememberMe,
                     onChanged: (val) => setState(() => _rememberMe = val ?? false),
-                    activeColor: Colors.teal,
+                    activeColor: Theme.of(context).colorScheme.primary,
                   ),
                   const Text('Recordarme', style: TextStyle(fontSize: 14)),
                   const Spacer(),
                   if (_isLogin && _canCheckBiometrics)
                     IconButton(
-                      icon: const Icon(Icons.fingerprint, size: 36, color: Colors.teal),
+                      icon: Icon(Icons.fingerprint, size: 36, color: Theme.of(context).colorScheme.primary),
                       onPressed: _authenticateWithBiometrics,
                       tooltip: 'Ingresar con biometría',
                     ),
@@ -172,8 +172,8 @@ class _LoginPageState extends State<LoginPage> {
                 height: 50,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.teal,
-                    foregroundColor: Colors.white,
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
                   onPressed: _submit,

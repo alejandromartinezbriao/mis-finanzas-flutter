@@ -66,26 +66,17 @@ class BrandIcon extends StatelessWidget {
     }
 
     Widget content;
-    if (manualLogo != null && (manualLogo!.startsWith('http') || manualLogo!.startsWith('https'))) {
-      // Es una URL externa
-      content = Image.network(
-        manualLogo!,
-        width: size * 0.8,
-        height: size * 0.8,
-        fit: BoxFit.contain,
-        errorBuilder: (context, error, stackTrace) => _defaultIcon(label),
-      );
-    } else if (assetPath != null) {
+    if (assetPath != null) {
       // Es un asset local
       content = Image.asset(
         assetPath,
         width: size * 0.8,
         height: size * 0.8,
         fit: BoxFit.contain,
-        errorBuilder: (context, error, stackTrace) => _defaultIcon(label),
+        errorBuilder: (context, error, stackTrace) => _defaultIcon(context, label),
       );
     } else {
-      content = _defaultIcon(label);
+      content = _defaultIcon(context, label);
     }
 
     return Container(
@@ -95,28 +86,29 @@ class BrandIcon extends StatelessWidget {
         shape: BoxShape.circle,
         gradient: RadialGradient(
           colors: [
-            Colors.white,
-            Colors.grey.shade100,
-            Colors.grey.shade300,
+            Theme.of(context).colorScheme.surface,
+            Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+            Theme.of(context).colorScheme.surfaceContainerHighest,
           ],
           center: const Alignment(-0.3, -0.3),
           radius: 0.7,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.2), // Sombra más fuerte para Web
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: size * 0.2,
             offset: Offset(0, size * 0.1),
           ),
-          BoxShadow(
-            color: Colors.white.withOpacity(0.9),
-            blurRadius: size * 0.08,
-            offset: Offset(-size * 0.05, -size * 0.05),
-            spreadRadius: -1,
-          ),
+          if (Theme.of(context).brightness == Brightness.light)
+            BoxShadow(
+              color: Colors.white.withValues(alpha: 0.9),
+              blurRadius: size * 0.08,
+              offset: Offset(-size * 0.05, -size * 0.05),
+              spreadRadius: -1,
+            ),
         ],
         border: Border.all(
-          color: Colors.grey.shade300,
+          color: Theme.of(context).colorScheme.outlineVariant,
           width: 0.5,
         ),
       ),
@@ -129,13 +121,13 @@ class BrandIcon extends StatelessWidget {
     );
   }
 
-  Widget _defaultIcon(String label) {
+  Widget _defaultIcon(BuildContext context, String label) {
     IconData iconData = Icons.account_balance_wallet;
     Color color = Colors.grey;
 
     if (label.contains('tarjeta') || label.contains('visa') || label.contains('master')) {
       iconData = Icons.credit_card;
-      color = Colors.blueGrey;
+      color = Theme.of(context).colorScheme.primary;
     } else if (label.contains('ose') || label.contains('agua')) {
       iconData = Icons.water_drop;
       color = Colors.blue;
