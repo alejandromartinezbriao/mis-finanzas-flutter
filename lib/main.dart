@@ -1,13 +1,16 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:quick_actions/quick_actions.dart';
 import 'firebase_options.dart';
 import 'pages/home_page.dart';
 import 'pages/login_page.dart';
 import 'pages/setup_page.dart';
 import 'pages/budgets_page.dart';
 import 'pages/goals_page.dart';
+import 'pages/statistics_page.dart';
 import 'services/auth_service.dart';
 
 void main() async {
@@ -16,6 +19,11 @@ void main() async {
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
+    );
+    // Habilitar persistencia offline explícitamente
+    FirebaseFirestore.instance.settings = const Settings(
+      persistenceEnabled: true,
+      cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
     );
     runApp(const MyApp());
   } catch (e) {
@@ -27,8 +35,43 @@ void main() async {
   }
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  final QuickActions quickActions = const QuickActions();
+  String? shortcutType;
+
+  @override
+  void initState() {
+    super.initState();
+    _setupQuickActions();
+  }
+
+  void _setupQuickActions() {
+    quickActions.setShortcutItems(<ShortcutItem>[
+      const ShortcutItem(
+        type: 'action_new_expense',
+        localizedTitle: 'Nuevo Gasto',
+        icon: 'ic_launcher',
+      ),
+      const ShortcutItem(
+        type: 'action_new_card',
+        localizedTitle: 'Compra con Tarjeta',
+        icon: 'ic_launcher',
+      ),
+    ]);
+
+    quickActions.initialize((type) {
+      setState(() {
+        shortcutType = type;
+      });
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -63,6 +106,7 @@ class MyApp extends StatelessWidget {
         '/setup': (context) => const SetupPage(),
         '/budgets': (context) => const BudgetsPage(),
         '/goals': (context) => const GoalsPage(),
+        '/statistics': (context) => const StatisticsPage(),
         '/login': (context) => const LoginPage(),
       },
       home: StreamBuilder<User?>(
@@ -78,7 +122,10 @@ class MyApp extends StatelessWidget {
           }
           
           if (snapshot.hasData) {
-            return const HomePage();
+            final String? currentAction = shortcutType;
+            // Consumimos el tipo de shortcut para que no se vuelva a abrir al reconstruir
+            if (currentAction != null) shortcutType = null;
+            return HomePage(initialAction: currentAction);
           }
 
           return const LoginPage();

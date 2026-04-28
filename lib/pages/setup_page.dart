@@ -6,7 +6,8 @@ import '../widgets/brand_icon.dart';
 
 class SetupPage extends StatefulWidget {
   final int initialIndex;
-  const SetupPage({super.key, this.initialIndex = 0});
+  final Map<String, dynamic>? goalToEdit;
+  const SetupPage({super.key, this.initialIndex = 0, this.goalToEdit});
 
   @override
   State<SetupPage> createState() => _SetupPageState();
@@ -28,6 +29,12 @@ class _SetupPageState extends State<SetupPage> with SingleTickerProviderStateMix
     _tabController.addListener(() {
       if (mounted) setState(() {});
     });
+
+    if (widget.goalToEdit != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showGoalDialog(goal: widget.goalToEdit);
+      });
+    }
   }
 
   @override
@@ -748,6 +755,7 @@ class _SetupPageState extends State<SetupPage> with SingleTickerProviderStateMix
     final currentCtrl = TextEditingController(text: goal?['currentAmount']?.toString() ?? '');
     String currency = goal?['currency'] ?? 'UYU';
     String selectedIcon = goal?['icon'] ?? 'flag';
+    String? linkedAccountId = goal?['linkedAccountId'];
 
     showDialog(
       context: context,
@@ -755,62 +763,90 @@ class _SetupPageState extends State<SetupPage> with SingleTickerProviderStateMix
         builder: (ctx, setS) => AlertDialog(
           title: Text(isEdit ? 'Editar Meta' : 'Nueva Meta'),
           content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: titleCtrl,
-                  decoration: const InputDecoration(labelText: 'Nombre de la meta (ej: Viaje)', border: OutlineInputBorder()),
-                ),
-                const SizedBox(height: 15),
-                Row(
+            child: StreamBuilder<List<Map<String, dynamic>>>(
+              stream: _service.getBalances(),
+              builder: (context, balSnapshot) {
+                final accounts = balSnapshot.data ?? [];
+                
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Expanded(
-                      child: DropdownButtonFormField<String>(
-                        value: currency,
-                        items: ['UYU', 'USD'].map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
-                        onChanged: (v) => setS(() => currency = v!),
-                        decoration: const InputDecoration(labelText: 'Moneda'),
-                      ),
+                    TextField(
+                      controller: titleCtrl,
+                      decoration: const InputDecoration(labelText: 'Nombre de la meta (ej: Viaje)', border: OutlineInputBorder()),
                     ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: TextField(
-                        controller: targetCtrl,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(labelText: 'Monto Objetivo', border: OutlineInputBorder()),
-                      ),
+                    const SizedBox(height: 15),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            value: currency,
+                            items: ['UYU', 'USD'].map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                            onChanged: (v) => setS(() {
+                              currency = v!;
+                              // Resetear cuenta vinculada si cambia la moneda para evitar inconsistencias
+                              linkedAccountId = null;
+                            }),
+                            decoration: const InputDecoration(labelText: 'Moneda'),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: TextField(
+                            controller: targetCtrl,
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(labelText: 'Monto Objetivo', border: OutlineInputBorder()),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 15),
+                    TextField(
+                      controller: currentCtrl,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(labelText: 'Monto ya ahorrado', border: OutlineInputBorder()),
+                    ),
+                    const SizedBox(height: 15),
+                    DropdownButtonFormField<String>(
+                      value: linkedAccountId,
+                      hint: const Text('¿Dónde guardas este ahorro?'),
+                      decoration: const InputDecoration(labelText: 'Cuenta vinculada', border: OutlineInputBorder()),
+                      items: [
+                        const DropdownMenuItem<String>(
+                          value: null,
+                          child: Text('Efectivo / Manual'),
+                        ),
+                        ...accounts.where((a) => a['currency'] == currency).map((a) => DropdownMenuItem(
+                          value: a['id'] as String,
+                          child: Text(a['accountName']),
+                        )),
+                      ],
+                      onChanged: (v) => setS(() => linkedAccountId = v),
+                    ),
+                    const SizedBox(height: 20),
+                    const Align(alignment: Alignment.centerLeft, child: Text('Icono representativo:', style: TextStyle(fontWeight: FontWeight.bold))),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 15,
+                      runSpacing: 15,
+                      children: [
+                        'flag', 'flight', 'directions_car', 'home', 'school', 'fitness_center', 'movie', 'redeem', 'pets', 'work'
+                      ].map((iconName) => GestureDetector(
+                        onTap: () => setS(() => selectedIcon = iconName),
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: selectedIcon == iconName ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.2) : Colors.transparent,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: selectedIcon == iconName ? Theme.of(context).colorScheme.primary : Colors.grey.shade300),
+                          ),
+                          child: Icon(_getIconData(iconName), color: selectedIcon == iconName ? Theme.of(context).colorScheme.primary : Colors.grey),
+                        ),
+                      )).toList(),
                     ),
                   ],
-                ),
-                const SizedBox(height: 15),
-                TextField(
-                  controller: currentCtrl,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Monto ya ahorrado', border: OutlineInputBorder()),
-                ),
-                const SizedBox(height: 20),
-                const Align(alignment: Alignment.centerLeft, child: Text('Icono representativo:', style: TextStyle(fontWeight: FontWeight.bold))),
-                const SizedBox(height: 10),
-                Wrap(
-                  spacing: 15,
-                  runSpacing: 15,
-                  children: [
-                    'flag', 'flight', 'directions_car', 'home', 'school', 'fitness_center', 'movie', 'redeem', 'pets', 'work'
-                  ].map((iconName) => GestureDetector(
-                    onTap: () => setS(() => selectedIcon = iconName),
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: selectedIcon == iconName ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.2) : Colors.transparent,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: selectedIcon == iconName ? Theme.of(context).colorScheme.primary : Colors.grey.shade300),
-                      ),
-                      child: Icon(_getIconData(iconName), color: selectedIcon == iconName ? Theme.of(context).colorScheme.primary : Colors.grey),
-                    ),
-                  )).toList(),
-                ),
-              ],
+                );
+              }
             ),
           ),
           actions: [
@@ -824,6 +860,7 @@ class _SetupPageState extends State<SetupPage> with SingleTickerProviderStateMix
                     'currentAmount': double.tryParse(currentCtrl.text) ?? 0.0,
                     'currency': currency,
                     'icon': selectedIcon,
+                    'linkedAccountId': linkedAccountId,
                   };
                   if (isEdit) {
                     _service.updateGoal(goal['id'], data);
@@ -942,6 +979,7 @@ class _SetupPageState extends State<SetupPage> with SingleTickerProviderStateMix
     String selectedCurrency = template?['currency'] ?? 'UYU';
     String? selectedCategoryId;
     bool isCreditCard = template?['isCreditCard'] ?? false;
+    bool includedInCard = template?['includedInCard'] ?? false;
     String? selectedLogo = template?['brandLogo'];
     List<Map<String, dynamic>> subscriptions = List<Map<String, dynamic>>.from(template?['subscriptions'] ?? []);
 
@@ -999,8 +1037,10 @@ class _SetupPageState extends State<SetupPage> with SingleTickerProviderStateMix
                     ),
                     const SizedBox(height: 10),
                     TextField(controller: dayController, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: type == 'EXPENSE' ? 'Día de vencimiento' : 'Día de cobro')),
-                    if (type == 'EXPENSE')
+                    if (type == 'EXPENSE') ...[
                       SwitchListTile(contentPadding: EdgeInsets.zero, title: const Text('¿Es Tarjeta de Crédito?'), value: isCreditCard, onChanged: (v) => setS(() => isCreditCard = v)),
+                      SwitchListTile(contentPadding: EdgeInsets.zero, title: const Text('¿Incluido en tarjeta?'), subtitle: const Text('Ej: Servicio que viene en el resumen'), value: includedInCard, onChanged: (v) => setS(() => includedInCard = v)),
+                    ],
                   ],
                 ),
                 actions: [
@@ -1019,6 +1059,7 @@ class _SetupPageState extends State<SetupPage> with SingleTickerProviderStateMix
                           'type': type,
                           'category': categoryName,
                           'isCreditCard': isCreditCard,
+                          'includedInCard': includedInCard,
                           'brandLogo': selectedLogo,
                           'subscriptions': isCreditCard ? subscriptions : [],
                         };

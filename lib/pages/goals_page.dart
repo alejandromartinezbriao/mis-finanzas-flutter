@@ -70,75 +70,81 @@ class _GoalsPageState extends State<GoalsPage> {
                   ? NumberFormat.currency(locale: 'es_UY', symbol: r'$', decimalDigits: 0)
                   : NumberFormat.currency(locale: 'en_US', symbol: r'U$S', decimalDigits: 2);
 
-              return Card(
-                margin: const EdgeInsets.only(bottom: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          CircleAvatar(
-                            backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                            child: Icon(_getIconData(g['icon']), color: Theme.of(context).colorScheme.primary),
+              return GestureDetector(
+                onTap: () => Navigator.push(
+                  context, 
+                  MaterialPageRoute(builder: (context) => SetupPage(initialIndex: 5, goalToEdit: g))
+                ),
+                child: Card(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            CircleAvatar(
+                              backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                              child: Icon(_getIconData(g['icon']), color: Theme.of(context).colorScheme.primary),
+                            ),
+                            const SizedBox(width: 15),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(g['title'], style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                                  Text('Objetivo: ${format.format(target)}', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13)),
+                                ],
+                              ),
+                            ),
+                            Text('${(percent * 100).toStringAsFixed(0)}%', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.teal)),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: LinearProgressIndicator(
+                            value: percent,
+                            minHeight: 12,
+                            backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                            color: percent >= 1.0 ? Colors.green : Colors.teal,
                           ),
-                          const SizedBox(width: 15),
-                          Expanded(
-                            child: Column(
+                        ),
+                        const SizedBox(height: 15),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(g['title'], style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                                Text('Objetivo: ${format.format(target)}', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13)),
+                                const Text('Ahorrado', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                                Text(format.format(current), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.teal)),
+                              ],
+                            ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                const Text('Faltante', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                                Text(format.format(remaining), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.deepOrange)),
+                              ],
+                            ),
+                          ],
+                        ),
+                        if (percent >= 1.0)
+                          const Padding(
+                            padding: EdgeInsets.only(top: 15),
+                            child: Row(
+                              children: [
+                                Icon(Icons.check_circle, color: Colors.green, size: 16),
+                                SizedBox(width: 8),
+                                Text('¡Meta cumplida!', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 13)),
                               ],
                             ),
                           ),
-                          Text('${(percent * 100).toStringAsFixed(0)}%', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.teal)),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: LinearProgressIndicator(
-                          value: percent,
-                          minHeight: 12,
-                          backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-                          color: percent >= 1.0 ? Colors.green : Colors.teal,
-                        ),
-                      ),
-                      const SizedBox(height: 15),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('Ahorrado', style: TextStyle(fontSize: 11, color: Colors.grey)),
-                              Text(format.format(current), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.teal)),
-                            ],
-                          ),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              const Text('Faltante', style: TextStyle(fontSize: 11, color: Colors.grey)),
-                              Text(format.format(remaining), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.deepOrange)),
-                            ],
-                          ),
-                        ],
-                      ),
-                      if (percent >= 1.0)
-                        const Padding(
-                          padding: EdgeInsets.only(top: 15),
-                          child: Row(
-                            children: [
-                              Icon(Icons.check_circle, color: Colors.green, size: 16),
-                              SizedBox(width: 8),
-                              Text('¡Meta cumplida!', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 13)),
-                            ],
-                          ),
-                        ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               );

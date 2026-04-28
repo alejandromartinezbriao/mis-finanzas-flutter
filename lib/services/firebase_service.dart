@@ -246,6 +246,19 @@ class FirebaseService {
     });
   }
 
+  Stream<List<TransactionModel>> getTransactionsInRange(DateTime start, DateTime end) {
+    final ref = _transactionsRef;
+    if (ref == null) return Stream.value([]);
+
+    return ref
+        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
+        .where('date', isLessThanOrEqualTo: Timestamp.fromDate(end))
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) => TransactionModel.fromMap(doc.data() as Map<String, dynamic>, doc.id)).toList();
+    });
+  }
+
   Future<void> clearMonth(int month, int year) async {
     try {
       final ref = _transactionsRef;
@@ -359,6 +372,7 @@ class FirebaseService {
             'type': data['type'] ?? 'EXPENSE',
             'description': initialDesc,
             'brandLogo': data['brandLogo'], // Sincronizar el logo manual
+            'includedInCard': data['includedInCard'] ?? false,
           });
           addedAny = true;
           existingTitles.add(_norm(title));
@@ -370,7 +384,15 @@ class FirebaseService {
     }
   }
 
-  Future<void> addCreditCardExpense({required String cardName, required double totalAmount, required int installments, required String currency, required DateTime startDate, String? concept}) async {
+  Future<void> addCreditCardExpense({
+    required String cardName,
+    required double totalAmount,
+    required int installments,
+    required String currency,
+    required DateTime startDate,
+    String? concept,
+    String? category,
+  }) async {
     try {
       final ref = _transactionsRef;
       final tRef = _templatesRef;
@@ -424,7 +446,7 @@ class FirebaseService {
             'description': newDesc, 
             'isCompleted': false,
             'dueDate': dueDateTs,
-            'brandLogo': cardLogo // Aseguramos que tenga el logo
+            'brandLogo': cardLogo
           });
         } else {
           await ref.add({
@@ -432,12 +454,12 @@ class FirebaseService {
             'description': detail, 
             'amount': amountPerMonth, 
             'date': Timestamp.fromDate(targetDate), 
-            'category': 'Tarjeta', 
+            'category': category ?? 'Tarjeta', 
             'currency': currency, 
             'type': 'EXPENSE', 
             'isCompleted': false,
             'dueDate': dueDateTs,
-            'brandLogo': cardLogo // Ponemos el logo al crear
+            'brandLogo': cardLogo
           });
         }
       }
@@ -559,4 +581,42 @@ class FirebaseService {
       print("Error deleteGoal: $e");
     }
   }
+
+  // --- TRANSFERENCIAS ---
+
+  Future<void> transferFunds({
+    required String fromAccountId,
+    required double amount,
+    String? toAccountId,
+    String? toGoalId,
+  }) async {
+    try {
+      final batch = _db.batch();
+      final fromRef = _balancesRef!.doc(fromAccountId);
+      
+      // 1. Restar de la cuenta origen
+      final fromDoc = await fromRef.get();
+      final double fromCurrent = (fromDoc.data() as Map<String, dynamic>)['amount'] ?? 0.0;
+      batch.update(fromRef, {'amount': fromCurrent - amount, 'updatedAt': Timestamp.now()});
+
+      // 2. Sumar al destino (Cuenta o Meta)
+      if (toAccountId != null) {
+        final toRef = _balancesRef!.doc(toAccountId);
+        final toDoc = await toRef.get();
+        final double toCurrent = (toDoc.data() as Map<String, dynamic>)['amount'] ?? 0.0;
+        batch.update(toRef, {'amount': toCurrent + amount, 'updatedAt': Timestamp.now()});
+      } else if (toGoalId != null) {
+        final goalRef = _goalsRef!.doc(toGoalId);
+        final goalDoc = await goalRef.get();
+        final double goalCurrent = (goalDoc.data() as Map<String, dynamic>)['currentAmount'] ?? 0.0;
+        batch.update(goalRef, {'currentAmount': goalCurrent + amount});
+      }
+
+      await batch.commit();
+    } catch (e) {
+      print("Error transferFunds: $e");
+      rethrow;
+    }
+  }
+
 }

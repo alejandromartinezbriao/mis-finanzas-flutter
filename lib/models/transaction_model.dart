@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class TransactionModel {
   final String id;
   final String title;
-  final String? description; // Nuevo campo para detalles
+  final String? description;
   final double amount;
   final double? minimumAmount;
   final DateTime date;
@@ -12,7 +12,8 @@ class TransactionModel {
   final String currency;
   final bool isCompleted;
   final String type;
-  final String? brandLogo; // Nuevo campo para el logo manual
+  final String? brandLogo;
+  final bool includedInCard; // Nuevo campo
 
   TransactionModel({
     required this.id,
@@ -27,6 +28,7 @@ class TransactionModel {
     this.isCompleted = false,
     this.type = 'EXPENSE',
     this.brandLogo,
+    this.includedInCard = false,
   });
 
   factory TransactionModel.fromMap(Map<String, dynamic> data, String id) {
@@ -43,6 +45,7 @@ class TransactionModel {
       isCompleted: data['isPaid'] ?? data['isCompleted'] ?? false,
       type: data['type'] ?? 'EXPENSE',
       brandLogo: data['brandLogo'],
+      includedInCard: data['includedInCard'] ?? false,
     );
   }
 
@@ -60,6 +63,7 @@ class TransactionModel {
       'isPaid': isCompleted,
       'type': type,
       'brandLogo': brandLogo,
+      'includedInCard': includedInCard,
     };
   }
 
@@ -75,6 +79,7 @@ class TransactionModel {
     bool? isCompleted,
     String? type,
     String? brandLogo,
+    bool? includedInCard,
   }) {
     return TransactionModel(
       id: id,
@@ -89,6 +94,7 @@ class TransactionModel {
       isCompleted: isCompleted ?? this.isCompleted,
       type: type ?? this.type,
       brandLogo: brandLogo ?? this.brandLogo,
+      includedInCard: includedInCard ?? this.includedInCard,
     );
   }
 }
