@@ -13,7 +13,8 @@ class TransactionModel {
   final bool isCompleted;
   final String type;
   final String? brandLogo;
-  final bool includedInCard; // Nuevo campo
+  final bool includedInCard;
+  final String? paidFromAccountId; // Nuevo campo
 
   TransactionModel({
     required this.id,
@@ -29,6 +30,7 @@ class TransactionModel {
     this.type = 'EXPENSE',
     this.brandLogo,
     this.includedInCard = false,
+    this.paidFromAccountId,
   });
 
   factory TransactionModel.fromMap(Map<String, dynamic> data, String id) {
@@ -46,6 +48,7 @@ class TransactionModel {
       type: data['type'] ?? 'EXPENSE',
       brandLogo: data['brandLogo'],
       includedInCard: data['includedInCard'] ?? false,
+      paidFromAccountId: data['paidFromAccountId'],
     );
   }
 
@@ -64,6 +67,7 @@ class TransactionModel {
       'type': type,
       'brandLogo': brandLogo,
       'includedInCard': includedInCard,
+      'paidFromAccountId': paidFromAccountId,
     };
   }
 
@@ -80,6 +84,7 @@ class TransactionModel {
     String? type,
     String? brandLogo,
     bool? includedInCard,
+    String? paidFromAccountId,
   }) {
     return TransactionModel(
       id: id,
@@ -95,6 +100,7 @@ class TransactionModel {
       type: type ?? this.type,
       brandLogo: brandLogo ?? this.brandLogo,
       includedInCard: includedInCard ?? this.includedInCard,
+      paidFromAccountId: paidFromAccountId ?? this.paidFromAccountId,
     );
   }
 }

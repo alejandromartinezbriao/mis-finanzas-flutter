@@ -324,6 +324,51 @@ class FirebaseService {
 
   // --- LÓGICA DE NEGOCIO ---
 
+  Future<void> completeTransactionWithBalanceUpdate({
+    required TransactionModel transaction,
+    required String accountId,
+    required bool isUndoing, // True si estamos pasando de Completado a Pendiente
+  }) async {
+    try {
+      final batch = _db.batch();
+      final transRef = _transactionsRef!.doc(transaction.id);
+      final accountRef = _balancesRef!.doc(accountId);
+
+      // 1. Actualizar estado de la transacción
+      batch.update(transRef, {
+        'isCompleted': !isUndoing, 
+        'isPaid': !isUndoing,
+        'paidFromAccountId': isUndoing ? null : accountId,
+      });
+
+      // 2. Actualizar el saldo de la cuenta
+      final accountDoc = await accountRef.get();
+      if (!accountDoc.exists) return;
+      
+      double currentBalance = (accountDoc.data() as Map<String, dynamic>)['amount'] ?? 0.0;
+      double transactionAmount = transaction.amount;
+      
+      double newBalance;
+      if (transaction.type == 'EXPENSE') {
+        // Si es gasto y lo pagamos: restamos. Si deshacemos el pago: sumamos.
+        newBalance = isUndoing ? currentBalance + transactionAmount : currentBalance - transactionAmount;
+      } else {
+        // Si es ingreso y se completa: sumamos. Si deshacemos: restamos.
+        newBalance = isUndoing ? currentBalance - transactionAmount : currentBalance + transactionAmount;
+      }
+
+      batch.update(accountRef, {
+        'amount': newBalance,
+        'updatedAt': Timestamp.now(),
+      });
+
+      await batch.commit();
+    } catch (e) {
+      print("Error completeTransactionWithBalanceUpdate: $e");
+      rethrow;
+    }
+  }
+
   Future<void> generateMonthlyTransactions(int month, int year) async {
     try {
       final refT = _templatesRef;

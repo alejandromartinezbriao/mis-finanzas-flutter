@@ -445,6 +445,114 @@ class _EditTransactionDialogState extends State<EditTransactionDialog> {
     super.dispose();
   }
 
+  Future<void> _togglePaidStatus(BuildContext context, TransactionModel t) async {
+    // Asegurarnos de usar el monto actual del controlador por si fue editado
+    final double? currentAmount = double.tryParse(amountController.text.replaceAll('.', '').replaceAll(',', '.'));
+    final transactionToUse = currentAmount != null ? t.copyWith(amount: currentAmount) : t;
+
+    if (t.isCompleted) {
+      // Caso: Deshacer pago (Pasar de Pagado a Pendiente)
+      if (t.paidFromAccountId == null) {
+        // Si no tiene cuenta asociada, solo cambiamos el estado
+        await widget.service.updateTransaction(transactionToUse.copyWith(isCompleted: false));
+        if (mounted) Navigator.pop(context);
+        return;
+      }
+
+      // Si tiene cuenta, revertir el saldo
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Deshacer Pago'),
+          content: const Text('¿Deseas marcar este movimiento como pendiente y devolver el dinero a la cuenta original?'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Solo Pendiente')),
+            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Revertir Saldo')),
+          ],
+        ),
+      );
+
+      if (confirm == null) return;
+
+      if (confirm) {
+        await widget.service.completeTransactionWithBalanceUpdate(
+          transaction: transactionToUse,
+          accountId: t.paidFromAccountId!,
+          isUndoing: true,
+        );
+      } else {
+        await widget.service.updateTransaction(transactionToUse.copyWith(isCompleted: false, paidFromAccountId: null));
+      }
+      if (mounted) Navigator.pop(context);
+    } else {
+      // Caso: Marcar como Pagado
+      _showAccountSelector(context, transactionToUse);
+    }
+  }
+
+  void _showAccountSelector(BuildContext context, TransactionModel t) {
+    showDialog(
+      context: context,
+      builder: (ctx) => StreamBuilder<List<Map<String, dynamic>>>(
+        stream: widget.service.getBalances(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+          final accounts = snapshot.data!;
+
+          return AlertDialog(
+            title: const Text('¿Desde qué cuenta se pagó?'),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: accounts.isEmpty
+                  ? const Text('No tienes cuentas configuradas. Ve al Panel de Control para añadir una.')
+                  : ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: accounts.length + 1,
+                      itemBuilder: (context, index) {
+                        if (index == accounts.length) {
+                          return ListTile(
+                            leading: const Icon(Icons.money_off_csred_outlined),
+                            title: const Text('Pago en efectivo'),
+                            subtitle: const Text('Marcar como pago sin descontar de ninguna cuenta'),
+                            onTap: () {
+                              widget.service.updateTransaction(t.copyWith(isCompleted: true));
+                              Navigator.pop(ctx); // Cierra selector
+                              Navigator.pop(this.context); // Cierra dialogo edicion
+                            },
+                          );
+                        }
+                        final acc = accounts[index];
+                        final bool sameCurrency = acc['currency'] == t.currency;
+
+                        return ListTile(
+                          leading: acc['brandLogo'] != null 
+                            ? Image.asset('assets/logos/${acc['brandLogo']}', width: 24, errorBuilder: (_, __, ___) => const Icon(Icons.account_balance_wallet))
+                            : const Icon(Icons.account_balance_wallet),
+                          title: Text(acc['accountName']),
+                          subtitle: Text('${acc['currency']} ${acc['amount']}'),
+                          trailing: !sameCurrency ? const Icon(Icons.warning_amber, color: Colors.orange, size: 16) : null,
+                          onTap: () async {
+                            await widget.service.completeTransactionWithBalanceUpdate(
+                              transaction: t,
+                              accountId: acc['id'],
+                              isUndoing: false,
+                            );
+                            if (ctx.mounted) Navigator.pop(ctx);
+                            if (mounted) Navigator.pop(this.context);
+                          },
+                        );
+                      },
+                    ),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = widget.transaction;
@@ -526,10 +634,7 @@ class _EditTransactionDialogState extends State<EditTransactionDialog> {
           child: const Text('Eliminar', style: TextStyle(color: Colors.red)),
         ),
         TextButton(
-          onPressed: () {
-            widget.service.updateTransaction(t.copyWith(isCompleted: !t.isCompleted));
-            Navigator.pop(context);
-          },
+          onPressed: () => _togglePaidStatus(context, t),
           child: Text(t.isCompleted ? 'Pendiente' : 'Pagado'),
         ),
         if (t.category != 'Tarjeta')

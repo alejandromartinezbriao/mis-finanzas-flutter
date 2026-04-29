@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/firebase_service.dart';
 import '../../utils/dialog_utils.dart';
-import '../../utils/icon_utils.dart';
 import '../brand_icon.dart';
 
 class TemplateListTab extends StatelessWidget {

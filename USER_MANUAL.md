@@ -33,7 +33,7 @@ Registra tus movimientos recurrentes (Sueldo, UTE, Internet).
 
 ### 3.1 Registrar Movimientos
 Usa el botón **"REGISTRAR MOVIMIENTO"** para elegir entre:
-*   **Ingreso o Gasto Simple:** Un movimiento puntual en el mes actual.
+*   **Ingreso o Gasto Simple:** Un movimiento puntual en el mes actual. Al marcarlo como "Pagado", la app te preguntará de qué cuenta quieres descontar el dinero para mantener tus saldos al día.
 *   **Compra con Tarjeta:** Especial para compras financiadas.
 
 ### 3.2 Gestión de Tarjetas de Crédito

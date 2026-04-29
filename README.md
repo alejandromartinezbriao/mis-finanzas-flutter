@@ -13,7 +13,16 @@ Una aplicación de finanzas personales desarrollada en Flutter, diseñada para o
 - **Modo Offline:** Persistencia de datos local para trabajar sin conexión; sincronización automática al recuperar señal.
 - **Plantillas y Automatización:** Carga rápida de gastos e ingresos fijos. Posibilidad de convertir cualquier transacción en una plantilla recurrente.
 - **Análisis Histórico y Exportación:** Gráficos de evolución de los últimos 6 meses, filtros por categoría y exportación de reportes a CSV (compatible con Excel).
-- **UX Optimizada e Identidad Visual:** Formateo automático de miles y selector unificado de iconografía con más de 50 iconos de Material y logos personalizados para bancos y servicios de Uruguay (BROU, Santander, Itaú, UTE, OSE, etc.).
+- **UX Optimizada e Identidad Visual:** Rediseño minimalista con logo adaptativo, formateo automático de miles y selector unificado de iconografía con más de 50 iconos de Material y logos personalizados para bancos y servicios de Uruguay.
+- **Documentación y Ayuda:** Manual de usuario y sección informativa integrados directamente en la aplicación para facilitar el aprendizaje de nuevas funciones.
+
+## 📄 Documentación del Proyecto
+
+Para más detalles sobre la visión, uso y futuro del proyecto, consulta los siguientes archivos:
+- [Manual del Usuario](USER_MANUAL.md): Guía detallada de todas las funcionalidades.
+- [Acerca de la App](ABOUT_APP.md): Misión, capacidades y detalles técnicos.
+- [Plan de Monetización](MONETIZATION_PLAN.md): Estrategia de negocio, proyecciones y costos de infraestructura.
+- [Log de Proyecto](PROJECT_LOG.md): Historial de cambios y hoja de ruta técnica.
 
 ## 🛠️ Stack Tecnológico
 

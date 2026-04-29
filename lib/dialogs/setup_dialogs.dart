@@ -438,7 +438,7 @@ class SetupDialogs {
             const SizedBox(height: 8),
             const Text('• Puedes elegir si el presupuesto es en Pesos (\$) o Dólares (U\$S).', style: TextStyle(fontSize: 14)),
             const SizedBox(height: 8),
-            const Text('• Los cambios se guardan automáticamente al presionar \"Enter\" o cambiar la moneda.', style: TextStyle(fontSize: 14)),
+            const Text('• Los cambios se guardan automáticamente al presionar "Enter" o cambiar la moneda.', style: TextStyle(fontSize: 14)),
             const SizedBox(height: 8),
             const Text('• En la pantalla de Análisis verás cuánto te queda disponible basado en tus gastos reales.', style: TextStyle(fontSize: 14)),
           ],
