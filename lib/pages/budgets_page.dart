@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../services/firebase_service.dart';
 import '../models/transaction_model.dart';
 import 'package:cuentas_personales/pages/setup_page.dart';
+import '../utils/icon_utils.dart';
 
 class BudgetsPage extends StatefulWidget {
   const BudgetsPage({super.key});
@@ -151,7 +152,7 @@ class _BudgetsPageState extends State<BudgetsPage> {
           children: [
             Row(
               children: [
-                Icon(_getIconData(cat['icon']), color: catColor),
+                Icon(IconUtils.getIconData(cat['icon']), color: catColor),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(cat['name'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
@@ -190,31 +191,5 @@ class _BudgetsPageState extends State<BudgetsPage> {
         ),
       ),
     );
-  }
-
-  IconData _getIconData(String name) {
-    switch (name) {
-      case 'shopping_cart': return Icons.shopping_cart;
-      case 'restaurant': return Icons.restaurant;
-      case 'directions_car': return Icons.directions_car;
-      case 'home': return Icons.home;
-      case 'flash_on': return Icons.flash_on;
-      case 'water_drop': return Icons.water_drop;
-      case 'phone_android': return Icons.phone_android;
-      case 'medical_services': return Icons.medical_services;
-      case 'school': return Icons.school;
-      case 'fitness_center': return Icons.fitness_center;
-      case 'flight': return Icons.flight;
-      case 'movie': return Icons.movie;
-      case 'payments': return Icons.payments;
-      case 'account_balance': return Icons.account_balance;
-      case 'redeem': return Icons.redeem;
-      case 'pets': return Icons.pets;
-      case 'work': return Icons.work;
-      case 'sports_esports': return Icons.sports_esports;
-      case 'stroller': return Icons.stroller;
-      case 'cleaning_services': return Icons.cleaning_services;
-      default: return Icons.category;
-    }
   }
 }

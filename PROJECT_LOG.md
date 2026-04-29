@@ -1,20 +1,21 @@
 # Log de Desarrollo - Cuentas Personales
 
-## Estado Actual (Última actualización: 13/05/2024)
+## Estado Actual (Última actualización: 29/04/2026)
 - **Interfaz**: Profesional, responsiva (Web/Móvil) con tema Teal.
 - **Fuentes**: Ajustadas para alta legibilidad.
 - **Arquitectura**: **Refactorización Mayor completada**. Código desacoplado mediante extracción de Widgets y Diálogos.
 - **Funcionalidad**: 
     - Arqueo de saldos reales y cobertura de deuda.
-    - Carga inteligente de plantillas.
-    - Gestión avanzada de Tarjetas de Crédito (cuotas automáticas).
+    - Carga inteligente de plantillas con soporte para suscripciones fijas.
+    - Control de Presupuestos mensuales por categoría.
+    - Gestión avanzada de Tarjetas de Crédito (cuotas automáticas y mínimos).
     - Accesos directos desde el ícono de la app (Quick Actions).
 - **Infraestructura**: Integración con Firebase (Auth/Firestore), QuickActions y fl_chart.
 
 ## Decisiones Arquitectónicas Tomadas
 1. **Desacoplamiento (Widgets)**: Extracción de componentes visuales clave (`DebtCoverageCard`, `SummaryBalanceCard`, `AccountBalanceDisplay`, `TransactionItemTile`) a la carpeta `lib/widgets/`.
 2. **Modularización de Diálogos**: Traslado de formularios complejos a `lib/dialogs/transaction_dialogs.dart` para reducir el tamaño de `HomePage` y mejorar la mantenibilidad.
-3. **Utilidades Centralizadas**: Creación de `IconUtils` para estandarizar la iconografía en toda la app.
+3. **Utilidades Centralizadas**: Creación de `IconUtils` con selector unificado de iconos Material y logos de empresas locales (BROU, Itaú, Santander, UTE, OSE, etc.).
 4. **Quick Actions**: Implementación de accesos directos ("Nuevo Gasto" y "Compra con Tarjeta") para agilizar el registro desde el escritorio del móvil.
 
 ## Hoja de Ruta (Roadmap) - Estado de Situación
@@ -30,19 +31,22 @@
 - [x] **Modo Offline**: Persistencia de Firestore habilitada (Cache ilimitado).
 - [x] **Validación de Formularios**: Formateo automático de moneda y validaciones de campos.
 - [x] **Categorización Flexible**: Soporte para movimientos sin categoría obligatoria.
+- [x] **Presupuestos**: Control de límites de gasto mensual por categoría.
 
 ### 📊 Fase 3: Análisis y Reportes (Completado)
 - [x] **Exportación**: Generación de reportes en CSV (Excel compatible) con opción de compartir.
 - [x] **Análisis Avanzado**: Comparativa de categorías mes a mes integrada en Estadísticas.
+- [x] **Metas y Transferencias**: Sistema de ahorro vinculado a cuentas reales.
 
 ### 💎 Fase 4: Monetización y Multi-usuario (Siguiente Paso)
 - [ ] **Modo Familiar**: Compartir "Hogares" entre varios usuarios.
 - [ ] **Modelo Premium**: Definición de límites para usuarios gratuitos vs pagos.
 
-## Últimos Avances (13/05/2024 - Tarde)
+## Últimos Avances (29/04/2026)
 - **Gestión de Ahorros**: Implementación de metas vinculadas a cuentas reales con reserva de saldo automática.
 - **Transferencias**: Nuevo sistema de movimientos de fondos entre cuentas y hacia metas.
-- **UX**: Formateo de miles en tiempo real y categorización opcional.
+- **Presupuestos**: Pantalla dedicada para asignar límites mensuales y visualizar cumplimiento.
+- **UX**: Selector de iconos unificado (Material + Logos locales) y formateo de miles en tiempo real.
 - **Multiplataforma**: Exportación optimizada para Web (descarga directa) y Móvil (compartir).
 - **Estadísticas**: Filtros por categoría para análisis de evolución histórica.
 

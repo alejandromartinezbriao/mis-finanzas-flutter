@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../utils/icon_utils.dart';
+
 class BrandIcon extends StatelessWidget {
   final String name;
   final String? manualLogo; // Nuevo campo para logo manual
@@ -17,9 +19,19 @@ class BrandIcon extends StatelessWidget {
     final String label = name.toLowerCase();
     
     // Mapeo de palabras clave a la ruta del asset
-    String? assetPath = manualLogo != null ? 'assets/logos/$manualLogo' : null;
+    String? assetPath;
+    
+    if (manualLogo != null) {
+      if (manualLogo!.startsWith('http')) {
+        // Es una URL
+      } else if (manualLogo!.endsWith('.png')) {
+        assetPath = 'assets/logos/$manualLogo';
+      } else {
+        // Es un nombre de icono material
+      }
+    }
 
-    if (assetPath == null) {
+    if (assetPath == null && manualLogo == null) {
       if (label.contains('santander')) {
         assetPath = 'assets/logos/santander.png';
       } else if (label.contains('itau') || label.contains('itaú')) {
@@ -66,7 +78,15 @@ class BrandIcon extends StatelessWidget {
     }
 
     Widget content;
-    if (assetPath != null) {
+    if (manualLogo != null && manualLogo!.startsWith('http')) {
+      content = Image.network(
+        manualLogo!,
+        width: size * 0.8,
+        height: size * 0.8,
+        fit: BoxFit.contain,
+        errorBuilder: (context, error, stackTrace) => _defaultIcon(context, label),
+      );
+    } else if (assetPath != null) {
       // Es un asset local
       content = Image.asset(
         assetPath,
@@ -74,6 +94,13 @@ class BrandIcon extends StatelessWidget {
         height: size * 0.8,
         fit: BoxFit.contain,
         errorBuilder: (context, error, stackTrace) => _defaultIcon(context, label),
+      );
+    } else if (manualLogo != null && !manualLogo!.endsWith('.png')) {
+      // Es un icono material
+      content = Icon(
+        IconUtils.getIconData(manualLogo),
+        size: size * 0.7,
+        color: Theme.of(context).colorScheme.primary,
       );
     } else {
       content = _defaultIcon(context, label);

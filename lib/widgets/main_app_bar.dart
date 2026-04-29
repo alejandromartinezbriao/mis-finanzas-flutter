@@ -3,6 +3,7 @@ import '../services/firebase_service.dart';
 import '../services/auth_service.dart';
 import '../dialogs/category_distribution_dialog.dart';
 import '../utils/export_utils.dart';
+import '../utils/dialog_utils.dart';
 import 'package:intl/intl.dart';
 
 class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
@@ -28,9 +29,29 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
 
     return AppBar(
       toolbarHeight: 50,
-      title: const Text(
-        'MIS FINANZAS',
-        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, letterSpacing: 1.2),
+      titleSpacing: 12,
+      title: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerLeft,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.account_balance_wallet_rounded,
+              color: Theme.of(context).colorScheme.primary,
+              size: 22,
+            ),
+            const SizedBox(width: 8),
+            const Text(
+              'Mis Finanzas',
+              style: TextStyle(
+                fontWeight: FontWeight.w800,
+                fontSize: 16,
+                letterSpacing: 0.2,
+              ),
+            ),
+          ],
+        ),
       ),
       centerTitle: false,
       elevation: 0,
@@ -38,36 +59,31 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
       foregroundColor: Theme.of(context).colorScheme.onSurface,
       actions: [
         IconButton(
-          icon: const Icon(Icons.pie_chart_outline),
-          tooltip: 'Distribución de gastos',
+          icon: const Icon(Icons.pie_chart_outline, size: 22),
+          tooltip: 'Distribución',
           onPressed: () => _showDistribution(context),
         ),
         IconButton(
-          icon: const Icon(Icons.query_stats),
-          tooltip: 'Análisis histórico',
+          icon: const Icon(Icons.query_stats, size: 22),
+          tooltip: 'Estadísticas',
           onPressed: () => Navigator.pushNamed(context, '/statistics'),
         ),
         IconButton(
-          icon: const Icon(Icons.flag_outlined),
-          tooltip: 'Metas de ahorro',
+          icon: const Icon(Icons.flag_outlined, size: 22),
+          tooltip: 'Metas',
           onPressed: () => Navigator.pushNamed(context, '/goals'),
         ),
         IconButton(
-          icon: const Icon(Icons.bar_chart_outlined),
+          icon: const Icon(Icons.bar_chart_outlined, size: 22),
           tooltip: 'Presupuestos',
           onPressed: () => Navigator.pushNamed(context, '/budgets'),
-        ),
-        IconButton(
-          icon: const Icon(Icons.settings_outlined),
-          tooltip: 'Configuración rápida',
-          onPressed: () => Navigator.pushNamed(context, '/setup'),
         ),
         PopupMenuButton<String>(
           icon: const Icon(Icons.more_vert),
           onSelected: (value) => _handleMenuAction(context, value, monthYearLabel),
           itemBuilder: (context) => _buildMenuItems(),
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: 4),
       ],
     );
   }
@@ -130,6 +146,26 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
           ],
         ),
       ),
+      const PopupMenuItem(
+        value: 'manual',
+        child: Row(
+          children: [
+            Icon(Icons.help_outline, size: 20),
+            SizedBox(width: 12),
+            Text('Manual de Usuario'),
+          ],
+        ),
+      ),
+      const PopupMenuItem(
+        value: 'about',
+        child: Row(
+          children: [
+            Icon(Icons.info_outline, size: 20),
+            SizedBox(width: 12),
+            Text('Acerca de...'),
+          ],
+        ),
+      ),
       const PopupMenuDivider(),
       const PopupMenuItem(
         value: 'logout',
@@ -155,6 +191,10 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
       if (confirm == true) {
         await AuthService().signOut();
       }
+    } else if (value == 'manual') {
+      Navigator.pushNamed(context, '/manual');
+    } else if (value == 'about') {
+      Navigator.pushNamed(context, '/about');
     } else if (value == 'setup') {
       Navigator.pushNamed(context, '/setup');
     } else if (value == 'export') {
@@ -167,14 +207,7 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
         }
       }
     } else if (value == 'clear') {
-      final confirm = await _showConfirmDialog(
-        context,
-        'Limpiar Mes',
-        '¿Borrar todos los movimientos de $label? (No borra las plantillas)',
-        'Limpiar',
-        isDestructive: true,
-      );
-      if (confirm == true) {
+      if (await DialogUtils.confirmDeletion(context, 'Todos los movimientos de $label')) {
         await service.clearMonth(viewingDate.month, viewingDate.year);
       }
     } else if (value == 'generate') {

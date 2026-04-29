@@ -4,6 +4,7 @@ import '../models/transaction_model.dart';
 import '../services/firebase_service.dart';
 import '../utils/icon_utils.dart';
 import '../utils/currency_formatter.dart';
+import '../utils/dialog_utils.dart';
 
 class SimpleTransactionDialog extends StatefulWidget {
   final FirebaseService service;
@@ -73,7 +74,7 @@ class _SimpleTransactionDialogState extends State<SimpleTransactionDialog> {
                   ),
                   const SizedBox(height: 15),
                   DropdownButtonFormField<String>(
-                    value: selectedCategoryId,
+                    initialValue: selectedCategoryId,
                     hint: const Text('Seleccionar Categoría (Opcional)'),
                     decoration: const InputDecoration(labelText: 'Categoría', border: OutlineInputBorder()),
                     items: [
@@ -266,7 +267,7 @@ class _CreditCardTransactionDialogState extends State<CreditCardTransactionDialo
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             DropdownButtonFormField<String>(
-                              value: selectedCard,
+                              initialValue: selectedCard,
                               hint: const Text('Seleccionar Tarjeta'),
                               items: cards.map((c) => DropdownMenuItem<String>(
                                 value: c['title'],
@@ -278,7 +279,7 @@ class _CreditCardTransactionDialogState extends State<CreditCardTransactionDialo
                             ),
                             const SizedBox(height: 10),
                             DropdownButtonFormField<String>(
-                              value: selectedCategoryId,
+                              initialValue: selectedCategoryId,
                               hint: const Text('Categoría (Opcional)'),
                               decoration: const InputDecoration(labelText: 'Categoría', border: OutlineInputBorder()),
                               items: [
@@ -478,28 +479,20 @@ class _EditTransactionDialogState extends State<EditTransactionDialog> {
                   dense: true,
                   contentPadding: EdgeInsets.zero,
                   title: Text(item, style: const TextStyle(fontSize: 12)),
-                  trailing: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
-                  onTap: () async {
-                    final bool? ok = await showDialog<bool>(
-                      context: context,
-                      builder: (ctx) => AlertDialog(
-                        title: const Text('¿Eliminar cuotas?'),
-                        content: Text('Se borrará "$item" de todos los meses.'),
-                        actions: [
-                          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('No')),
-                          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Sí, borrar todo')),
-                        ],
-                      ),
-                    );
-                    if (ok == true) {
-                      await widget.service.removeCreditCardExpense(
-                        cardName: t.title,
-                        fullItemText: item,
-                        startDate: t.date,
-                      );
-                      if (context.mounted) Navigator.pop(context);
-                    }
-                  },
+                  trailing: IconButton(
+                    icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                    onPressed: () async {
+                      if (await DialogUtils.confirmDeletion(context, item)) {
+                        await widget.service.removeCreditCardExpense(
+                          cardName: t.title,
+                          fullItemText: item,
+                          startDate: t.date,
+                        );
+                        if (context.mounted) Navigator.pop(context);
+                      }
+                    },
+                  ),
+                  onTap: () {}, // Deshabilitamos el onTap del ListTile para usar el IconButton
                 )),
                 const Divider(),
               ],
@@ -525,20 +518,7 @@ class _EditTransactionDialogState extends State<EditTransactionDialog> {
       actions: [
         TextButton(
           onPressed: () async {
-            final bool? confirm = await showDialog<bool>(
-              context: context,
-              builder: (ctx) => AlertDialog(
-                title: const Text('¿Borrar ítem?'),
-                actions: [
-                  TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
-                  TextButton(
-                    onPressed: () => Navigator.pop(ctx, true),
-                    child: const Text('Borrar', style: TextStyle(color: Colors.red)),
-                  ),
-                ],
-              ),
-            );
-            if (confirm == true) {
+            if (await DialogUtils.confirmDeletion(context, t.title)) {
               widget.service.deleteTransaction(t.id);
               if (context.mounted) Navigator.pop(context);
             }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/transaction_model.dart';
 import 'brand_icon.dart';
+import '../utils/dialog_utils.dart';
 
 class TransactionItemTile extends StatelessWidget {
   final TransactionModel transaction;
@@ -34,23 +35,7 @@ class TransactionItemTile extends StatelessWidget {
         child: const Icon(Icons.delete_sweep, color: Colors.white),
       ),
       confirmDismiss: (direction) async {
-        return await showDialog<bool>(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('¿Eliminar movimiento?'),
-            content: Text('¿Estás seguro de que quieres eliminar "${transaction.title}"?'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Cancelar'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('Eliminar', style: TextStyle(color: Colors.red)),
-              ),
-            ],
-          ),
-        );
+        return await DialogUtils.confirmDeletion(context, transaction.title);
       },
       onDismissed: (_) => onDeleteConfirmed(),
       child: ListTile(

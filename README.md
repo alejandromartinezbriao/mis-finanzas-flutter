@@ -5,15 +5,15 @@ Una aplicación de finanzas personales desarrollada en Flutter, diseñada para o
 ## 🚀 Características Principales
 
 - **Gestión Bimonetaria:** Manejo nativo y simultáneo de Pesos Uruguayos (UYU) y Dólares (USD).
-- **Análisis de Cobertura de Deuda:** Compara tu **disponible libre** contra tus **obligaciones pendientes**.
+- **Análisis de Cobertura de Deuda:** Compara tu **disponible libre** contra tus **obligaciones pendientes** (gastos fijos y tarjetas).
+- **Presupuestos Mensuales:** Define límites de gasto por categoría y monitorea el cumplimiento en tiempo real.
 - **Metas de Ahorro Inteligentes:** Define metas y vincula cuentas reales. El dinero ahorrado se "reserva" y se resta del disponible para gastos, evitando el uso accidental de ahorros.
 - **Transferencias y Movimientos:** Gestión fluida de fondos entre cuentas y hacia metas de ahorro.
-- **Gestión de Tarjetas de Crédito:** Registra compras en cuotas con distribución automática en meses futuros y asignación de categorías por compra.
+- **Gestión de Tarjetas de Crédito:** Registro de compras en cuotas con distribución automática, manejo de pagos mínimos y soporte para suscripciones fijas dentro del estado de cuenta.
 - **Modo Offline:** Persistencia de datos local para trabajar sin conexión; sincronización automática al recuperar señal.
-- **Plantillas y Automatización:** Carga rápida de gastos e ingresos fijos.
-- **Análisis Histórico y Exportación:** Gráficos de evolución de los últimos 6 meses, filtros por categoría y exportación de reportes a CSV (compatible con Excel) en Web y Móvil.
-- **UX Optimizada:** Formateo automático de miles mientras escribes y categorización flexible.
-- **Identidad Visual:** Reconocimiento automático de logos para servicios y bancos.
+- **Plantillas y Automatización:** Carga rápida de gastos e ingresos fijos. Posibilidad de convertir cualquier transacción en una plantilla recurrente.
+- **Análisis Histórico y Exportación:** Gráficos de evolución de los últimos 6 meses, filtros por categoría y exportación de reportes a CSV (compatible con Excel).
+- **UX Optimizada e Identidad Visual:** Formateo automático de miles y selector unificado de iconografía con más de 50 iconos de Material y logos personalizados para bancos y servicios de Uruguay (BROU, Santander, Itaú, UTE, OSE, etc.).
 
 ## 🛠️ Stack Tecnológico
 

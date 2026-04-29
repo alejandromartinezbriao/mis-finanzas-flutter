@@ -495,7 +495,7 @@ class FirebaseService {
           List<String> items = desc.split(', ').where((s) => s.isNotEmpty).toList();
           bool foundAny = false;
           final newItems = items.where((item) {
-            if (item.startsWith(conceptBase + ' (')) {
+            if (item.startsWith('$conceptBase (')) {
               foundAny = true;
               return false;
             }

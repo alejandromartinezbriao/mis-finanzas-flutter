@@ -84,7 +84,7 @@ class _TransferDialogState extends State<TransferDialog> {
                       }
 
                       return DropdownButtonFormField<String>(
-                        value: _selectedDestinationId,
+                        initialValue: _selectedDestinationId,
                         decoration: const InputDecoration(labelText: 'Cuenta Destino', border: OutlineInputBorder(), prefixIcon: Icon(Icons.account_balance_wallet)),
                         items: accounts.map((a) => DropdownMenuItem(value: a['id'] as String, child: Text(a['accountName']))).toList(),
                         onChanged: (v) => setState(() => _selectedDestinationId = v),
@@ -106,7 +106,7 @@ class _TransferDialogState extends State<TransferDialog> {
                       }
 
                       return DropdownButtonFormField<String>(
-                        value: _selectedDestinationId,
+                        initialValue: _selectedDestinationId,
                         decoration: const InputDecoration(labelText: 'Meta de Ahorro', border: OutlineInputBorder(), prefixIcon: Icon(Icons.outlined_flag)),
                         items: goals.map((g) => DropdownMenuItem(value: g['id'] as String, child: Text(g['title']))).toList(),
                         onChanged: (v) => setState(() => _selectedDestinationId = v),

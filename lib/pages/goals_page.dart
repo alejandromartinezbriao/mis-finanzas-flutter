@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../services/firebase_service.dart';
 import 'setup_page.dart';
+import '../utils/icon_utils.dart';
 
 class GoalsPage extends StatefulWidget {
   const GoalsPage({super.key});
@@ -87,7 +88,7 @@ class _GoalsPageState extends State<GoalsPage> {
                           children: [
                             CircleAvatar(
                               backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                              child: Icon(_getIconData(g['icon']), color: Theme.of(context).colorScheme.primary),
+                              child: Icon(IconUtils.getIconData(g['icon']), color: Theme.of(context).colorScheme.primary),
                             ),
                             const SizedBox(width: 15),
                             Expanded(
@@ -153,21 +154,5 @@ class _GoalsPageState extends State<GoalsPage> {
         },
       ),
     );
-  }
-
-  IconData _getIconData(String? name) {
-    switch (name) {
-      case 'flag': return Icons.flag;
-      case 'flight': return Icons.flight;
-      case 'directions_car': return Icons.directions_car;
-      case 'home': return Icons.home;
-      case 'school': return Icons.school;
-      case 'fitness_center': return Icons.fitness_center;
-      case 'movie': return Icons.movie;
-      case 'redeem': return Icons.redeem;
-      case 'pets': return Icons.pets;
-      case 'work': return Icons.work;
-      default: return Icons.flag;
-    }
   }
 }

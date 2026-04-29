@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'brand_icon.dart';
-import '../dialogs/transfer_dialog.dart';
-import '../services/firebase_service.dart';
 
 class AccountBalanceGrid extends StatelessWidget {
   final Stream<List<Map<String, dynamic>>> balancesStream;
@@ -307,7 +305,7 @@ class AccountBalanceRow extends StatelessWidget {
                             ),
                           ),
                         );
-                      }).toList(),
+                      }),
                     ],
                   ),
                 ),
