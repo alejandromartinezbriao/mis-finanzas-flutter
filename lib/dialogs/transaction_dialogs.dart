@@ -51,7 +51,6 @@ class _SimpleTransactionDialogState extends State<SimpleTransactionDialog> {
         final allCategories = catSnapshot.data ?? [];
         final categories = allCategories.where((c) => c['type'] == type).toList();
 
-        // Validar que la categoría seleccionada sea del tipo correcto
         if (selectedCategoryId != null && !categories.any((c) => c['id'] == selectedCategoryId)) {
           selectedCategoryId = null;
         }
@@ -114,9 +113,13 @@ class _SimpleTransactionDialogState extends State<SimpleTransactionDialog> {
                       Expanded(
                         child: TextFormField(
                           controller: amountController,
-                          keyboardType: TextInputType.number,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
                           inputFormatters: [ThousandsSeparatorInputFormatter()],
-                          decoration: const InputDecoration(labelText: 'Monto', border: OutlineInputBorder()),
+                          decoration: const InputDecoration(
+                            labelText: 'Monto', 
+                            border: OutlineInputBorder(),
+                            helperText: 'Usa coma (,) para decimales. No uses puntos.',
+                          ),
                           validator: (v) {
                             if (v == null || v.isEmpty) return 'Ingresa un monto';
                             return null;
@@ -125,7 +128,7 @@ class _SimpleTransactionDialogState extends State<SimpleTransactionDialog> {
                       ),
                       const SizedBox(width: 10),
                       Container(
-                        height: 56, // Match height of TextFormField with border
+                        height: 56,
                         padding: const EdgeInsets.symmetric(horizontal: 12),
                         decoration: BoxDecoration(
                           border: Border.all(color: Theme.of(context).colorScheme.outline),
@@ -182,7 +185,7 @@ class _SimpleTransactionDialogState extends State<SimpleTransactionDialog> {
                   widget.service.addTransaction(TransactionModel(
                     id: '',
                     title: titleController.text,
-                    amount: double.parse(amountController.text.replaceAll('.', '').replaceAll(',', '.')),
+                    amount: double.tryParse(amountController.text.replaceAll(',', '.')) ?? 0.0,
                     date: selectedDate,
                     category: categoryName,
                     currency: currency,
@@ -318,9 +321,13 @@ class _CreditCardTransactionDialogState extends State<CreditCardTransactionDialo
                                 Expanded(
                                   child: TextFormField(
                                     controller: amountController,
-                                    keyboardType: TextInputType.number,
+                                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
                                     inputFormatters: [ThousandsSeparatorInputFormatter()],
-                                    decoration: const InputDecoration(labelText: 'Monto Total', border: OutlineInputBorder()),
+                                    decoration: const InputDecoration(
+                                      labelText: 'Monto Total', 
+                                      border: OutlineInputBorder(),
+                                      helperText: 'Usa coma (,) para decimales. No uses puntos.',
+                                    ),
                                     validator: (v) {
                                       if (v == null || v.isEmpty) return 'Ingresa un monto';
                                       return null;
@@ -390,7 +397,7 @@ class _CreditCardTransactionDialogState extends State<CreditCardTransactionDialo
 
                         widget.service.addCreditCardExpense(
                           cardName: selectedCard!,
-                          totalAmount: double.parse(amountController.text.replaceAll('.', '').replaceAll(',', '.')),
+                          totalAmount: double.tryParse(amountController.text.replaceAll(',', '.')) ?? 0.0,
                           installments: int.parse(installmentsController.text),
                           currency: currency,
                           startDate: selectedDate,
@@ -433,9 +440,9 @@ class _EditTransactionDialogState extends State<EditTransactionDialog> {
   @override
   void initState() {
     super.initState();
-    final formatter = NumberFormat.decimalPattern('es_UY');
+    // Al editar, mostramos el número con coma decimal para ser consistentes con la entrada
     amountController = TextEditingController(
-      text: formatter.format(widget.transaction.amount),
+      text: widget.transaction.amount.toString().replaceAll('.', ',').replaceAll(RegExp(r',0$'), ''),
     );
   }
 
@@ -446,20 +453,16 @@ class _EditTransactionDialogState extends State<EditTransactionDialog> {
   }
 
   Future<void> _togglePaidStatus(BuildContext context, TransactionModel t) async {
-    // Asegurarnos de usar el monto actual del controlador por si fue editado
-    final double? currentAmount = double.tryParse(amountController.text.replaceAll('.', '').replaceAll(',', '.'));
-    final transactionToUse = currentAmount != null ? t.copyWith(amount: currentAmount) : t;
+    final double currentAmount = double.tryParse(amountController.text.replaceAll(',', '.')) ?? 0.0;
+    final transactionToUse = t.copyWith(amount: currentAmount);
 
     if (t.isCompleted) {
-      // Caso: Deshacer pago (Pasar de Pagado a Pendiente)
       if (t.paidFromAccountId == null) {
-        // Si no tiene cuenta asociada, solo cambiamos el estado
         await widget.service.updateTransaction(transactionToUse.copyWith(isCompleted: false));
         if (mounted) Navigator.pop(context);
         return;
       }
 
-      // Si tiene cuenta, revertir el saldo
       final confirm = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
@@ -485,7 +488,6 @@ class _EditTransactionDialogState extends State<EditTransactionDialog> {
       }
       if (mounted) Navigator.pop(context);
     } else {
-      // Caso: Marcar como Pagado
       _showAccountSelector(context, transactionToUse);
     }
   }
@@ -516,21 +518,18 @@ class _EditTransactionDialogState extends State<EditTransactionDialog> {
                             subtitle: const Text('Marcar como pago sin descontar de ninguna cuenta'),
                             onTap: () {
                               widget.service.updateTransaction(t.copyWith(isCompleted: true));
-                              Navigator.pop(ctx); // Cierra selector
-                              Navigator.pop(this.context); // Cierra dialogo edicion
+                              Navigator.pop(ctx);
+                              Navigator.pop(this.context);
                             },
                           );
                         }
                         final acc = accounts[index];
-                        final bool sameCurrency = acc['currency'] == t.currency;
-
                         return ListTile(
                           leading: acc['brandLogo'] != null 
-                            ? Image.asset('assets/logos/${acc['brandLogo']}', width: 24, errorBuilder: (_, __, ___) => const Icon(Icons.account_balance_wallet))
+                            ? Image.asset('assets/logos/${acc['brandLogo']}', width: 24, errorBuilder: (_, _, _) => const Icon(Icons.account_balance_wallet))
                             : const Icon(Icons.account_balance_wallet),
                           title: Text(acc['accountName']),
                           subtitle: Text('${acc['currency']} ${acc['amount']}'),
-                          trailing: !sameCurrency ? const Icon(Icons.warning_amber, color: Colors.orange, size: 16) : null,
                           onTap: () async {
                             await widget.service.completeTransactionWithBalanceUpdate(
                               transaction: t,
@@ -600,19 +599,19 @@ class _EditTransactionDialogState extends State<EditTransactionDialog> {
                       }
                     },
                   ),
-                  onTap: () {}, // Deshabilitamos el onTap del ListTile para usar el IconButton
                 )),
                 const Divider(),
               ],
               const SizedBox(height: 10),
               TextFormField(
                 controller: amountController,
-                keyboardType: TextInputType.number,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 inputFormatters: [ThousandsSeparatorInputFormatter()],
                 decoration: const InputDecoration(
                   labelText: 'Monto Total',
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.attach_money),
+                  helperText: 'Usa coma (,) para decimales. No uses puntos.',
                 ),
                 validator: (v) {
                   if (v == null || v.isEmpty) return 'Ingresa un monto';
@@ -667,11 +666,9 @@ class _EditTransactionDialogState extends State<EditTransactionDialog> {
         FilledButton(
           onPressed: () {
             if (_formKey.currentState!.validate()) {
-              final double? val = double.tryParse(amountController.text.replaceAll('.', '').replaceAll(',', '.'));
-              if (val != null) {
-                widget.service.updateTransaction(t.copyWith(amount: val));
-                Navigator.pop(context);
-              }
+              final double val = double.tryParse(amountController.text.replaceAll(',', '.')) ?? 0.0;
+              widget.service.updateTransaction(t.copyWith(amount: val));
+              Navigator.pop(context);
             }
           },
           child: const Text('Guardar'),

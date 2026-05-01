@@ -1,12 +1,13 @@
 # Log de Desarrollo - Cuentas Personales
 
-## Estado Actual (Última actualización: 29/04/2026)
+## Estado Actual (Última actualización: 30/04/2026)
 - **Interfaz**: Profesional y minimalista, optimizada para Web y Móvil. Nuevo AppBar con logo adaptativo.
 - **Fuentes**: Tipografía monocromática de alta legibilidad (Negro/Blanco dinámico).
 - **Arquitectura**: Código desacoplado mediante extracción de Widgets, Diálogos y Repositorios lógicos.
 - **Funcionalidad**: 
     - Arqueo de saldos reales y cobertura de deuda.
-    - **Pagos Vinculados**: Al marcar un gasto como pago, se puede seleccionar la cuenta de origen y descontar el saldo automáticamente.
+    - **Pagos Vinculados**: Al marcar un gasto como pago, se puede seleccionar la cuenta de origen y descontar el saldo automáticamente. Incluye soporte para reversión de pagos.
+    - **Validación de Datos**: Política de "Cero Tolerancia" en entrada de montos (uso obligatorio de coma decimal y bloqueo de puntos).
     - Carga inteligente de plantillas con soporte para suscripciones fijas.
     - Control de Presupuestos mensuales por categoría.
     - Gestión avanzada de Tarjetas de Crédito (cuotas automáticas y mínimos).
@@ -44,7 +45,7 @@
 - [ ] **Modo Familiar**: Compartir "Hogares" entre varios usuarios.
 - [ ] **Modelo Premium**: Definición de límites para usuarios gratuitos vs pagos.
 
-## Últimos Avances (29/04/2026)
+## Últimos Avances (30/04/2026)
 - **UX/UI**: Rediseño de la barra de navegación superior con un logo minimalista y optimización de espacio para iconos de acción.
 - **Documentación In-App**: Creación e integración de las pantallas "Acerca de" y "Manual del Usuario" con diseño responsivo y tipografía monocromática.
 - **Estrategia de Negocio**: Elaboración de un plan detallado de monetización (Fase 4) incluyendo proyecciones de costos de infraestructura y dominios web.
@@ -53,6 +54,7 @@
 - **Presupuestos**: Pantalla dedicada para asignar límites mensuales y visualizar cumplimiento.
 - **Multiplataforma**: Mejoras en la visualización web mediante el uso de contenedores con ancho controlado.
 - **Pagos Automáticos**: Integración de lógica para descontar saldos de cuentas bancarias al completar transacciones.
+- **Robustez de Montos**: Implementación de formateadores estrictos y visualización estandarizada de 2 decimales en toda la app.
 
 ---
 *Desarrollado con enfoque en modularidad y escalabilidad.*

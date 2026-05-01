@@ -47,7 +47,7 @@ class _TransferDialogState extends State<TransferDialog> {
         ],
       ),
       content: Container(
-        width: 400, // Ancho fijo para evitar que se expanda infinitamente
+        width: 400,
         constraints: const BoxConstraints(maxWidth: 400),
         child: SingleChildScrollView(
           child: Form(
@@ -119,12 +119,13 @@ class _TransferDialogState extends State<TransferDialog> {
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _amountController,
-                  keyboardType: TextInputType.number,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   inputFormatters: [ThousandsSeparatorInputFormatter()],
                   decoration: InputDecoration(
                     labelText: 'Monto ($currency)',
                     border: const OutlineInputBorder(),
                     prefixIcon: const Icon(Icons.attach_money, color: Colors.teal),
+                    helperText: 'Usa coma (,) para decimales. No uses puntos.',
                   ),
                   validator: (v) {
                     if (v == null || v.isEmpty) return 'Ingresa un monto';
@@ -141,7 +142,7 @@ class _TransferDialogState extends State<TransferDialog> {
         FilledButton(
           onPressed: () async {
             if (_formKey.currentState!.validate() && _selectedDestinationId != null) {
-              final double amount = double.parse(_amountController.text.replaceAll('.', '').replaceAll(',', '.'));
+              final double amount = double.tryParse(_amountController.text.replaceAll(',', '.')) ?? 0.0;
               
               try {
                 await widget.service.transferFunds(

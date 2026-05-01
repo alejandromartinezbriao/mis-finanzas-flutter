@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/intl.dart';
 import '../models/transaction_model.dart';
 
 class FirebaseService {
@@ -517,37 +518,72 @@ class FirebaseService {
     try {
       final ref = _transactionsRef;
       if (ref == null) return;
+
+      // 1. Descomponer el texto para obtener el concepto y el monto a restar
+      // Formato esperado: "Concepto (Cuota X/Y) - $1.234,56"
       final parts = fullItemText.split(' - ');
       if (parts.length < 2) return;
-      final conceptWithInstallment = parts[0];
-      final amountStr = parts[1].replaceAll(r'$', '').replaceAll(r'U$S', '').replaceAll(',', '');
-      final double amountToSubtract = double.tryParse(amountStr) ?? 0;
-      final conceptBase = conceptWithInstallment.contains(' (') ? conceptWithInstallment.substring(0, conceptWithInstallment.lastIndexOf(' (')) : conceptWithInstallment;
-      for (int i = 0; i < 24; i++) {
+      
+      final conceptWithInstallment = parts[0]; // "Concepto (Cuota X/Y)"
+      
+      // Limpiar el monto: quitar símbolos de moneda y puntos de miles, convertir coma a punto
+      String amountClean = parts[1]
+          .replaceAll(r'$', '')
+          .replaceAll(r'U$S', '')
+          .replaceAll('.', '')
+          .replaceAll(',', '.')
+          .trim();
+      
+      final double amountToSubtract = double.tryParse(amountClean) ?? 0;
+      if (amountToSubtract <= 0) return;
+
+      // Extraer el concepto base (lo que está antes del paréntesis)
+      final conceptBase = conceptWithInstallment.contains(' (') 
+          ? conceptWithInstallment.substring(0, conceptWithInstallment.lastIndexOf(' (')) 
+          : conceptWithInstallment;
+
+      // 2. Buscar en los próximos 36 meses (cubriendo cualquier plan de cuotas largo)
+      for (int i = 0; i < 36; i++) {
         DateTime targetDate = DateTime(startDate.year, startDate.month + i, 1, 12, 0, 0);
-        final startQuery = DateTime(targetDate.year, targetDate.month, 1).subtract(const Duration(days: 2));
-        final endQuery = DateTime(targetDate.year, targetDate.month + 1, 1).add(const Duration(days: 2));
-        final snapshot = await ref.where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startQuery)).where('date', isLessThanOrEqualTo: Timestamp.fromDate(endQuery)).get();
+        int targetM = targetDate.month;
+        int targetY = targetDate.year;
+
+        final startQuery = DateTime(targetY, targetM, 1).subtract(const Duration(days: 2));
+        final endQuery = DateTime(targetY, targetM + 1, 1).add(const Duration(days: 2));
+        
+        final snapshot = await ref
+            .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startQuery))
+            .where('date', isLessThanOrEqualTo: Timestamp.fromDate(endQuery))
+            .get();
+
         final cardDoc = snapshot.docs.where((doc) {
           final data = doc.data() as Map<String, dynamic>;
           final DateTime d = (data['date'] as Timestamp).toDate();
-          return d.month == targetDate.month && d.year == targetDate.year && _norm(data['title'] ?? '') == _norm(cardName);
+          return d.month == targetM && d.year == targetY && _norm(data['title'] ?? '') == _norm(cardName);
         }).firstOrNull;
+
         if (cardDoc != null) {
           final data = cardDoc.data() as Map<String, dynamic>;
           String desc = data['description'] ?? '';
           double currentTotal = (data['amount'] ?? 0.0).toDouble();
+          
           List<String> items = desc.split(', ').where((s) => s.isNotEmpty).toList();
-          bool foundAny = false;
+          
+          bool foundInThisMonth = false;
           final newItems = items.where((item) {
+            // Buscamos si el ítem de este mes empieza con el concepto base
             if (item.startsWith('$conceptBase (')) {
-              foundAny = true;
-              return false;
+              foundInThisMonth = true;
+              return false; // Lo eliminamos de la lista
             }
             return true;
           }).toList();
-          if (foundAny) {
-            await ref.doc(cardDoc.id).update({'description': newItems.join(', '), 'amount': (currentTotal - amountToSubtract).clamp(0.0, double.infinity)});
+
+          if (foundInThisMonth) {
+            await ref.doc(cardDoc.id).update({
+              'description': newItems.join(', '),
+              'amount': (currentTotal - amountToSubtract).clamp(0.0, double.infinity)
+            });
           }
         }
       }
@@ -557,8 +593,12 @@ class FirebaseService {
   }
 
   String _formatAmount(double amount, String currency) {
-    if (currency == 'UYU') return r'$' + amount.toStringAsFixed(0);
-    return r'U$S' + amount.toStringAsFixed(2);
+    final formatter = NumberFormat.currency(
+      locale: 'es_UY',
+      symbol: currency == 'UYU' ? r'$' : r'U$S',
+      decimalDigits: 2,
+    );
+    return formatter.format(amount);
   }
 
   Future<void> createTemplateFromTransaction(TransactionModel t) async {

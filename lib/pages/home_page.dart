@@ -10,6 +10,7 @@ import '../widgets/month_selector.dart';
 import '../widgets/main_app_bar.dart';
 import '../dialogs/transaction_dialogs.dart';
 import '../dialogs/transfer_dialog.dart';
+import '../utils/currency_formatter.dart';
 
 class HomePage extends StatefulWidget {
   final String? initialAction;
@@ -26,7 +27,6 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    // Si se abrió por un acceso directo, mostramos el diálogo correspondiente
     if (widget.initialAction != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (widget.initialAction == 'action_new_expense') {
@@ -43,8 +43,8 @@ class _HomePageState extends State<HomePage> {
       });
     }
   }
-  final NumberFormat _uyuFormat = NumberFormat.currency(locale: 'es_UY', symbol: r'$', decimalDigits: 0);
-  final NumberFormat _usdFormat = NumberFormat.currency(locale: 'en_US', symbol: r'U$S', decimalDigits: 0);
+  final NumberFormat _uyuFormat = NumberFormat.currency(locale: 'es_UY', symbol: r'$', decimalDigits: 2);
+  final NumberFormat _usdFormat = NumberFormat.currency(locale: 'en_US', symbol: r'U$S', decimalDigits: 2);
 
   @override
   Widget build(BuildContext context) {
@@ -64,7 +64,6 @@ class _HomePageState extends State<HomePage> {
             return Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // PANEL IZQUIERDO (Resumen y Arqueo)
                 SizedBox(
                   width: 400,
                   child: SingleChildScrollView(
@@ -86,7 +85,6 @@ class _HomePageState extends State<HomePage> {
                             double inUSD = txs.where((t) => t.type == 'INCOME' && t.currency == 'USD').fold(0, (sum, t) => sum + t.amount);
                             double outUSD = txs.where((t) => t.type == 'EXPENSE' && t.currency == 'USD').fold(0, (sum, t) => sum + t.amount);
                             
-                            // Obtener deudas (no pagas) - EXCLUIR los incluidos en tarjeta para evitar doble conteo
                             double debtUYU = txs.where((t) => t.type == 'EXPENSE' && t.currency == 'UYU' && !t.isCompleted && !t.includedInCard).fold(0, (sum, t) => sum + t.amount);
                             double debtUSD = txs.where((t) => t.type == 'EXPENSE' && t.currency == 'USD' && !t.isCompleted && !t.includedInCard).fold(0, (sum, t) => sum + t.amount);
 
@@ -99,11 +97,9 @@ class _HomePageState extends State<HomePage> {
                                     final balances = balSnapshot.data ?? [];
                                     final goals = goalSnapshot.data ?? [];
                                     
-                                    // Calcular dinero total en cuentas
                                     double totalUYU = balances.where((b) => b['currency'] == 'UYU').fold(0, (sum, b) => sum + (b['amount'] ?? 0));
                                     double totalUSD = balances.where((b) => b['currency'] == 'USD').fold(0, (sum, b) => sum + (b['amount'] ?? 0));
                                     
-                                    // Calcular cuánto de ese dinero está reservado para metas
                                     double reservedUYU = goals
                                         .where((g) => g['currency'] == 'UYU' && g['linkedAccountId'] != null)
                                         .fold(0, (sum, g) => sum + (g['currentAmount'] ?? 0));
@@ -111,7 +107,6 @@ class _HomePageState extends State<HomePage> {
                                         .where((g) => g['currency'] == 'USD' && g['linkedAccountId'] != null)
                                         .fold(0, (sum, g) => sum + (g['currentAmount'] ?? 0));
 
-                                    // El disponible real para pagar deudas es Total - Reservado
                                     double freeUYU = totalUYU - reservedUYU;
                                     double freeUSD = totalUSD - reservedUSD;
 
@@ -157,7 +152,6 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
                 const VerticalDivider(width: 1),
-                // PANEL DERECHO (Lista de movimientos)
                 Expanded(
                   child: Column(
                     children: [
@@ -170,7 +164,6 @@ class _HomePageState extends State<HomePage> {
             );
           }
 
-          // DISEÑO MÓVIL
           return Column(
             children: [
               MonthSelector(
@@ -217,13 +210,11 @@ class _HomePageState extends State<HomePage> {
           return _buildEmptyState();
         }
 
-        // Totales para móvil (se calculan aquí si no es web)
         double inUYU = transactions.where((t) => t.type == 'INCOME' && t.currency == 'UYU').fold(0, (sum, t) => sum + t.amount);
         double outUYU = transactions.where((t) => t.type == 'EXPENSE' && t.currency == 'UYU').fold(0, (sum, t) => sum + t.amount);
         double inUSD = transactions.where((t) => t.type == 'INCOME' && t.currency == 'USD').fold(0, (sum, t) => sum + t.amount);
         double outUSD = transactions.where((t) => t.type == 'EXPENSE' && t.currency == 'USD').fold(0, (sum, t) => sum + t.amount);
 
-        // Deudas (no pagas) - EXCLUIR los incluidos en tarjeta
         double debtUYU = transactions.where((t) => t.type == 'EXPENSE' && t.currency == 'UYU' && !t.isCompleted && !t.includedInCard).fold(0, (sum, t) => sum + t.amount);
         double debtUSD = transactions.where((t) => t.type == 'EXPENSE' && t.currency == 'USD' && !t.isCompleted && !t.includedInCard).fold(0, (sum, t) => sum + t.amount);
 
@@ -341,7 +332,9 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _showUpdateBalanceDialog(Map<String, dynamic> b) {
-    final controller = TextEditingController(text: b['amount'].toString());
+    final controller = TextEditingController(
+      text: (b['amount'] ?? 0.0).toString().replaceAll('.', ',').replaceAll(RegExp(r',0$'), '')
+    );
     final format = b['currency'] == 'UYU' ? _uyuFormat : _usdFormat;
 
     showDialog(
@@ -359,10 +352,11 @@ class _HomePageState extends State<HomePage> {
               children: [
                 TextField(
                   controller: controller,
-                  keyboardType: TextInputType.number,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: [ThousandsSeparatorInputFormatter()],
                   decoration: InputDecoration(
                     labelText: 'Saldo Total en la Cuenta (${b['currency']})',
-                    helperText: 'Ingresa el saldo real que ves en tu banco/billetera',
+                    helperText: 'Usa coma (,) para decimales. No uses puntos.',
                     prefixIcon: const Icon(Icons.account_balance_wallet),
                   ),
                 ),
@@ -407,7 +401,7 @@ class _HomePageState extends State<HomePage> {
                     children: [
                       const Text('Disponible Libre:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.blueGrey)),
                       Builder(builder: (context) {
-                        final currentVal = double.tryParse(controller.text) ?? 0.0;
+                        final currentVal = double.tryParse(controller.text.replaceAll(',', '.')) ?? 0.0;
                         return Text(format.format(currentVal - totalReserved), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.blueGrey));
                       }),
                     ],
@@ -430,7 +424,7 @@ class _HomePageState extends State<HomePage> {
               TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
               FilledButton(
                 onPressed: () {
-                  final val = double.tryParse(controller.text);
+                  final val = double.tryParse(controller.text.replaceAll(',', '.'));
                   if (val != null) {
                     _service.updateBalance(b['id'], val);
                     Navigator.pop(ctx);

@@ -1,9 +1,6 @@
 import 'package:flutter/services.dart';
-import 'package:intl/intl.dart';
 
 class ThousandsSeparatorInputFormatter extends TextInputFormatter {
-  static final NumberFormat _formatter = NumberFormat.decimalPattern('es_UY');
-
   @override
   TextEditingValue formatEditUpdate(
     TextEditingValue oldValue,
@@ -13,17 +10,17 @@ class ThousandsSeparatorInputFormatter extends TextInputFormatter {
       return newValue.copyWith(text: '');
     }
 
-    // Remover todo lo que no sea número
-    String newText = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+    // Política de "Cero Tolerancia":
+    // Solo permitimos dígitos y una única COMA (,) para decimales.
+    // NO permitimos puntos (.) de ningún tipo.
     
-    if (newText.isEmpty) return newValue.copyWith(text: '');
+    final regExp = RegExp(r'^\d*,?\d{0,2}$');
+    
+    if (regExp.hasMatch(newValue.text)) {
+      return newValue;
+    }
 
-    double value = double.parse(newText);
-    String formatted = _formatter.format(value);
-
-    return newValue.copyWith(
-      text: formatted,
-      selection: TextSelection.collapsed(offset: formatted.length),
-    );
+    // Si el usuario intenta poner un punto o una segunda coma, lo bloqueamos.
+    return oldValue;
   }
 }

@@ -45,7 +45,8 @@ class UserManualPage extends StatelessWidget {
               _buildParagraph(
                 'En la pantalla principal puedes registrar dos tipos de movimientos:\n\n'
                 '• Movimientos Simples: Gastos o ingresos puntuales del mes.\n'
-                '• Compras con Tarjeta: Registra el monto total y las cuotas; la app distribuirá el gasto en los meses futuros automáticamente.',
+                '• Compras con Tarjeta: Registra el monto total y las cuotas; la app distribuirá el gasto en los meses futuros automáticamente.\n\n'
+                'Al ingresar montos, utiliza siempre la coma (,) para los decimales (el punto está bloqueado). Al marcar un gasto como "Pagado", podrás elegir la cuenta de origen para que el saldo se descuente automáticamente.',
                 textColor
               ),
 
