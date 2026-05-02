@@ -5,7 +5,9 @@ Una aplicación de finanzas personales desarrollada en Flutter, diseñada para o
 ## 🚀 Características Principales
 
 - **Gestión Bimonetaria:** Manejo nativo y simultáneo de Pesos Uruguayos (UYU) y Dólares (USD).
-- **Análisis de Cobertura de Deuda:** Compara tu **disponible libre** contra tus **obligaciones pendientes** (gastos fijos y tarjetas).
+- **Análisis de Cobertura Dinámico:** Compara tu **disponible libre** contra tus **deudas** en el mes actual, o visualiza el **cierre de mes** (superávit/déficit exacto) al consultar meses pasados.
+- **Ingresos con Auto-saldo:** Asigna tus ingresos directamente a cuentas bancarias al registrarlos para mantener tus balances actualizados sin esfuerzo.
+- **Identidad Visual Intuitiva:** Código de colores estandarizado (**Verde** para ingresos, **Naranja Rojizo** para egresos) para una interpretación inmediata del estado financiero.
 - **Presupuestos Mensuales:** Define límites de gasto por categoría y monitorea el cumplimiento en tiempo real.
 - **Metas de Ahorro Inteligentes:** Define metas y vincula cuentas reales. El dinero ahorrado se "reserva" y se resta del disponible para gastos, evitando el uso accidental de ahorros.
 - **Transferencias y Movimientos:** Gestión fluida de fondos entre cuentas y hacia metas de ahorro.

@@ -4,11 +4,12 @@ Bienvenido al manual oficial de **Mis Finanzas**. Esta guía te ayudará a compr
 
 ---
 
-## 1. Conceptos Fundamentales
-La aplicación se basa en tres pilares:
-*   **Bimonetaria:** Manejo nativo de Pesos Uruguayos (UYU) y Dólares (USD).
-*   **Arqueo Real:** Comparación de tu dinero en mano/banco contra tus deudas.
-*   **Reserva de Ahorros:** El dinero que ahorras se "separa" de tu disponible para que no lo gastes accidentalmente.
+## 1. Conceptos Fundamentales (Ejes del Sistema)
+La aplicación se sustenta en cuatro pilares estratégicos para garantizar una gestión financiera profesional:
+*   **Gestión Bimonetaria:** Administración nativa y simultánea de activos en Pesos Uruguayos (UYU) y Dólares (USD).
+*   **Liquidez y Cobertura Dinámica:** Análisis en tiempo real de su disponibilidad financiera comparada con sus obligaciones pendientes del mes actual.
+*   **Identidad Visual:** Interfaz optimizada para una interpretación inmediata; el **Verde** identifica ingresos y saldos positivos, mientras que el **Naranja Rojizo** señala egresos y deudas.
+*   **Reserva de Ahorros:** Protección lógica de fondos destinados a metas específicas, restándolos de su disponible para evitar consumos accidentales de capital ahorrado.
 
 ---
 
@@ -23,8 +24,9 @@ Aquí defines dónde tienes tu dinero (ej: Santander, BROU, Efectivo).
 ### 2.2 Categorías de Gasto
 Personaliza tus categorías (ej: Supermercado, Alquiler, Ocio). Puedes elegir iconos de la galería de Material Design.
 
-### 2.3 Plantillas (Gastos/Ingresos Fijos)
-Registra tus movimientos recurrentes (Sueldo, UTE, Internet). 
+### 2.3 Plantillas (Gastos / Tarjetas)
+Registra tus movimientos recurrentes (Sueldo, Alquiler, UTE, etc.). 
+*   **Tarjetas de Crédito:** Debes registrarlas aquí como un "Gasto Fijo". Esto permite que la app genere el ítem de pago mensual automáticamente.
 *   Al inicio de cada mes, puedes cargar todas estas plantillas con un solo botón desde la pantalla principal.
 
 ---
@@ -33,7 +35,8 @@ Registra tus movimientos recurrentes (Sueldo, UTE, Internet).
 
 ### 3.1 Registrar Movimientos
 Usa el botón **"REGISTRAR MOVIMIENTO"** para elegir entre:
-*   **Ingreso o Gasto Simple:** Un movimiento puntual en el mes actual. Al marcarlo como "Pagado", la app te permitirá seleccionar una de tus cuentas para descontar el saldo automáticamente (o marcarlo como "Pago en Efectivo").
+*   **Ingreso:** Al crearlo, puedes seleccionar la **Cuenta de Destino** (ej: BROU, Efectivo). El monto se sumará automáticamente al saldo de esa cuenta para que no tengas que hacerlo manualmente.
+*   **Gasto Simple:** Un movimiento puntual en el mes actual. Al marcarlo como "Pagado", la app te permitirá seleccionar una de tus cuentas para descontar el saldo automáticamente (o marcarlo como "Pago en Efectivo").
 *   **Compra con Tarjeta:** Especial para compras financiadas.
 
 **Nota sobre Montos:** Al ingresar cifras, utiliza siempre la **coma (,)** para los decimales. El punto (.) está bloqueado para evitar errores de interpretación. La aplicación siempre mostrará 2 decimales para mayor claridad.

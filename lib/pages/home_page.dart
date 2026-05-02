@@ -110,6 +110,14 @@ class _HomePageState extends State<HomePage> {
                                     double freeUYU = totalUYU - reservedUYU;
                                     double freeUSD = totalUSD - reservedUSD;
 
+                                    // Determinar estado del mes
+                                    final now = DateTime.now();
+                                    final viewingMonth = DateTime(_viewingDate.year, _viewingDate.month);
+                                    final currentMonth = DateTime(now.year, now.month);
+                                    
+                                    final bool isPast = viewingMonth.isBefore(currentMonth);
+                                    final bool isFuture = viewingMonth.isAfter(currentMonth);
+
                                     return Column(
                                       children: [
                                         SummaryBalanceCard(
@@ -121,15 +129,18 @@ class _HomePageState extends State<HomePage> {
                                           usdFormat: _usdFormat,
                                           isVertical: true,
                                         ),
-                                        const SizedBox(height: 20),
-                                        DebtCoverageCard(
-                                          realUYU: freeUYU,
-                                          debtUYU: debtUYU,
-                                          realUSD: freeUSD,
-                                          debtUSD: debtUSD,
-                                          uyuFormat: _uyuFormat,
-                                          usdFormat: _usdFormat,
-                                        ),
+                                        if (!isFuture) ...[
+                                          const SizedBox(height: 20),
+                                          DebtCoverageCard(
+                                            realUYU: isPast ? inUYU : freeUYU,
+                                            debtUYU: isPast ? outUYU : debtUYU,
+                                            realUSD: isPast ? inUSD : freeUSD,
+                                            debtUSD: isPast ? outUSD : debtUSD,
+                                            uyuFormat: _uyuFormat,
+                                            usdFormat: _usdFormat,
+                                            isClosureMode: isPast,
+                                          ),
+                                        ],
                                       ],
                                     );
                                   }
@@ -218,6 +229,14 @@ class _HomePageState extends State<HomePage> {
         double debtUYU = transactions.where((t) => t.type == 'EXPENSE' && t.currency == 'UYU' && !t.isCompleted && !t.includedInCard).fold(0, (sum, t) => sum + t.amount);
         double debtUSD = transactions.where((t) => t.type == 'EXPENSE' && t.currency == 'USD' && !t.isCompleted && !t.includedInCard).fold(0, (sum, t) => sum + t.amount);
 
+        // Determinar estado del mes
+        final now = DateTime.now();
+        final viewingMonth = DateTime(_viewingDate.year, _viewingDate.month);
+        final currentMonth = DateTime(now.year, now.month);
+        
+        final bool isPast = viewingMonth.isBefore(currentMonth);
+        final bool isFuture = viewingMonth.isAfter(currentMonth);
+
         final incomes = transactions.where((t) => t.type == 'INCOME').toList()..sort((a, b) => a.title.compareTo(b.title));
         final expenses = transactions.where((t) => t.type == 'EXPENSE').toList()..sort((a, b) => a.title.compareTo(b.title));
 
@@ -259,14 +278,17 @@ class _HomePageState extends State<HomePage> {
                           .where((g) => g['currency'] == 'USD' && g['linkedAccountId'] != null)
                           .fold(0, (sum, g) => sum + (g['currentAmount'] ?? 0));
 
+                      if (isFuture) return const SizedBox.shrink();
+
                       return DebtCoverageCard(
-                        realUYU: totalUYU - reservedUYU,
-                        debtUYU: debtUYU,
-                        realUSD: totalUSD - reservedUSD,
-                        debtUSD: debtUSD,
+                        realUYU: isPast ? inUYU : totalUYU - reservedUYU,
+                        debtUYU: isPast ? outUYU : debtUYU,
+                        realUSD: isPast ? inUSD : totalUSD - reservedUSD,
+                        debtUSD: isPast ? outUSD : debtUSD,
                         uyuFormat: _uyuFormat,
                         usdFormat: _usdFormat,
                         isMobile: true,
+                        isClosureMode: isPast,
                       );
                     }
                   );

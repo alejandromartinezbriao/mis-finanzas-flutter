@@ -31,7 +31,7 @@ class TemplateListTab extends StatelessWidget {
                 return Center(
                   child: Text(
                     type == 'EXPENSE' 
-                      ? 'No hay gastos fijos configurados.' 
+                      ? 'No hay gastos fijos o tarjetas configuradas.'
                       : 'No hay ingresos fijos configurados.',
                     style: const TextStyle(color: Colors.grey),
                   ),

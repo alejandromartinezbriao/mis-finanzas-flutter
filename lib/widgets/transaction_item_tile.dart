@@ -72,14 +72,14 @@ class TransactionItemTile extends StatelessWidget {
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 14,
-                color: isExpense ? Theme.of(context).colorScheme.onSurface : Colors.green,
+                color: isExpense ? Colors.deepOrange.shade800 : Colors.green,
               ),
             ),
             if (isExpense)
               Icon(
                 transaction.isCompleted ? Icons.check_circle : Icons.pending_actions,
                 size: 14,
-                color: transaction.isCompleted ? Colors.green : Colors.orange,
+                color: transaction.isCompleted ? Colors.green : Colors.deepOrange,
               ),
           ],
         ),

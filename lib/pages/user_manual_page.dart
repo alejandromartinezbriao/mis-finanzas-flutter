@@ -23,12 +23,13 @@ class UserManualPage extends StatelessWidget {
               _buildHeader('Guía de Uso de Mis Finanzas', titleColor),
               const SizedBox(height: 24),
               
-              _buildSectionTitle('1. Conceptos Fundamentales', titleColor),
+              _buildSectionTitle('1. Conceptos Fundamentales (Ejes del Sistema)', titleColor),
               _buildParagraph(
-                'La aplicación está diseñada bajo tres pilares estratégicos:\n\n'
-                '• Bimonetaria: Gestión nativa de Pesos (UYU) y Dólares (USD).\n'
-                '• Arqueo Real: Comparación de saldos bancarios contra deudas actuales.\n'
-                '• Reserva de Ahorros: Protección lógica de fondos destinados a metas.',
+                'La aplicación se sustenta en cuatro pilares estratégicos para garantizar una gestión profesional:\n\n'
+                '• Gestión Bimonetaria: Administración nativa y simultánea de activos en Pesos (UYU) y Dólares (USD).\n'
+                '• Liquidez y Cobertura Dinámica: Análisis en tiempo real de su disponibilidad financiera frente a obligaciones pendientes.\n'
+                '• Identidad Visual: Interfaz optimizada; el Verde identifica ingresos y saldos positivos; el Naranja Rojizo señala egresos y deudas.\n'
+                '• Reserva de Ahorros: Protección lógica de fondos destinados a metas específicas, aislándolos de su disponible para gastos.',
                 textColor
               ),
 
@@ -37,16 +38,17 @@ class UserManualPage extends StatelessWidget {
                 'Accede desde el menú de opciones (...) > Panel de Control. Antes de comenzar, configura tus bases:\n\n'
                 '• Cuentas: Define tus bancos y billeteras. Mantén el saldo real actualizado para que el análisis de cobertura sea preciso.\n'
                 '• Categorías: Personaliza tus tipos de gasto con iconos representativos.\n'
-                '• Plantillas: Registra tus ingresos y gastos fijos para cargarlos automáticamente cada mes.',
+                '• Plantillas: Registra tus ingresos y gastos fijos (incluyendo tarjetas de crédito) para cargarlos automáticamente cada mes.',
                 textColor
               ),
 
               _buildSectionTitle('3. Uso Diario', titleColor),
               _buildParagraph(
                 'En la pantalla principal puedes registrar dos tipos de movimientos:\n\n'
-                '• Movimientos Simples: Gastos o ingresos puntuales del mes.\n'
-                '• Compras con Tarjeta: Registra el monto total y las cuotas; la app distribuirá el gasto en los meses futuros automáticamente.\n\n'
-                'Al ingresar montos, utiliza siempre la coma (,) para los decimales (el punto está bloqueado). Al marcar un gasto como "Pagado", podrás elegir la cuenta de origen para que el saldo se descuente automáticamente.',
+                '• Ingresos: Al registrarlos, puedes elegir la cuenta destino para actualizar su saldo automáticamente.\n'
+                '• Gastos Simples: Movimientos puntuales. Al marcarlos como "Pagados", eliges de qué cuenta descontar el dinero.\n'
+                '• Compras con Tarjeta: Registra el total y las cuotas; la app las distribuirá automáticamente.\n\n'
+                'Al ingresar montos, utiliza siempre la coma (,) para los decimales (el punto está bloqueado).',
                 textColor
               ),
 
@@ -71,14 +73,7 @@ class UserManualPage extends StatelessWidget {
                 textColor
               ),
 
-              const Divider(height: 60),
-              Center(
-                child: Text(
-                  'Si necesitas más ayuda, consulta la sección "Acerca de".',
-                  style: TextStyle(color: textColor, fontStyle: FontStyle.italic),
-                ),
-              ),
-              const SizedBox(height: 40),
+              const SizedBox(height: 60),
             ],
           ),
         ),

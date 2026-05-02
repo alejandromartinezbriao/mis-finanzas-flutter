@@ -211,6 +211,46 @@ class FirebaseService {
     }
   }
 
+  Future<void> addTransactionWithBalanceUpdate({
+    required TransactionModel transaction,
+    String? accountId,
+  }) async {
+    try {
+      final batch = _db.batch();
+      final transRef = _transactionsRef!.doc(); // Generar ID automático
+      
+      // 1. Guardar la transacción
+      batch.set(transRef, {
+        ...transaction.toMap(),
+        if (accountId != null) 'paidFromAccountId': accountId,
+      });
+
+      // 2. Si hay cuenta asociada, actualizar su saldo
+      if (accountId != null) {
+        final accountRef = _balancesRef!.doc(accountId);
+        final accountDoc = await accountRef.get();
+        
+        if (accountDoc.exists) {
+          double currentBalance = (accountDoc.data() as Map<String, dynamic>)['amount'] ?? 0.0;
+          // Si es ingreso sumamos, si es gasto restamos (aunque por ahora solo lo usaremos para ingresos)
+          double newBalance = transaction.type == 'INCOME' 
+              ? currentBalance + transaction.amount 
+              : currentBalance - transaction.amount;
+          
+          batch.update(accountRef, {
+            'amount': newBalance,
+            'updatedAt': Timestamp.now(),
+          });
+        }
+      }
+
+      await batch.commit();
+    } catch (e) {
+      print("Error addTransactionWithBalanceUpdate: $e");
+      rethrow;
+    }
+  }
+
   Future<void> updateTransaction(TransactionModel t) async {
     try {
       final ref = _transactionsRef;

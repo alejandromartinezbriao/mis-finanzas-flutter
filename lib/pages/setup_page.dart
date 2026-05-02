@@ -77,7 +77,7 @@ class _SetupPageState extends State<SetupPage> with SingleTickerProviderStateMix
           unselectedLabelStyle: const TextStyle(fontSize: 12),
           isScrollable: true,
           tabs: const [
-            Tab(icon: Icon(Icons.money_off), text: 'Gastos'),
+            Tab(icon: Icon(Icons.money_off), text: 'Gastos / Tarjetas'),
             Tab(icon: Icon(Icons.attach_money), text: 'Ingresos'),
             Tab(icon: Icon(Icons.account_balance), text: 'Mis Cuentas'),
             Tab(icon: Icon(Icons.category_outlined), text: 'Categorías'),
@@ -150,7 +150,7 @@ class _SetupPageState extends State<SetupPage> with SingleTickerProviderStateMix
 
   String _getButtonLabel() {
     switch (_tabController.index) {
-      case 0: return 'NUEVO GASTO FIJO';
+      case 0: return 'NUEVO GASTO / TARJETA';
       case 1: return 'NUEVO INGRESO FIJO';
       case 2: return 'NUEVA CUENTA';
       case 3: return 'NUEVA CATEGORÍA';

@@ -83,9 +83,9 @@ class SummaryBalanceCard extends StatelessWidget {
           ),
         ),
         SizedBox(height: isCompact ? 4 : 12),
-        _miniAmount(context, 'Ingresos', income, Colors.teal, format, isCompact: isCompact),
+        _miniAmount(context, 'Ingresos', income, Colors.green, format, isCompact: isCompact),
         SizedBox(height: isCompact ? 2 : 4),
-        _miniAmount(context, 'Egresos', expense, Colors.deepOrange, format, isCompact: isCompact),
+        _miniAmount(context, 'Egresos', expense, Colors.deepOrange.shade800, format, isCompact: isCompact),
         if (!isCompact) ...[
           const SizedBox(height: 12),
           ClipRRect(
@@ -93,7 +93,7 @@ class SummaryBalanceCard extends StatelessWidget {
             child: LinearProgressIndicator(
               value: progress,
               backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-              color: progress > 0.9 ? Colors.red : (progress > 0.5 ? Colors.orange : Colors.teal),
+              color: progress > 0.9 ? Colors.red : (progress > 0.5 ? Colors.deepOrange : Colors.green),
               minHeight: 8,
             ),
           ),
@@ -114,7 +114,7 @@ class SummaryBalanceCard extends StatelessWidget {
               style: TextStyle(
                 fontSize: isCompact ? 16 : 18,
                 fontWeight: FontWeight.bold,
-                color: balance >= 0 ? Colors.teal : Colors.red,
+                color: balance >= 0 ? Colors.green : Colors.red,
               ),
             ),
           ],
