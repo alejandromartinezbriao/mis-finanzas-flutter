@@ -27,6 +27,9 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+    // Asegurar que el perfil del usuario existe (y es Premium por defecto en esta fase)
+    _service.createUserProfileIfNotExist();
+
     if (widget.initialAction != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (widget.initialAction == 'action_new_expense') {
@@ -43,7 +46,9 @@ class _HomePageState extends State<HomePage> {
       });
     }
   }
-  final NumberFormat _uyuFormat = NumberFormat.currency(locale: 'es_UY', symbol: r'$', decimalDigits: 2);
+
+  // Formateadores sin separadores de miles y con punto decimal
+  final NumberFormat _uyuFormat = NumberFormat.currency(locale: 'en_US', symbol: r'$', decimalDigits: 2);
   final NumberFormat _usdFormat = NumberFormat.currency(locale: 'en_US', symbol: r'U$S', decimalDigits: 2);
 
   @override
@@ -110,7 +115,6 @@ class _HomePageState extends State<HomePage> {
                                     double freeUYU = totalUYU - reservedUYU;
                                     double freeUSD = totalUSD - reservedUSD;
 
-                                    // Determinar estado del mes
                                     final now = DateTime.now();
                                     final viewingMonth = DateTime(_viewingDate.year, _viewingDate.month);
                                     final currentMonth = DateTime(now.year, now.month);
@@ -229,7 +233,6 @@ class _HomePageState extends State<HomePage> {
         double debtUYU = transactions.where((t) => t.type == 'EXPENSE' && t.currency == 'UYU' && !t.isCompleted && !t.includedInCard).fold(0, (sum, t) => sum + t.amount);
         double debtUSD = transactions.where((t) => t.type == 'EXPENSE' && t.currency == 'USD' && !t.isCompleted && !t.includedInCard).fold(0, (sum, t) => sum + t.amount);
 
-        // Determinar estado del mes
         final now = DateTime.now();
         final viewingMonth = DateTime(_viewingDate.year, _viewingDate.month);
         final currentMonth = DateTime(now.year, now.month);
@@ -237,8 +240,15 @@ class _HomePageState extends State<HomePage> {
         final bool isPast = viewingMonth.isBefore(currentMonth);
         final bool isFuture = viewingMonth.isAfter(currentMonth);
 
-        final incomes = transactions.where((t) => t.type == 'INCOME').toList()..sort((a, b) => a.title.compareTo(b.title));
-        final expenses = transactions.where((t) => t.type == 'EXPENSE').toList()..sort((a, b) => a.title.compareTo(b.title));
+        final incomes = transactions.where((t) => t.type == 'INCOME').toList()
+          ..sort((a, b) => a.orderIndex != b.orderIndex 
+              ? a.orderIndex.compareTo(b.orderIndex) 
+              : a.title.compareTo(b.title));
+        
+        final expenses = transactions.where((t) => t.type == 'EXPENSE').toList()
+          ..sort((a, b) => a.orderIndex != b.orderIndex 
+              ? a.orderIndex.compareTo(b.orderIndex) 
+              : a.title.compareTo(b.title));
 
         final sortedItems = [
           if (incomes.isNotEmpty) 'INGRESOS',
@@ -355,7 +365,7 @@ class _HomePageState extends State<HomePage> {
 
   void _showUpdateBalanceDialog(Map<String, dynamic> b) {
     final controller = TextEditingController(
-      text: (b['amount'] ?? 0.0).toString().replaceAll('.', ',').replaceAll(RegExp(r',0$'), '')
+      text: (b['amount'] ?? 0.0).toString().replaceAll(RegExp(r'\.0$'), '')
     );
     final format = b['currency'] == 'UYU' ? _uyuFormat : _usdFormat;
 
@@ -378,7 +388,7 @@ class _HomePageState extends State<HomePage> {
                   inputFormatters: [ThousandsSeparatorInputFormatter()],
                   decoration: InputDecoration(
                     labelText: 'Saldo Total en la Cuenta (${b['currency']})',
-                    helperText: 'Usa coma (,) para decimales. No uses puntos.',
+                    helperText: 'Usa punto (.) para decimales. No uses puntos de miles.',
                     prefixIcon: const Icon(Icons.account_balance_wallet),
                   ),
                 ),
@@ -423,7 +433,7 @@ class _HomePageState extends State<HomePage> {
                     children: [
                       const Text('Disponible Libre:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.blueGrey)),
                       Builder(builder: (context) {
-                        final currentVal = double.tryParse(controller.text.replaceAll(',', '.')) ?? 0.0;
+                        final currentVal = double.tryParse(controller.text) ?? 0.0;
                         return Text(format.format(currentVal - totalReserved), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.blueGrey));
                       }),
                     ],
@@ -446,7 +456,7 @@ class _HomePageState extends State<HomePage> {
               TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
               FilledButton(
                 onPressed: () {
-                  final val = double.tryParse(controller.text.replaceAll(',', '.'));
+                  final val = double.tryParse(controller.text);
                   if (val != null) {
                     _service.updateBalance(b['id'], val);
                     Navigator.pop(ctx);

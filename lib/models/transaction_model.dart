@@ -14,7 +14,8 @@ class TransactionModel {
   final String type;
   final String? brandLogo;
   final bool includedInCard;
-  final String? paidFromAccountId; // Nuevo campo
+  final String? paidFromAccountId;
+  final int orderIndex; // Nuevo campo para orden personalizado
 
   TransactionModel({
     required this.id,
@@ -31,6 +32,7 @@ class TransactionModel {
     this.brandLogo,
     this.includedInCard = false,
     this.paidFromAccountId,
+    this.orderIndex = 999, // Por defecto al final
   });
 
   factory TransactionModel.fromMap(Map<String, dynamic> data, String id) {
@@ -49,6 +51,7 @@ class TransactionModel {
       brandLogo: data['brandLogo'],
       includedInCard: data['includedInCard'] ?? false,
       paidFromAccountId: data['paidFromAccountId'],
+      orderIndex: data['orderIndex'] ?? 999,
     );
   }
 
@@ -68,6 +71,7 @@ class TransactionModel {
       'brandLogo': brandLogo,
       'includedInCard': includedInCard,
       'paidFromAccountId': paidFromAccountId,
+      'orderIndex': orderIndex,
     };
   }
 
@@ -85,6 +89,7 @@ class TransactionModel {
     String? brandLogo,
     bool? includedInCard,
     String? paidFromAccountId,
+    int? orderIndex,
   }) {
     return TransactionModel(
       id: id,
@@ -101,6 +106,7 @@ class TransactionModel {
       brandLogo: brandLogo ?? this.brandLogo,
       includedInCard: includedInCard ?? this.includedInCard,
       paidFromAccountId: paidFromAccountId ?? this.paidFromAccountId,
+      orderIndex: orderIndex ?? this.orderIndex,
     );
   }
 }

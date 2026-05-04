@@ -45,6 +45,33 @@ class FirebaseService {
 
   String _norm(String text) => text.trim().toLowerCase();
 
+  // --- USUARIOS / PERFIL ---
+
+  Stream<Map<String, dynamic>?> getUserProfile() {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return Stream.value(null);
+    return _db.collection('users').doc(uid).snapshots().map((doc) => doc.data());
+  }
+
+  Future<void> createUserProfileIfNotExist() async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return;
+
+      final ref = _db.collection('users').doc(user.uid);
+      final doc = await ref.get();
+      if (!doc.exists) {
+        await ref.set({
+          'email': user.email,
+          'isPremium': true, // Durante desarrollo, nuevos usuarios son Premium por defecto
+          'createdAt': Timestamp.now(),
+        });
+      }
+    } catch (e) {
+      print("Error createUserProfileIfNotExist: $e");
+    }
+  }
+
   // --- PRESUPUESTOS ---
 
   Stream<List<Map<String, dynamic>>> getBudgets(int month, int year) {
@@ -222,7 +249,7 @@ class FirebaseService {
       // 1. Guardar la transacción
       batch.set(transRef, {
         ...transaction.toMap(),
-        if (accountId != null) 'paidFromAccountId': accountId,
+        'paidFromAccountId': ?accountId,
       });
 
       // 2. Si hay cuenta asociada, actualizar su saldo
@@ -322,24 +349,88 @@ class FirebaseService {
   Stream<List<Map<String, dynamic>>> getTemplates({String? type}) {
     final ref = _templatesRef;
     if (ref == null) return Stream.value([]);
+    
     Query query = ref;
     if (type != null) {
       query = query.where('type', isEqualTo: type);
     }
-    return query.snapshots().map((snap) => snap.docs.map((doc) {
-      final data = doc.data() as Map<String, dynamic>;
-      data['id'] = doc.id;
-      return data;
-    }).toList());
+    
+    return query.snapshots().map((snap) {
+      final list = snap.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        data['id'] = doc.id;
+        return data;
+      }).toList();
+      
+      // Ordenar en memoria por orderIndex para evitar requerir índices compuestos en Firestore
+      list.sort((a, b) {
+        int aIdx = a['orderIndex'] ?? 999;
+        int bIdx = b['orderIndex'] ?? 999;
+        if (aIdx != bIdx) return aIdx.compareTo(bIdx);
+        return (a['title'] as String).toLowerCase().compareTo((b['title'] as String).toLowerCase());
+      });
+      
+      return list;
+    });
   }
 
   Future<void> addTemplate(Map<String, dynamic> t) async {
     try {
       final ref = _templatesRef;
       if (ref == null) return;
-      await ref.add(t);
+      
+      // Obtener el último índice para poner el nuevo al final
+      final snapshot = await ref.orderBy('orderIndex', descending: true).limit(1).get();
+      int nextIndex = 0;
+      if (snapshot.docs.isNotEmpty) {
+        nextIndex = (snapshot.docs.first.data() as Map<String, dynamic>)['orderIndex'] ?? 0;
+        nextIndex++;
+      }
+
+      await ref.add({
+        ...t,
+        'orderIndex': nextIndex,
+      });
     } catch (e) {
       print("Error addTemplate: $e");
+    }
+  }
+
+  Future<void> updateTemplatesOrder(List<Map<String, dynamic>> templates) async {
+    try {
+      final batch = _db.batch();
+      final ref = _templatesRef;
+      final expenseRef = _transactionsRef;
+      if (ref == null || expenseRef == null) return;
+
+      for (int i = 0; i < templates.length; i++) {
+        final String templateId = templates[i]['id'];
+        final String title = templates[i]['title'] ?? '';
+        final int orderIndex = i;
+
+        // 1. Actualizar la plantilla
+        batch.update(ref.doc(templateId), {'orderIndex': orderIndex});
+
+        // 2. Propagar el orden a TODAS las transacciones futuras con el mismo nombre
+        // Buscamos desde el mes pasado para cubrir cualquier rezagado
+        final now = DateTime.now();
+        final startDate = DateTime(now.year, now.month - 1, 1);
+        
+        final relatedExpenses = await expenseRef
+            .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
+            .get();
+
+        for (var doc in relatedExpenses.docs) {
+          final data = doc.data() as Map<String, dynamic>;
+          if (_norm(data['title'] ?? '') == _norm(title)) {
+            batch.update(doc.reference, {'orderIndex': orderIndex});
+          }
+        }
+      }
+
+      await batch.commit();
+    } catch (e) {
+      print("Error updateTemplatesOrder: $e");
     }
   }
 
@@ -427,42 +518,57 @@ class FirebaseService {
       bool addedAny = false;
       for (var doc in templatesDocs.docs) {
         final data = doc.data() as Map<String, dynamic>;
-        final String title = data['title'] ?? 'Sin título';
-        if (!existingTitles.contains(_norm(title))) {
-          final newRef = refE.doc();
+          final String title = data['title'] ?? 'Sin título';
+          final int oIndex = data['orderIndex'] ?? 999;
           
-          double initialAmount = (data['defaultAmount'] ?? 0.0).toDouble();
-          String initialDesc = data['defaultDescription'] ?? '';
-          
-          // Lógica para suscripciones de tarjeta
-          if (data['isCreditCard'] == true && data['subscriptions'] != null) {
-            final List subs = data['subscriptions'] as List;
-            for (var sub in subs) {
-              final subName = sub['name'] ?? 'Sub';
-              final subAmt = (sub['amount'] ?? 0.0).toDouble();
-              initialAmount += subAmt;
-              // Usamos el formato "Concepto (Detalle) - Monto" para consistencia con cuotas
-              final subDetail = "$subName (Fijo) - ${_formatAmount(subAmt, data['currency'] ?? 'UYU')}";
-              initialDesc = initialDesc.isEmpty ? subDetail : "$initialDesc, $subDetail";
+          if (!existingTitles.contains(_norm(title))) {
+            final newRef = refE.doc();
+            
+            double initialAmount = (data['defaultAmount'] ?? 0.0).toDouble();
+            String initialDesc = data['defaultDescription'] ?? '';
+            
+            // Lógica para suscripciones de tarjeta
+            if (data['isCreditCard'] == true && data['subscriptions'] != null) {
+              final List subs = data['subscriptions'] as List;
+              for (var sub in subs) {
+                final subName = sub['name'] ?? 'Sub';
+                final subAmt = (sub['amount'] ?? 0.0).toDouble();
+                initialAmount += subAmt;
+                // Usamos el formato "Concepto (Detalle) - Monto" para consistencia con cuotas
+                final subDetail = "$subName (Fijo) - ${_formatAmount(subAmt, data['currency'] ?? 'UYU')}";
+                initialDesc = initialDesc.isEmpty ? subDetail : "$initialDesc, $subDetail";
+              }
+            }
+
+            batch.set(newRef, {
+              'title': title,
+              'amount': initialAmount,
+              'date': Timestamp.fromDate(DateTime(year, month, 1, 12, 0, 0)),
+              'dueDate': data['dueDay'] != null ? Timestamp.fromDate(DateTime(year, month, data['dueDay'])) : null,
+              'category': data['category'] ?? (data['type'] == 'INCOME' ? 'Ingreso' : 'Fijo'),
+              'currency': data['currency'] ?? 'UYU',
+              'isCompleted': false,
+              'type': data['type'] ?? 'EXPENSE',
+              'description': initialDesc,
+              'brandLogo': data['brandLogo'],
+              'includedInCard': data['includedInCard'] ?? false,
+              'orderIndex': oIndex,
+            });
+            addedAny = true;
+            existingTitles.add(_norm(title));
+          } else {
+            // Si ya existe (ej: cuotas de tarjeta), actualizamos su orderIndex
+            final existingDoc = existingDocs.docs.where((doc) {
+              final d = doc.data() as Map<String, dynamic>;
+              final DateTime dt = (d['date'] as Timestamp).toDate();
+              return dt.month == month && dt.year == year && _norm(d['title'] ?? '') == _norm(title);
+            }).firstOrNull;
+
+            if (existingDoc != null) {
+              batch.update(existingDoc.reference, {'orderIndex': oIndex});
+              addedAny = true;
             }
           }
-
-          batch.set(newRef, {
-            'title': title,
-            'amount': initialAmount,
-            'date': Timestamp.fromDate(DateTime(year, month, 1, 12, 0, 0)),
-            'dueDate': data['dueDay'] != null ? Timestamp.fromDate(DateTime(year, month, data['dueDay'])) : null,
-            'category': data['category'] ?? (data['type'] == 'INCOME' ? 'Ingreso' : 'Fijo'),
-            'currency': data['currency'] ?? 'UYU',
-            'isCompleted': false,
-            'type': data['type'] ?? 'EXPENSE',
-            'description': initialDesc,
-            'brandLogo': data['brandLogo'], // Sincronizar el logo manual
-            'includedInCard': data['includedInCard'] ?? false,
-          });
-          addedAny = true;
-          existingTitles.add(_norm(title));
-        }
       }
       if (addedAny) await batch.commit();
     } catch (e) {
@@ -487,6 +593,7 @@ class FirebaseService {
       // 1. Intentar obtener datos de la plantilla de esta tarjeta
       int? dueDay;
       String? cardLogo;
+      int? cardOrderIndex;
       final templates = await tRef.get();
       final cardTemplate = templates.docs.where((doc) {
         final data = doc.data() as Map<String, dynamic>;
@@ -497,6 +604,7 @@ class FirebaseService {
         final cardData = cardTemplate.data() as Map<String, dynamic>;
         dueDay = cardData['dueDay'];
         cardLogo = cardData['brandLogo'];
+        cardOrderIndex = cardData['orderIndex'];
       }
 
       double amountPerMonth = totalAmount / installments;
@@ -532,7 +640,8 @@ class FirebaseService {
             'description': newDesc, 
             'isCompleted': false,
             'dueDate': dueDateTs,
-            'brandLogo': cardLogo
+            'brandLogo': cardLogo,
+            'orderIndex': cardOrderIndex ?? 999,
           });
         } else {
           await ref.add({
@@ -543,9 +652,10 @@ class FirebaseService {
             'category': category ?? 'Tarjeta', 
             'currency': currency, 
             'type': 'EXPENSE', 
-            'isCompleted': false,
-            'dueDate': dueDateTs,
-            'brandLogo': cardLogo
+            'isCompleted': false, 
+            'dueDate': dueDateTs, 
+            'brandLogo': cardLogo,
+            'orderIndex': cardOrderIndex ?? 999,
           });
         }
       }
@@ -634,7 +744,7 @@ class FirebaseService {
 
   String _formatAmount(double amount, String currency) {
     final formatter = NumberFormat.currency(
-      locale: 'es_UY',
+      locale: 'en_US',
       symbol: currency == 'UYU' ? r'$' : r'U$S',
       decimalDigits: 2,
     );

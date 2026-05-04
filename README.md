@@ -16,7 +16,8 @@ Una aplicación de finanzas personales desarrollada en Flutter, diseñada para o
 - **Plantillas y Automatización:** Carga rápida de gastos e ingresos fijos. Posibilidad de convertir cualquier transacción en una plantilla recurrente.
 - **Análisis Histórico y Exportación:** Gráficos de evolución de los últimos 6 meses, filtros por categoría y exportación de reportes a CSV (compatible con Excel).
 - **UX Optimizada e Identidad Visual:** Rediseño minimalista con logo adaptativo, visualización estandarizada de 2 decimales y selector unificado de iconografía con más de 50 iconos de Material y logos personalizados para bancos y servicios de Uruguay.
-- **Entrada de Datos Robusta:** Sistema de validación estricto para montos, optimizado para evitar errores de interpretación decimal (formato local con coma).
+- **Entrada de Datos Blindada:** Sistema de validación estricto para montos (uso de punto decimal), eliminando ambigüedades con separadores de miles y comas.
+- **Organización Flexible:** Capacidad de reordenar tus plantillas de gastos e ingresos con un simple gesto de arrastrar, manteniendo la coherencia visual en todos los meses.
 - **Documentación y Ayuda:** Manual de usuario y sección informativa integrados directamente en la aplicación para facilitar el aprendizaje de nuevas funciones.
 
 ## 📄 Documentación del Proyecto

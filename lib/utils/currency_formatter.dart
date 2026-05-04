@@ -10,17 +10,18 @@ class ThousandsSeparatorInputFormatter extends TextInputFormatter {
       return newValue.copyWith(text: '');
     }
 
-    // Política de "Cero Tolerancia":
-    // Solo permitimos dígitos y una única COMA (,) para decimales.
-    // NO permitimos puntos (.) de ningún tipo.
+    // Política de "Cero Tolerancia" (V2):
+    // Solo permitimos dígitos y un único PUNTO (.) para decimales.
+    // Bloqueamos físicamente la COMA (,) para evitar errores de interpretación.
+    // No hay separadores de miles automáticos.
     
-    final regExp = RegExp(r'^\d*,?\d{0,2}$');
+    final regExp = RegExp(r'^\d*\.?\d{0,2}$');
     
     if (regExp.hasMatch(newValue.text)) {
       return newValue;
     }
 
-    // Si el usuario intenta poner un punto o una segunda coma, lo bloqueamos.
+    // Si el usuario intenta poner algo no válido (como una coma o segundo punto), lo bloqueamos.
     return oldValue;
   }
 }

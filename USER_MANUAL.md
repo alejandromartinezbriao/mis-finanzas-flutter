@@ -27,6 +27,7 @@ Personaliza tus categorías (ej: Supermercado, Alquiler, Ocio). Puedes elegir ic
 ### 2.3 Plantillas (Gastos / Tarjetas)
 Registra tus movimientos recurrentes (Sueldo, Alquiler, UTE, etc.). 
 *   **Tarjetas de Crédito:** Debes registrarlas aquí como un "Gasto Fijo". Esto permite que la app genere el ítem de pago mensual automáticamente.
+*   **Orden Personalizado:** Puedes arrastrar las plantillas desde el icono de las rayitas grises para organizar tu lista mensual en el orden que prefieras. Este orden se aplicará automáticamente a todos los meses.
 *   Al inicio de cada mes, puedes cargar todas estas plantillas con un solo botón desde la pantalla principal.
 
 ---

@@ -19,6 +19,21 @@ class TemplateListTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+          child: Row(
+            children: [
+              const Icon(Icons.info_outline, size: 14, color: Colors.grey),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Arrastra desde el icono de la derecha para reordenar.',
+                  style: TextStyle(fontSize: 11, color: Colors.grey.shade600, fontStyle: FontStyle.italic),
+                ),
+              ),
+            ],
+          ),
+        ),
         Expanded(
           child: StreamBuilder<List<Map<String, dynamic>>>(
             stream: service.getTemplates(type: type),
@@ -31,19 +46,28 @@ class TemplateListTab extends StatelessWidget {
                 return Center(
                   child: Text(
                     type == 'EXPENSE' 
-                      ? 'No hay gastos fijos o tarjetas configuradas.'
+                      ? 'No hay gastos fijos o tarjetas configuradas.' 
                       : 'No hay ingresos fijos configurados.',
                     style: const TextStyle(color: Colors.grey),
                   ),
                 );
               }
 
-              return ListView.builder(
+              return ReorderableListView.builder(
+                buildDefaultDragHandles: false, // Desactivamos el "long press" por defecto
                 itemCount: templates.length,
                 padding: const EdgeInsets.symmetric(vertical: 8),
+                onReorder: (oldIndex, newIndex) {
+                  if (newIndex > oldIndex) newIndex -= 1;
+                  final List<Map<String, dynamic>> items = List.from(templates);
+                  final Map<String, dynamic> item = items.removeAt(oldIndex);
+                  items.insert(newIndex, item);
+                  service.updateTemplatesOrder(items);
+                },
                 itemBuilder: (context, index) {
                   final t = templates[index];
                   return Card(
+                    key: ValueKey(t['id']),
                     margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                     child: ListTile(
                       leading: BrandIcon(name: t['title'], manualLogo: t['brandLogo'], size: 32),
@@ -52,13 +76,26 @@ class TemplateListTab extends StatelessWidget {
                         '${t['currency']} ${t['defaultAmount'] != null ? "(${(t['defaultAmount'] as num).toStringAsFixed(0)}) " : ""}',
                         style: const TextStyle(fontSize: 13),
                       ),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.delete_outline, color: Colors.red), 
-                        onPressed: () async {
-                          if (await DialogUtils.confirmDeletion(context, t['title'])) {
-                            service.deleteTemplate(t['id']);
-                          }
-                        }
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline, color: Colors.red), 
+                            onPressed: () async {
+                              if (await DialogUtils.confirmDeletion(context, t['title'])) {
+                                service.deleteTemplate(t['id']);
+                              }
+                            }
+                          ),
+                          // Escuchador específico para activar el arrastre inmediatamente en PC y Móvil
+                          ReorderableDragStartListener(
+                            index: index,
+                            child: const Padding(
+                              padding: EdgeInsets.all(8.0),
+                              child: Icon(Icons.drag_indicator, color: Colors.grey),
+                            ),
+                          ),
+                        ],
                       ),
                       onTap: () => onEdit(t, type),
                     ),

@@ -28,8 +28,8 @@ class _SimpleTransactionDialogState extends State<SimpleTransactionDialog> {
   String currency = 'UYU';
   bool includedInCard = false;
   
-  String? selectedCategoryId; // Para Gastos
-  String? selectedAccountId;   // Para Ingresos
+  String? selectedCategoryId;
+  String? selectedAccountId;
   
   late DateTime selectedDate;
 
@@ -80,7 +80,7 @@ class _SimpleTransactionDialogState extends State<SimpleTransactionDialog> {
                   builder: (context, snapshot) {
                     final categories = snapshot.data ?? [];
                     return DropdownButtonFormField<String>(
-                      value: selectedCategoryId,
+                      initialValue: selectedCategoryId,
                       hint: const Text('Seleccionar Categoría'),
                       decoration: const InputDecoration(labelText: 'Categoría', border: OutlineInputBorder()),
                       items: [
@@ -109,7 +109,7 @@ class _SimpleTransactionDialogState extends State<SimpleTransactionDialog> {
                   builder: (context, snapshot) {
                     final accounts = snapshot.data ?? [];
                     return DropdownButtonFormField<String>(
-                      value: selectedAccountId,
+                      initialValue: selectedAccountId,
                       hint: const Text('¿A dónde va el dinero?'),
                       decoration: const InputDecoration(labelText: 'Cuenta Destino', border: OutlineInputBorder()),
                       items: [
@@ -145,7 +145,7 @@ class _SimpleTransactionDialogState extends State<SimpleTransactionDialog> {
               const SizedBox(height: 10),
               TextFormField(
                 controller: titleController,
-                decoration: const InputDecoration(labelText: 'Concepto', border: OutlineInputBorder()),
+                decoration: const InputDecoration(labelText: 'Concepto (Ej: Alquiler, Sueldo)', border: OutlineInputBorder()),
                 validator: (v) => (v == null || v.isEmpty) ? 'Ingresa un concepto' : null,
               ),
               const SizedBox(height: 10),
@@ -160,7 +160,7 @@ class _SimpleTransactionDialogState extends State<SimpleTransactionDialog> {
                       decoration: const InputDecoration(
                         labelText: 'Monto', 
                         border: OutlineInputBorder(),
-                        helperText: 'Usa coma (,) para decimales',
+                        helperText: 'Usa punto (.) para decimales.',
                       ),
                       validator: (v) {
                         if (v == null || v.isEmpty) return 'Ingresa un monto';
@@ -227,7 +227,7 @@ class _SimpleTransactionDialogState extends State<SimpleTransactionDialog> {
               final transaction = TransactionModel(
                 id: '',
                 title: titleController.text,
-                amount: double.tryParse(amountController.text.replaceAll(',', '.')) ?? 0.0,
+                amount: double.tryParse(amountController.text) ?? 0.0,
                 date: selectedDate,
                 category: categoryName,
                 currency: currency,
@@ -370,7 +370,7 @@ class _CreditCardTransactionDialogState extends State<CreditCardTransactionDialo
                                     decoration: const InputDecoration(
                                       labelText: 'Monto Total', 
                                       border: OutlineInputBorder(),
-                                      helperText: 'Usa coma (,) para decimales',
+                                      helperText: 'Usa punto (.) para decimales.',
                                     ),
                                     validator: (v) {
                                       if (v == null || v.isEmpty) return 'Ingresa un monto';
@@ -442,7 +442,7 @@ class _CreditCardTransactionDialogState extends State<CreditCardTransactionDialo
 
                         widget.service.addCreditCardExpense(
                           cardName: selectedCard!,
-                          totalAmount: double.tryParse(amountController.text.replaceAll(',', '.')) ?? 0.0,
+                          totalAmount: double.tryParse(amountController.text) ?? 0.0,
                           installments: int.parse(installmentsController.text),
                           currency: currency,
                           startDate: selectedDate,
@@ -485,9 +485,9 @@ class _EditTransactionDialogState extends State<EditTransactionDialog> {
   @override
   void initState() {
     super.initState();
-    final formatter = NumberFormat.currency(locale: 'es_UY', symbol: '', decimalDigits: 2);
+    // Cargamos el monto directo como un string con punto decimal, sin formato de miles.
     amountController = TextEditingController(
-      text: formatter.format(widget.transaction.amount).trim(),
+      text: widget.transaction.amount.toString().replaceAll(RegExp(r'\.0$'), ''),
     );
   }
 
@@ -498,7 +498,7 @@ class _EditTransactionDialogState extends State<EditTransactionDialog> {
   }
 
   Future<void> _togglePaidStatus(BuildContext context, TransactionModel t) async {
-    final double currentAmount = double.tryParse(amountController.text.replaceAll(',', '.')) ?? 0.0;
+    final double currentAmount = double.tryParse(amountController.text) ?? 0.0;
     final transactionToUse = t.copyWith(amount: currentAmount);
 
     if (t.isCompleted) {
@@ -656,7 +656,7 @@ class _EditTransactionDialogState extends State<EditTransactionDialog> {
                   labelText: 'Monto Total',
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.attach_money),
-                  helperText: 'Usa coma (,) para decimales',
+                  helperText: 'Usa punto (.) para decimales.',
                 ),
                 validator: (v) {
                   if (v == null || v.isEmpty) return 'Ingresa un monto';
@@ -711,7 +711,7 @@ class _EditTransactionDialogState extends State<EditTransactionDialog> {
         FilledButton(
           onPressed: () {
             if (_formKey.currentState!.validate()) {
-              final double val = double.tryParse(amountController.text.replaceAll(',', '.')) ?? 0.0;
+              final double val = double.tryParse(amountController.text) ?? 0.0;
               widget.service.updateTransaction(t.copyWith(amount: val));
               Navigator.pop(context);
             }
