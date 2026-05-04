@@ -27,7 +27,7 @@ class TemplateListTab extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Arrastra desde el icono de la derecha para reordenar.',
+                  'Arrastra desde el icono de las flechas para reordenar.',
                   style: TextStyle(fontSize: 11, color: Colors.grey.shade600, fontStyle: FontStyle.italic),
                 ),
               ),
@@ -92,7 +92,7 @@ class TemplateListTab extends StatelessWidget {
                             index: index,
                             child: const Padding(
                               padding: EdgeInsets.all(8.0),
-                              child: Icon(Icons.drag_indicator, color: Colors.grey),
+                              child: Icon(Icons.swap_vert, color: Colors.grey),
                             ),
                           ),
                         ],
