@@ -249,7 +249,7 @@ class FirebaseService {
       // 1. Guardar la transacción
       batch.set(transRef, {
         ...transaction.toMap(),
-        'paidFromAccountId': ?accountId,
+        'paidFromAccountId': accountId,
       });
 
       // 2. Si hay cuenta asociada, actualizar su saldo

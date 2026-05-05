@@ -107,11 +107,19 @@ class _SimpleTransactionDialogState extends State<SimpleTransactionDialog> {
                 StreamBuilder<List<Map<String, dynamic>>>(
                   stream: widget.service.getBalances(),
                   builder: (context, snapshot) {
-                    final accounts = snapshot.data ?? [];
+                    final allAccounts = snapshot.data ?? [];
+                    // Filtrar cuentas por la moneda seleccionada para el ingreso
+                    final accounts = allAccounts.where((a) => a['currency'] == currency).toList();
+
                     return DropdownButtonFormField<String>(
                       initialValue: selectedAccountId,
-                      hint: const Text('¿A dónde va el dinero?'),
-                      decoration: const InputDecoration(labelText: 'Cuenta Destino', border: OutlineInputBorder()),
+                      hint: Text(accounts.isEmpty ? 'No hay cuentas en $currency' : '¿A dónde va el dinero?'),
+                      decoration: InputDecoration(
+                        labelText: 'Cuenta Destino ($currency)', 
+                        border: const OutlineInputBorder(),
+                        helperText: accounts.isEmpty ? 'Crea una cuenta en $currency en Configuración' : null,
+                        helperStyle: const TextStyle(color: Colors.orange),
+                      ),
                       items: [
                         const DropdownMenuItem<String>(
                           value: null,
@@ -538,61 +546,112 @@ class _EditTransactionDialogState extends State<EditTransactionDialog> {
   }
 
   void _showAccountSelector(BuildContext context, TransactionModel t) {
+    bool isProcessing = false;
+
     showDialog(
       context: context,
-      builder: (ctx) => StreamBuilder<List<Map<String, dynamic>>>(
-        stream: widget.service.getBalances(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-          final accounts = snapshot.data!;
+      barrierDismissible: false, // Evitar cerrar mientras se procesa
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setS) => StreamBuilder<List<Map<String, dynamic>>>(
+          stream: widget.service.getBalances(),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+            
+            final allAccounts = snapshot.data!;
+            // Mostramos todas las cuentas para que el usuario vea que existen, 
+            // pero resaltamos las que coinciden con la moneda.
+            final accounts = allAccounts; 
 
-          return AlertDialog(
-            title: const Text('¿Desde qué cuenta se pagó?'),
-            content: SizedBox(
-              width: double.maxFinite,
-              child: accounts.isEmpty
-                  ? const Text('No tienes cuentas configuradas. Ve al Panel de Control para añadir una.')
-                  : ListView.builder(
-                      shrinkWrap: true,
-                      itemCount: accounts.length + 1,
-                      itemBuilder: (context, index) {
-                        if (index == accounts.length) {
-                          return ListTile(
-                            leading: const Icon(Icons.money_off_csred_outlined),
-                            title: const Text('Pago en efectivo'),
-                            subtitle: const Text('Marcar como pago sin descontar de ninguna cuenta'),
-                            onTap: () {
-                              widget.service.updateTransaction(t.copyWith(isCompleted: true));
-                              Navigator.pop(ctx);
-                              Navigator.pop(this.context);
+            return AlertDialog(
+              title: Text('Pagar con ${t.currency}'),
+              content: isProcessing 
+                ? const SizedBox(
+                    height: 100,
+                    child: Center(child: CircularProgressIndicator()),
+                  )
+                : SizedBox(
+                    width: double.maxFinite,
+                    child: accounts.isEmpty
+                        ? const Text('No tienes cuentas configuradas. Ve al Panel de Control.')
+                        : ListView.builder(
+                            shrinkWrap: true,
+                            itemCount: accounts.length + 1,
+                            itemBuilder: (context, index) {
+                              if (index == accounts.length) {
+                                return ListTile(
+                                  leading: const Icon(Icons.money_off_csred_outlined),
+                                  title: const Text('Pago en efectivo'),
+                                  subtitle: const Text('Sin descontar de ninguna cuenta'),
+                                  onTap: isProcessing ? null : () async {
+                                    setS(() => isProcessing = true);
+                                    try {
+                                      await widget.service.updateTransaction(t.copyWith(isCompleted: true));
+                                      if (ctx.mounted) Navigator.pop(ctx);
+                                      if (mounted) Navigator.pop(this.context);
+                                    } catch (e) {
+                                      setS(() => isProcessing = false);
+                                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+                                    }
+                                  },
+                                );
+                              }
+                              
+                              final acc = accounts[index];
+                              final bool sameCurrency = acc['currency'] == t.currency;
+
+                              return ListTile(
+                                enabled: !isProcessing,
+                                leading: acc['brandLogo'] != null 
+                                  ? Image.asset('assets/logos/${acc['brandLogo']}', width: 24, errorBuilder: (_, _, _) => const Icon(Icons.account_balance_wallet))
+                                  : Icon(Icons.account_balance_wallet, color: sameCurrency ? null : Colors.grey),
+                                title: Text(acc['accountName'], style: TextStyle(color: sameCurrency ? null : Colors.grey)),
+                                subtitle: Text('${acc['currency']} ${acc['amount']}', style: TextStyle(color: sameCurrency ? null : Colors.grey)),
+                                trailing: sameCurrency ? null : const Icon(Icons.warning_amber_rounded, size: 16, color: Colors.orange),
+                                onTap: () async {
+                                  // DIÁLOGO DE CONFIRMACIÓN
+                                  final confirm = await showDialog<bool>(
+                                    context: context,
+                                    builder: (c) => AlertDialog(
+                                      title: const Text('Confirmar Pago'),
+                                      content: Text('¿Confirmas descontar ${t.currency} ${t.amount} de la cuenta ${acc['accountName']}?'),
+                                      actions: [
+                                        TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancelar')),
+                                        FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('Confirmar Pago')),
+                                      ],
+                                    ),
+                                  );
+
+                                  if (confirm == true) {
+                                    setS(() => isProcessing = true);
+                                    try {
+                                      await widget.service.completeTransactionWithBalanceUpdate(
+                                        transaction: t,
+                                        accountId: acc['id'],
+                                        isUndoing: false,
+                                      );
+                                      if (ctx.mounted) Navigator.pop(ctx);
+                                      if (mounted) Navigator.pop(this.context);
+                                    } catch (e) {
+                                      setS(() => isProcessing = false);
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error al procesar pago: $e')));
+                                      }
+                                    }
+                                  }
+                                },
+                              );
                             },
-                          );
-                        }
-                        final acc = accounts[index];
-                        return ListTile(
-                          leading: acc['brandLogo'] != null 
-                            ? Image.asset('assets/logos/${acc['brandLogo']}', width: 24, errorBuilder: (_, _, _) => const Icon(Icons.account_balance_wallet))
-                            : const Icon(Icons.account_balance_wallet),
-                          title: Text(acc['accountName']),
-                          subtitle: Text('${acc['currency']} ${acc['amount']}'),
-                          onTap: () async {
-                            await widget.service.completeTransactionWithBalanceUpdate(
-                              transaction: t,
-                              accountId: acc['id'],
-                              isUndoing: false,
-                            );
-                            if (ctx.mounted) Navigator.pop(ctx);
-                            if (mounted) Navigator.pop(this.context);
-                          },
-                        );
-                      },
-                    ),
-            ),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
-            ],
-          );
-        },
+                          ),
+                  ),
+              actions: [
+                TextButton(
+                  onPressed: isProcessing ? null : () => Navigator.pop(ctx), 
+                  child: const Text('Cancelar')
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
