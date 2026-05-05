@@ -20,56 +20,61 @@ class UserManualPage extends StatelessWidget {
           child: ListView(
             padding: const EdgeInsets.all(24.0),
             children: [
-              _buildHeader('Guía de Uso de Mis Finanzas', titleColor),
+              _buildHeader('Guía Rápida de Uso', titleColor),
+              const SizedBox(height: 8),
+              Text(
+                'Esta guía detalla dónde encontrar y cómo utilizar las funciones principales de la aplicación.',
+                style: TextStyle(fontSize: 16, color: textColor, fontStyle: FontStyle.italic),
+              ),
               const SizedBox(height: 24),
               
-              _buildSectionTitle('1. Conceptos Fundamentales (Ejes del Sistema)', titleColor),
+              _buildSectionTitle('1. PANTALLA PRINCIPAL (Gestión Mensual)', titleColor),
               _buildParagraph(
-                'La aplicación se sustenta en cuatro pilares estratégicos para garantizar una gestión profesional:\n\n'
-                '• Gestión Bimonetaria: Administración nativa y simultánea de activos en Pesos (UYU) y Dólares (USD).\n'
-                '• Liquidez y Cobertura Dinámica: Análisis en tiempo real de su disponibilidad financiera frente a obligaciones pendientes.\n'
-                '• Identidad Visual: Interfaz optimizada; el Verde identifica ingresos y saldos positivos; el Naranja Rojizo señala egresos y deudas.\n'
-                '• Reserva de Ahorros: Protección lógica de fondos destinados a metas específicas, aislándolos de su disponible para gastos.',
+                'Es el centro de operaciones diario:\n\n'
+                '• Selector de Mes (Barra Superior): Flechas para navegar entre meses pasados (historial), el actual y futuros (proyecciones).\n'
+                '• Cuadro de Cobertura (Arriba): Comparación visual de tu dinero disponible vs. deudas pendientes del mes.\n'
+                '• Saldos de Cuentas: Visualización rápida del dinero real en tus bancos y billeteras.\n'
+                '• Lista de Movimientos: Ingresos (Verde) y Gastos (Naranja).\n'
+                '• Botón REGISTRAR MOVIMIENTO: Acceso rápido para crear Ingresos, Gastos o Compras con Tarjeta.',
                 textColor
               ),
 
-              _buildSectionTitle('2. Panel de Control', titleColor),
+              _buildSectionTitle('2. CONFIGURACIÓN MAESTRA (Menú > Configuración)', titleColor),
               _buildParagraph(
-                'Accede desde el menú de opciones (...) > Panel de Control. Antes de comenzar, configura tus bases:\n\n'
-                '• Cuentas: Define tus bancos y billeteras. Mantén el saldo real actualizado para que el análisis de cobertura sea preciso.\n'
-                '• Categorías: Personaliza tus tipos de gasto con iconos representativos.\n'
-                '• Plantillas: Registra tus ingresos y gastos fijos (incluyendo tarjetas de crédito) para cargarlos automáticamente cada mes.',
+                'Lugar para definir tu estructura financiera antes de empezar:\n\n'
+                '• Pestaña Gastos / Tarjetas: Gestión de pagos fijos y tarjetas. Arrastra desde el icono de las flechas para reordenar.\n'
+                '• Pestaña Ingresos: Gestión de sueldos o rentas fijas.\n'
+                '• Pestaña Mis Cuentas: Registro de bancos (Santander, BROU, etc.) y efectivo.\n'
+                '• Pestaña Categorías: Personalización de iconos y colores.\n'
+                '• Pestaña Presupuestos: Configuración de topes de gasto mensuales.\n'
+                '• Pestaña Metas: Creación de fondos de ahorro (ej. "Vacaciones").',
                 textColor
               ),
 
-              _buildSectionTitle('3. Uso Diario', titleColor),
+              _buildSectionTitle('3. HERRAMIENTAS DE CONTROL', titleColor),
               _buildParagraph(
-                'En la pantalla principal puedes registrar dos tipos de movimientos:\n\n'
-                '• Ingresos: Al registrarlos, puedes elegir la cuenta destino para actualizar su saldo automáticamente.\n'
-                '• Gastos Simples: Movimientos puntuales. Al marcarlos como "Pagados", eliges de qué cuenta descontar el dinero.\n'
-                '• Compras con Tarjeta: Registra el total y las cuotas; la app las distribuirá automáticamente.\n\n'
-                'Al ingresar montos, utiliza siempre la coma (,) para los decimales (el punto está bloqueado).',
+                'Ubicadas en el menú lateral o iconos de acceso directo:\n\n'
+                '• Metas de Ahorro (Icono Bandera): Permite "reservar" dinero de una cuenta real para que no se cuente como disponible para gastos.\n'
+                '• Estadísticas (Icono Gráfico): Evolución de los últimos 6 meses y reparto de gastos por categoría.\n'
+                '• Presupuestos (Icono Barras): Control visual de cuánto has gastado frente al límite definido.\n'
+                '• Exportación (Menú ... > Exportar): Descarga el mes actual en formato CSV (Excel).',
                 textColor
               ),
 
-              _buildSectionTitle('4. Metas y Ahorro', titleColor),
+              _buildSectionTitle('4. OPERACIONES CLAVE', titleColor),
               _buildParagraph(
-                'Desde la sección de Metas (icono bandera), puedes crear objetivos de ahorro. '
-                'Al vincular una meta a una cuenta, el dinero asignado se mostrará como "Reservado", '
-                'ayudándote a no gastar el dinero que ya has decidido ahorrar.',
+                '• Carga Mensual: Al iniciar un nuevo mes, presiona "Cargar Plantillas" en el centro para traer tus gastos fijos automáticamente.\n'
+                '• Pago Automático: Al marcar un gasto como "Completado" (check), la app descuenta el dinero de la cuenta elegida.\n'
+                '• Ingreso Inteligente: Al crear un ingreso, elige la cuenta de destino para sumar el saldo automáticamente.\n'
+                '• Compras en Cuotas: Indica el número de cuotas y la app las distribuirá en los meses correspondientes.',
                 textColor
               ),
 
-              _buildSectionTitle('5. Presupuestos y Estadísticas', titleColor),
+              _buildSectionTitle('5. TIPS DE CARGA DE DATOS', titleColor),
               _buildParagraph(
-                '• Presupuestos: Establece límites mensuales por categoría para evitar excederte.\n'
-                '• Estadísticas: Analiza la evolución de tus finanzas en los últimos 6 meses con gráficos detallados.',
-                textColor
-              ),
-
-              _buildSectionTitle('6. Exportación', titleColor),
-              _buildParagraph(
-                'Desde el menú de opciones (...), puedes exportar todos los movimientos del mes a un archivo CSV compatible con Excel para un análisis externo o respaldo.',
+                '• Decimales: Utiliza siempre el punto (.) para separar decimales.\n'
+                '• Símbolos: No escribas "\$" ni "U\$S", la app los asigna según la moneda.\n'
+                '• Iconos: Pulsa sobre el icono de cualquier movimiento para cambiar su imagen o logo.',
                 textColor
               ),
 
@@ -85,7 +90,7 @@ class UserManualPage extends StatelessWidget {
     return Text(
       text,
       style: TextStyle(
-        fontSize: 24,
+        fontSize: 28,
         fontWeight: FontWeight.w900,
         color: color,
         letterSpacing: 0.5,
