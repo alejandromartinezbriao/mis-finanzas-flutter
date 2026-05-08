@@ -1,17 +1,14 @@
 # Log de Desarrollo - Cuentas Personales
 
-## Estado Actual (Última actualización: 04/05/2026)
-- **Interfaz**: Profesional y minimalista, optimizada para Web y Móvil. Nuevo AppBar con logo adaptativo.
-- **Fuentes**: Tipografía monocromática de alta legibilidad (Negro/Blanco dinámico).
-- **Arquitectura**: Código desacoplado mediante extracción de Widgets, Diálogos y Repositorios lógicos.
-- **Funcionalidad**: 
-    - Arqueo de saldos reales y cobertura de deuda dinámica.
-    - **Pagos Vinculados**: Soporte para descontar saldos automáticamente y reversión de pagos.
-    - **Ingresos Inteligentes**: Asignación directa a cuentas bancarias al momento del registro.
-    - **Validación de Datos**: Política de "Cero Tolerancia" en entrada de montos (uso de punto decimal obligatorio).
-    - **Orden Personalizado**: Sistema de reordenamiento visual en plantillas (drag-and-drop) con propagación automática de posición a todas las transacciones históricas y futuras.
-    - Gestión avanzada de Tarjetas de Crédito, Presupuestos y Metas de Ahorro.
-    - Documentación y manual de usuario integrados en la app.
+## Estado Actual (Última actualización: 06/05/2026)
+- **Interfaz**: Profesional y minimalista, optimizada para Web y Móvil.
+- **Identidad**: Proyecto renombrado formalmente a **Mis Finanzas**.
+- **Aritmética**: Estandarización total de 2 decimales en toda la cadena de datos (Ingreso, Firebase, Visualización) eliminando ruido de punto flotante.
+- **Usabilidad**: 
+    - **Registro Instantáneo**: Capacidad de registrar un gasto y descontar el saldo de una cuenta en un solo paso.
+    - **Edición Flexible**: Edición total de conceptos, categorías y montos en transacciones ya registradas.
+    - **Confirmación Activa**: Diálogos de confirmación antes de guardar registros para prevenir errores accidentales.
+    - **Reordenamiento Total**: Soporte para reordenar cuentas bancarias por prioridad del usuario.
 - **Infraestructura**: Firebase (Auth/Firestore), QuickActions, fl_chart y persistencia local activa.
 
 ## Decisiones Arquitectónicas Tomadas
@@ -44,12 +41,14 @@
 - [ ] **Proceso de Migración**: Sistema de "ascensión" de datos locales a la nube al adquirir suscripción Premium.
 - [ ] **Refactorización a Repositorios**: Abstracción de la capa de datos para alternar entre DB Local y Firestore de forma transparente.
 
-## Últimos Avances (04/05/2026)
-- **Orden Personalizado**: Implementación de listas reordenables en el Panel de Control para gastos e ingresos fijos. El orden definido se sincroniza automáticamente con todos los movimientos del mismo nombre en el historial y meses futuros.
-- **Optimización de Entrada**: Transición definitiva al uso de punto (.) como separador decimal para evitar ambigüedades, con bloqueo físico de comas y separadores de miles en toda la app.
-- **Ingresos Inteligentes**: El registro de ingresos ahora permite seleccionar la cuenta de destino (o efectivo), actualizando el saldo de forma automática y atómica en Firebase.
-- **Identidad Visual**: Implementación de un código de colores intuitivo: **Verde** para ingresos/completados y **Naranja Rojizo (DeepOrange)** para egresos/pendientes, aplicado globalmente por sugerencia de usuario (Vero).
-- **Inteligencia Temporal**: El cuadro de cobertura ahora es dinámico (Cierre de Mes con resultado exacto en pasado, Cobertura en presente, oculto en futuro).
+## Últimos Avances (06/05/2026)
+- **Estandarización Numérica**: Implementación de redondeo a 2 decimales en el core de Firebase Service para evitar cifras con excesiva precisión decimal.
+- **Registro de Gasto con Pago**: Optimización del flujo de "Nuevo Movimiento" permitiendo seleccionar la cuenta de pago al instante, eliminando la necesidad de marcar el gasto como pagado manualmente después de crearlo.
+- **Edición Avanzada**: Apertura de campos "Concepto" y "Categoría" en el diálogo de edición de movimientos.
+- **Cuentas Reordenables**: Extensión del sistema de drag-and-drop a la pestaña de "Mis Cuentas" en la configuración maestra.
+- **Confirmación de Seguridad**: Implementación de diálogos de confirmación previa al guardado de cualquier movimiento o compra con tarjeta.
+- **Robustez en Tarjetas**: Mejora en la lógica de eliminación de consumos de tarjeta; ahora el sistema recalcula el total sumando los ítems restantes para evitar errores de redondeo o pérdida de datos.
+- **Gráficos Precisos**: Estandarización de los tooltips en estadísticas para mostrar cifras monetarias formateadas.
 
 ## Historial de Hitos Recientes
 - **Documentación In-App**: Integración de las pantallas "Acerca de" y "Manual del Usuario" con diseño responsivo.

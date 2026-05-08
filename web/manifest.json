@@ -1,6 +1,6 @@
 {
-    "name": "cuentas_personales",
-    "short_name": "cuentas_personales",
+    "name": "Mis Finanzas",
+    "short_name": "Mis Finanzas",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

@@ -25,3 +25,14 @@ class ThousandsSeparatorInputFormatter extends TextInputFormatter {
     return oldValue;
   }
 }
+
+class CurrencyUtils {
+  static String formatForInput(double value) {
+    // Si el valor no tiene decimales significativos, lo mostramos como entero
+    // de lo contrario mostramos 2 decimales exactos.
+    if (value == value.roundToDouble()) {
+      return value.toStringAsFixed(0);
+    }
+    return value.toStringAsFixed(2);
+  }
+}

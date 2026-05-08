@@ -17,7 +17,7 @@ Es el centro de operaciones diario.
 ## 2. CONFIGURACIÓN MAESTRA (Menú > Configuración)
 Lugar para definir tu estructura financiera antes de empezar.
 *   **Pestaña Gastos / Tarjetas:** Gestión de pagos fijos y tarjetas de crédito.
-    *   *Acción:* Arrastrar desde el icono de **flechas** para reordenar la lista.
+    *   *Acción:* Arrastrar desde el icono de **flechas** para reordenar la lista (aplica a Gastos, Ingresos y Cuentas).
 *   **Pestaña Ingresos:** Gestión de sueldos o rentas fijas.
 *   **Pestaña Mis Cuentas:** Registro de bancos (Santander, BROU, etc.) y efectivo.
 *   **Pestaña Categorías:** Personalización de iconos y colores para clasificar gastos.
@@ -42,8 +42,9 @@ Ubicadas en el menú lateral o iconos de acceso directo.
 
 ## 4. OPERACIONES CLAVE
 *   **Carga Mensual:** Al iniciar un nuevo mes, presiona **"Cargar Plantillas"** en el centro de la pantalla para traer todos tus gastos e ingresos fijos automáticamente.
-*   **Pago Automático:** Al marcar un gasto como "Completado" (check), la app te preguntará de qué cuenta quieres descontar el dinero.
+*   **Pago Automático:** Al marcar un gasto como "Completado" (check), la app te preguntará de qué cuenta quieres descontar el dinero. También puedes seleccionar la cuenta de pago **al momento de crear el gasto** para hacerlo en un solo paso.
 *   **Ingreso Inteligente:** Al crear un ingreso, elige la cuenta de destino para sumar el saldo automáticamente.
+*   **Seguridad de Datos:** La app te pedirá una **confirmación** antes de guardar cualquier registro nuevo para evitar errores de carga.
 *   **Compras en Cuotas:** Al registrar una tarjeta, indica el número de cuotas y la app las distribuirá en los meses correspondientes de forma automática.
 
 ---

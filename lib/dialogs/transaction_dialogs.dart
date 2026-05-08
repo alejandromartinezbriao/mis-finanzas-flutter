@@ -33,6 +33,10 @@ class _SimpleTransactionDialogState extends State<SimpleTransactionDialog> {
   
   late DateTime selectedDate;
 
+  String accTruncate(String name) {
+    return name.length > 18 ? '${name.substring(0, 15)}...' : name;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -151,6 +155,52 @@ class _SimpleTransactionDialogState extends State<SimpleTransactionDialog> {
                 ),
 
               const SizedBox(height: 10),
+              if (type == 'EXPENSE') ...[
+                StreamBuilder<List<Map<String, dynamic>>>(
+                  stream: widget.service.getBalances(),
+                  builder: (context, snapshot) {
+                    final allAccounts = snapshot.data ?? [];
+                    final accounts = allAccounts.where((a) => a['currency'] == currency).toList();
+
+                    return DropdownButtonFormField<String>(
+                      initialValue: selectedAccountId,
+                      hint: Text(accounts.isEmpty ? '¿Pagado ahora?' : '¿Con qué pagaste? (Opcional)'),
+                      decoration: InputDecoration(
+                        labelText: 'Cuenta de Pago ($currency)',
+                        border: const OutlineInputBorder(),
+                        helperText: 'Si seleccionas una, se marcará como pagado.',
+                      ),
+                      items: [
+                        const DropdownMenuItem<String>(
+                          value: null,
+                          child: Row(
+                            children: [
+                              Icon(Icons.pending_actions, color: Colors.orange, size: 20),
+                              SizedBox(width: 10),
+                              Text('Dejar como Pendiente', style: TextStyle(color: Colors.orange)),
+                            ],
+                          ),
+                        ),
+                        ...accounts.map((a) => DropdownMenuItem(
+                          value: a['id'] as String,
+                          child: Row(
+                            children: [
+                              if (a['brandLogo'] != null)
+                                Padding(
+                                  padding: const EdgeInsets.only(right: 10),
+                                  child: Image.asset('assets/logos/${a['brandLogo']}', width: 18),
+                                ),
+                              Text(accTruncate(a['accountName'])),
+                            ],
+                          ),
+                        )),
+                      ],
+                      onChanged: (v) => setState(() => selectedAccountId = v),
+                    );
+                  }
+                ),
+                const SizedBox(height: 10),
+              ],
               TextFormField(
                 controller: titleController,
                 decoration: const InputDecoration(labelText: 'Concepto (Ej: Alquiler, Sueldo)', border: OutlineInputBorder()),
@@ -187,7 +237,10 @@ class _SimpleTransactionDialogState extends State<SimpleTransactionDialog> {
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<String>(
                         value: currency,
-                        onChanged: (v) => setState(() => currency = v!),
+                        onChanged: (v) => setState(() {
+                          currency = v!;
+                          selectedAccountId = null; // Resetear cuenta al cambiar moneda
+                        }),
                         items: ['UYU', 'USD'].map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
                       ),
                     ),
@@ -227,6 +280,18 @@ class _SimpleTransactionDialogState extends State<SimpleTransactionDialog> {
         FilledButton(
           onPressed: () async {
             if (_formKey.currentState!.validate()) {
+              final double amount = double.tryParse(amountController.text) ?? 0.0;
+              final String concept = titleController.text;
+
+              final confirm = await DialogUtils.confirmAction(
+                context,
+                title: 'Confirmar Registro',
+                message: '¿Deseas registrar "$concept" por un monto de $currency $amount?',
+                confirmText: 'Registrar',
+              );
+
+              if (confirm != true) return;
+
               String categoryName = 'Otros';
               if (type == 'INCOME') {
                 categoryName = 'Ingreso';
@@ -240,16 +305,18 @@ class _SimpleTransactionDialogState extends State<SimpleTransactionDialog> {
                 category: categoryName,
                 currency: currency,
                 type: type,
-                isCompleted: true,
+                isCompleted: selectedAccountId != null, // Auto-completar si hay cuenta
                 includedInCard: includedInCard,
               );
 
-              if (type == 'INCOME') {
+              if (selectedAccountId != null) {
+                // Si seleccionó cuenta (sea Ingreso o Gasto), usamos la lógica atómica
                 await widget.service.addTransactionWithBalanceUpdate(
                   transaction: transaction,
                   accountId: selectedAccountId,
                 );
               } else {
+                // Si no hay cuenta (Efectivo o Gasto pendiente)
                 await widget.service.addTransaction(transaction);
               }
               
@@ -287,6 +354,10 @@ class _CreditCardTransactionDialogState extends State<CreditCardTransactionDialo
   String currency = 'UYU';
   late DateTime selectedDate;
 
+  String accTruncate(String name) {
+    return name.length > 18 ? '${name.substring(0, 15)}...' : name;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -311,6 +382,12 @@ class _CreditCardTransactionDialogState extends State<CreditCardTransactionDialo
         return StreamBuilder<List<Map<String, dynamic>>>(
           stream: widget.service.getTemplates(type: 'EXPENSE'),
           builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const AlertDialog(
+                content: SizedBox(height: 100, child: Center(child: CircularProgressIndicator())),
+              );
+            }
+
             final cards = snapshot.data?.where((t) => t['isCreditCard'] == true).toList() ?? [];
 
             return AlertDialog(
@@ -320,7 +397,22 @@ class _CreditCardTransactionDialogState extends State<CreditCardTransactionDialo
                 const Text('Compra con Tarjeta')
               ]),
               content: cards.isEmpty
-                  ? const Text('Primero debes marcar alguna de tus plantillas de gastos como "Tarjeta de Crédito" en Configuración.')
+                  ? Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text('No tienes plantillas marcadas como "Tarjeta de Crédito".'),
+                        const SizedBox(height: 15),
+                        const Text(
+                          'Si quieres usar una de tus cuentas (ej: Prex o Débito), usa el botón "Registrar Movimiento" y selecciona la cuenta en "Cuenta de Pago".',
+                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
+                        const SizedBox(height: 15),
+                        const Text(
+                          'Si es una tarjeta de crédito tradicional, primero márcala como tal en la Configuración de Gastos.',
+                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
+                      ],
+                    )
                   : SingleChildScrollView(
                       child: Form(
                         key: _formKey,
@@ -441,8 +533,21 @@ class _CreditCardTransactionDialogState extends State<CreditCardTransactionDialo
                 if (cards.isNotEmpty)
                   FilledButton(
                     style: FilledButton.styleFrom(backgroundColor: Colors.deepOrange.shade800),
-                    onPressed: () {
+                    onPressed: () async {
                       if (_formKey.currentState!.validate()) {
+                        final double totalAmount = double.tryParse(amountController.text) ?? 0.0;
+                        final int installments = int.parse(installmentsController.text);
+                        
+                        final confirm = await DialogUtils.confirmAction(
+                          context,
+                          title: 'Confirmar Compra',
+                          message: '¿Registrar compra de $currency $totalAmount en $installments cuotas con la tarjeta $selectedCard?',
+                          confirmText: 'Registrar Compra',
+                          confirmColor: Colors.deepOrange.shade800,
+                        );
+
+                        if (confirm != true) return;
+
                         final categoryName = allCategories.firstWhere(
                           (c) => c['id'] == selectedCategoryId,
                           orElse: () => {'name': 'Tarjeta'}
@@ -457,8 +562,10 @@ class _CreditCardTransactionDialogState extends State<CreditCardTransactionDialo
                           concept: conceptController.text.isNotEmpty ? conceptController.text : null,
                           category: categoryName,
                         );
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Procesando gasto de tarjeta...')));
+                        if (context.mounted) Navigator.pop(context);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Procesando gasto de tarjeta...')));
+                        }
                       }
                     },
                     child: const Text('Registrar Compra'),
@@ -489,19 +596,23 @@ class EditTransactionDialog extends StatefulWidget {
 class _EditTransactionDialogState extends State<EditTransactionDialog> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController amountController;
+  late TextEditingController titleController;
+  String? selectedCategoryId;
 
   @override
   void initState() {
     super.initState();
     // Cargamos el monto directo como un string con punto decimal, sin formato de miles.
     amountController = TextEditingController(
-      text: widget.transaction.amount.toString().replaceAll(RegExp(r'\.0$'), ''),
+      text: CurrencyUtils.formatForInput(widget.transaction.amount),
     );
+    titleController = TextEditingController(text: widget.transaction.title);
   }
 
   @override
   void dispose() {
     amountController.dispose();
+    titleController.dispose();
     super.dispose();
   }
 
@@ -708,6 +819,42 @@ class _EditTransactionDialogState extends State<EditTransactionDialog> {
               ],
               const SizedBox(height: 10),
               TextFormField(
+                controller: titleController,
+                decoration: const InputDecoration(
+                  labelText: 'Concepto',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.edit_note),
+                ),
+                validator: (v) => (v == null || v.isEmpty) ? 'Ingresa un concepto' : null,
+              ),
+              const SizedBox(height: 10),
+              StreamBuilder<List<Map<String, dynamic>>>(
+                stream: widget.service.getCategories(type: widget.transaction.type),
+                builder: (context, snapshot) {
+                  final categories = snapshot.data ?? [];
+                  if (selectedCategoryId == null && categories.isNotEmpty) {
+                    final match = categories.where((c) => c['name'] == widget.transaction.category).firstOrNull;
+                    if (match != null) selectedCategoryId = match['id'];
+                  }
+
+                  return DropdownButtonFormField<String>(
+                    value: selectedCategoryId,
+                    hint: const Text('Categoría'),
+                    decoration: const InputDecoration(labelText: 'Categoría', border: OutlineInputBorder(), prefixIcon: Icon(Icons.category)),
+                    items: [
+                      if (widget.transaction.type == 'INCOME')
+                        const DropdownMenuItem(value: 'income_cat', child: Text('Ingreso')),
+                      ...categories.map((c) => DropdownMenuItem(
+                        value: c['id'] as String,
+                        child: Text(c['name']),
+                      )),
+                    ],
+                    onChanged: (v) => setState(() => selectedCategoryId = v),
+                  );
+                }
+              ),
+              const SizedBox(height: 10),
+              TextFormField(
                 controller: amountController,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 inputFormatters: [ThousandsSeparatorInputFormatter()],
@@ -768,11 +915,28 @@ class _EditTransactionDialogState extends State<EditTransactionDialog> {
             },
           ),
         FilledButton(
-          onPressed: () {
+          onPressed: () async {
             if (_formKey.currentState!.validate()) {
               final double val = double.tryParse(amountController.text) ?? 0.0;
-              widget.service.updateTransaction(t.copyWith(amount: val));
-              Navigator.pop(context);
+              
+              // Obtener el nombre de la categoría seleccionada
+              String newCategory = t.category;
+              if (selectedCategoryId != null) {
+                if (selectedCategoryId == 'income_cat') {
+                  newCategory = 'Ingreso';
+                } else {
+                  final categories = await widget.service.getCategories(type: t.type).first;
+                  final cat = categories.where((c) => c['id'] == selectedCategoryId).firstOrNull;
+                  if (cat != null) newCategory = cat['name'];
+                }
+              }
+
+              widget.service.updateTransaction(t.copyWith(
+                title: titleController.text,
+                amount: val,
+                category: newCategory,
+              ));
+              if (context.mounted) Navigator.pop(context);
             }
           },
           child: const Text('Guardar'),

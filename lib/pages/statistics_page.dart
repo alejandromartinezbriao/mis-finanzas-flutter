@@ -213,11 +213,30 @@ class _StatisticsPageState extends State<StatisticsPage> {
   }
 
   Widget _buildBarChart(List<_MonthlyData> data) {
+    final format = _currency == 'UYU' 
+      ? NumberFormat.currency(locale: 'es_UY', symbol: r'$', decimalDigits: 0)
+      : NumberFormat.currency(locale: 'en_US', symbol: r'U$S', decimalDigits: 0);
+
     return BarChart(
       BarChartData(
         alignment: BarChartAlignment.spaceAround,
         maxY: _getMaxValue(data) * 1.2,
-        barTouchData: BarTouchData(enabled: true),
+        barTouchData: BarTouchData(
+          enabled: true,
+          touchTooltipData: BarTouchTooltipData(
+            getTooltipColor: (group) => Colors.blueGrey.withOpacity(0.8),
+            getTooltipItem: (group, groupIndex, rod, rodIndex) {
+              return BarTooltipItem(
+                format.format(rod.toY),
+                const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+              );
+            },
+          ),
+        ),
         titlesData: FlTitlesData(
           show: true,
           bottomTitles: AxisTitles(
@@ -280,6 +299,10 @@ class _StatisticsPageState extends State<StatisticsPage> {
     List<BarChartGroupData> groups = [];
     double maxVal = 0;
 
+    final format = _currency == 'UYU' 
+      ? NumberFormat.currency(locale: 'es_UY', symbol: r'$', decimalDigits: 0)
+      : NumberFormat.currency(locale: 'en_US', symbol: r'U$S', decimalDigits: 0);
+
     for (int i = 0; i < _monthCount; i++) {
       DateTime d = DateTime(now.year, now.month - (_monthCount - 1 - i), 1);
       double total = txs
@@ -305,6 +328,22 @@ class _StatisticsPageState extends State<StatisticsPage> {
       BarChartData(
         alignment: BarChartAlignment.spaceAround,
         maxY: maxVal == 0 ? 100 : maxVal * 1.2,
+        barTouchData: BarTouchData(
+          enabled: true,
+          touchTooltipData: BarTouchTooltipData(
+            getTooltipColor: (group) => Colors.blueGrey.withOpacity(0.8),
+            getTooltipItem: (group, groupIndex, rod, rodIndex) {
+              return BarTooltipItem(
+                format.format(rod.toY),
+                const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+              );
+            },
+          ),
+        ),
         titlesData: FlTitlesData(
           show: true,
           bottomTitles: AxisTitles(

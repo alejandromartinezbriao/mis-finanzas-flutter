@@ -5,10 +5,10 @@
 ## 📱 ¿Qué puedes hacer con esta App?
 
 ### 1. Control Real de Saldos (Arqueo)
-No solo anotas lo que gastas. La app te permite registrar el saldo real de tus cuentas bancarias y billeteras, comparándolo automáticamente con tus deudas pendientes del mes. Así sabrás cuánto dinero tienes **realmente libre**.
+No solo anotas lo que gastas. La app te permite registrar el saldo real de tus cuentas bancarias y billeteras, comparándolo automáticamente con tus deudas pendientes del mes. Puedes organizar tus cuentas en el orden que prefieras.
 
 ### 2. Gestión Inteligente de Tarjetas
-Registra tus compras en cuotas una sola vez. La aplicación se encarga de distribuir los montos en los meses correspondientes y te avisa cuánto deberás pagar en cada cierre de tarjeta.
+Registra tus compras en cuotas una sola vez. La aplicación se encarga de distribuir los montos en los meses correspondientes y te avisa cuánto deberás pagar en cada cierre de tarjeta. Si te equivocas, puedes borrar consumos y el sistema recalculará el total automáticamente.
 
 ### 3. Metas de Ahorro con Reserva
 Define metas (ej. "Vacaciones" o "Fondo de Emergencia") y vincula una cuenta real. El dinero que ahorres se "reserva" lógicamente, restándose de tu disponible para gastos para que no lo uses por error.

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/firebase_service.dart';
 import '../utils/icon_utils.dart';
+import '../utils/currency_formatter.dart';
 
 class SetupDialogs {
   static void showCategoryDialog(BuildContext context, FirebaseService service, Map<String, dynamic>? category) {
@@ -175,8 +176,12 @@ class SetupDialogs {
   static void showGoalDialog(BuildContext context, FirebaseService service, Map<String, dynamic>? goal) {
     final isEdit = goal != null;
     final titleCtrl = TextEditingController(text: goal?['title'] ?? '');
-    final targetCtrl = TextEditingController(text: goal?['targetAmount']?.toString() ?? '');
-    final currentCtrl = TextEditingController(text: goal?['currentAmount']?.toString() ?? '');
+    final targetCtrl = TextEditingController(
+      text: goal != null ? CurrencyUtils.formatForInput((goal['targetAmount'] ?? 0.0).toDouble()) : ''
+    );
+    final currentCtrl = TextEditingController(
+      text: goal != null ? CurrencyUtils.formatForInput((goal['currentAmount'] ?? 0.0).toDouble()) : ''
+    );
     String currency = goal?['currency'] ?? 'UYU';
     String selectedIcon = goal?['icon'] ?? 'flag';
     String? linkedAccountId = goal?['linkedAccountId'];
@@ -217,7 +222,8 @@ class SetupDialogs {
                         Expanded(
                           child: TextField(
                             controller: targetCtrl,
-                            keyboardType: TextInputType.number,
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            inputFormatters: [ThousandsSeparatorInputFormatter()],
                             decoration: const InputDecoration(labelText: 'Monto Objetivo', border: OutlineInputBorder()),
                           ),
                         ),
@@ -226,7 +232,8 @@ class SetupDialogs {
                     const SizedBox(height: 15),
                     TextField(
                       controller: currentCtrl,
-                      keyboardType: TextInputType.number,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      inputFormatters: [ThousandsSeparatorInputFormatter()],
                       decoration: const InputDecoration(labelText: 'Monto ya ahorrado', border: OutlineInputBorder()),
                     ),
                     const SizedBox(height: 15),
@@ -312,7 +319,9 @@ class SetupDialogs {
     final isEdit = template != null;
     final titleController = TextEditingController(text: template?['title'] ?? '');
     final dayController = TextEditingController(text: template?['dueDay']?.toString() ?? '');
-    final defaultAmountController = TextEditingController(text: template?['defaultAmount']?.toString() ?? '');
+    final defaultAmountController = TextEditingController(
+      text: template != null ? CurrencyUtils.formatForInput((template['defaultAmount'] ?? 0.0).toDouble()) : ''
+    );
     String selectedCurrency = template?['currency'] ?? 'UYU';
     String? selectedCategoryId;
     bool isCreditCard = template?['isCreditCard'] ?? false;
@@ -369,7 +378,14 @@ class SetupDialogs {
                       children: [
                         Expanded(child: DropdownButtonFormField<String>(initialValue: selectedCurrency, items: ['UYU', 'USD'].map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(), onChanged: (v) => setS(() => selectedCurrency = v!), decoration: const InputDecoration(labelText: 'Moneda'))),
                         const SizedBox(width: 10),
-                        Expanded(child: TextField(controller: defaultAmountController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Monto Fijo'))),
+                        Expanded(
+                          child: TextField(
+                            controller: defaultAmountController, 
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            inputFormatters: [ThousandsSeparatorInputFormatter()],
+                            decoration: const InputDecoration(labelText: 'Monto Fijo'),
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 10),

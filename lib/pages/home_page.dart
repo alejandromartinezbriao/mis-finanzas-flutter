@@ -365,7 +365,7 @@ class _HomePageState extends State<HomePage> {
 
   void _showUpdateBalanceDialog(Map<String, dynamic> b) {
     final controller = TextEditingController(
-      text: (b['amount'] ?? 0.0).toString().replaceAll(RegExp(r'\.0$'), '')
+      text: CurrencyUtils.formatForInput((b['amount'] ?? 0.0).toDouble())
     );
     final format = b['currency'] == 'UYU' ? _uyuFormat : _usdFormat;
 

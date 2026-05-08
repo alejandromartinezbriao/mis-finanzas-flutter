@@ -125,7 +125,7 @@ class _TransferDialogState extends State<TransferDialog> {
                     labelText: 'Monto ($currency)',
                     border: const OutlineInputBorder(),
                     prefixIcon: const Icon(Icons.attach_money, color: Colors.teal),
-                    helperText: 'Usa coma (,) para decimales. No uses puntos.',
+                    helperText: 'Usa punto (.) para decimales. No uses puntos de miles.',
                   ),
                   validator: (v) {
                     if (v == null || v.isEmpty) return 'Ingresa un monto';
@@ -142,7 +142,7 @@ class _TransferDialogState extends State<TransferDialog> {
         FilledButton(
           onPressed: () async {
             if (_formKey.currentState!.validate() && _selectedDestinationId != null) {
-              final double amount = double.tryParse(_amountController.text.replaceAll(',', '.')) ?? 0.0;
+              final double amount = double.tryParse(_amountController.text) ?? 0.0;
               
               try {
                 await widget.service.transferFunds(

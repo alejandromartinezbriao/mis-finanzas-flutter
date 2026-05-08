@@ -45,6 +45,8 @@ class FirebaseService {
 
   String _norm(String text) => text.trim().toLowerCase();
 
+  double _round(double val) => double.parse(val.toStringAsFixed(2));
+
   // --- USUARIOS / PERFIL ---
 
   Stream<Map<String, dynamic>?> getUserProfile() {
@@ -96,11 +98,11 @@ class FirebaseService {
           .get();
 
       if (existing.docs.isNotEmpty) {
-        await ref.doc(existing.docs.first.id).update({'amount': amount, 'currency': currency});
+        await ref.doc(existing.docs.first.id).update({'amount': _round(amount), 'currency': currency});
       } else {
         await ref.add({
           'categoryName': categoryName,
-          'amount': amount,
+          'amount': _round(amount),
           'month': month,
           'year': year,
           'currency': currency,
@@ -170,11 +172,23 @@ class FirebaseService {
   Stream<List<Map<String, dynamic>>> getBalances() {
     final ref = _balancesRef;
     if (ref == null) return Stream.value([]);
-    return ref.orderBy('accountName').snapshots().map((snap) => snap.docs.map((doc) {
-          final data = doc.data() as Map<String, dynamic>;
-          data['id'] = doc.id;
-          return data;
-        }).toList());
+    return ref.snapshots().map((snap) {
+      final list = snap.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        data['id'] = doc.id;
+        return data;
+      }).toList();
+      
+      // Ordenar en memoria por orderIndex para evitar requerir índices compuestos en Firestore
+      list.sort((a, b) {
+        int aIdx = a['orderIndex'] ?? 999;
+        int bIdx = b['orderIndex'] ?? 999;
+        if (aIdx != bIdx) return aIdx.compareTo(bIdx);
+        return (a['accountName'] as String).toLowerCase().compareTo((b['accountName'] as String).toLowerCase());
+      });
+      
+      return list;
+    });
   }
 
   Future<void> updateBalance(String id, double amount) async {
@@ -182,7 +196,7 @@ class FirebaseService {
       final ref = _balancesRef;
       if (ref == null) return;
       await ref.doc(id).update({
-        'amount': amount,
+        'amount': _round(amount),
         'updatedAt': Timestamp.now(),
       });
     } catch (e) {
@@ -204,12 +218,22 @@ class FirebaseService {
     try {
       final ref = _balancesRef;
       if (ref == null) return;
+
+      // Obtener el último índice para poner la nueva al final
+      final snapshot = await ref.orderBy('orderIndex', descending: true).limit(1).get();
+      int nextIndex = 0;
+      if (snapshot.docs.isNotEmpty) {
+        nextIndex = (snapshot.docs.first.data() as Map<String, dynamic>)['orderIndex'] ?? 0;
+        nextIndex++;
+      }
+
       await ref.add({
         'accountName': name,
         'amount': 0.0,
         'currency': currency,
         'updatedAt': Timestamp.now(),
         'brandLogo': logo,
+        'orderIndex': nextIndex,
       });
     } catch (e) {
       print("Error addBalanceAccount: $e");
@@ -223,6 +247,23 @@ class FirebaseService {
       await ref.doc(id).delete();
     } catch (e) {
       print("Error deleteBalanceAccount: $e");
+    }
+  }
+
+  Future<void> updateBalancesOrder(List<Map<String, dynamic>> balances) async {
+    try {
+      final batch = _db.batch();
+      final ref = _balancesRef;
+      if (ref == null) return;
+
+      for (int i = 0; i < balances.length; i++) {
+        final String balanceId = balances[i]['id'];
+        batch.update(ref.doc(balanceId), {'orderIndex': i});
+      }
+
+      await batch.commit();
+    } catch (e) {
+      print("Error updateBalancesOrder: $e");
     }
   }
 
@@ -265,7 +306,7 @@ class FirebaseService {
               : currentBalance - transaction.amount;
           
           batch.update(accountRef, {
-            'amount': newBalance,
+            'amount': _round(newBalance),
             'updatedAt': Timestamp.now(),
           });
         }
@@ -490,7 +531,7 @@ class FirebaseService {
       }
 
       batch.update(accountRef, {
-        'amount': newBalance,
+        'amount': _round(newBalance),
         'updatedAt': Timestamp.now(),
       });
 
@@ -542,7 +583,7 @@ class FirebaseService {
 
             batch.set(newRef, {
               'title': title,
-              'amount': initialAmount,
+              'amount': _round(initialAmount),
               'date': Timestamp.fromDate(DateTime(year, month, 1, 12, 0, 0)),
               'dueDate': data['dueDay'] != null ? Timestamp.fromDate(DateTime(year, month, data['dueDay'])) : null,
               'category': data['category'] ?? (data['type'] == 'INCOME' ? 'Ingreso' : 'Fijo'),
@@ -636,7 +677,7 @@ class FirebaseService {
           String newDesc = (existingDesc == null || existingDesc.isEmpty) ? detail : "$existingDesc, $detail";
           
           await ref.doc(existingCardDoc.id).update({
-            'amount': currentAmount + amountPerMonth, 
+            'amount': _round(currentAmount + amountPerMonth), 
             'description': newDesc, 
             'isCompleted': false,
             'dueDate': dueDateTs,
@@ -647,7 +688,7 @@ class FirebaseService {
           await ref.add({
             'title': cardName, 
             'description': detail, 
-            'amount': amountPerMonth, 
+            'amount': _round(amountPerMonth), 
             'date': Timestamp.fromDate(targetDate), 
             'category': category ?? 'Tarjeta', 
             'currency': currency, 
@@ -669,30 +710,23 @@ class FirebaseService {
       final ref = _transactionsRef;
       if (ref == null) return;
 
-      // 1. Descomponer el texto para obtener el concepto y el monto a restar
-      // Formato esperado: "Concepto (Cuota X/Y) - $1.234,56"
+      // 1. Descomponer el texto para obtener el concepto y el identificador de la cuota
       final parts = fullItemText.split(' - ');
       if (parts.length < 2) return;
       
-      final conceptWithInstallment = parts[0]; // "Concepto (Cuota X/Y)"
+      final fullIdentifier = parts[0]; // "Concepto (Cuota X/Y)"
       
-      // Limpiar el monto: quitar símbolos de moneda y puntos de miles, convertir coma a punto
-      String amountClean = parts[1]
-          .replaceAll(r'$', '')
-          .replaceAll(r'U$S', '')
-          .replaceAll('.', '')
-          .replaceAll(',', '.')
-          .trim();
-      
-      final double amountToSubtract = double.tryParse(amountClean) ?? 0;
-      if (amountToSubtract <= 0) return;
+      // Extraer el concepto base para identificar todas las cuotas relacionadas
+      String conceptBase = '';
+      if (fullIdentifier.contains(' (')) {
+        conceptBase = fullIdentifier.substring(0, fullIdentifier.lastIndexOf(' ('));
+      } else if (fullIdentifier.startsWith('Cuota ')) {
+        conceptBase = ''; 
+      } else {
+        conceptBase = fullIdentifier;
+      }
 
-      // Extraer el concepto base (lo que está antes del paréntesis)
-      final conceptBase = conceptWithInstallment.contains(' (') 
-          ? conceptWithInstallment.substring(0, conceptWithInstallment.lastIndexOf(' (')) 
-          : conceptWithInstallment;
-
-      // 2. Buscar en los próximos 36 meses (cubriendo cualquier plan de cuotas largo)
+      // 2. Buscar en los próximos 36 meses
       for (int i = 0; i < 36; i++) {
         DateTime targetDate = DateTime(startDate.year, startDate.month + i, 1, 12, 0, 0);
         int targetM = targetDate.month;
@@ -715,24 +749,44 @@ class FirebaseService {
         if (cardDoc != null) {
           final data = cardDoc.data() as Map<String, dynamic>;
           String desc = data['description'] ?? '';
-          double currentTotal = (data['amount'] ?? 0.0).toDouble();
           
           List<String> items = desc.split(', ').where((s) => s.isNotEmpty).toList();
           
-          bool foundInThisMonth = false;
+          bool itemsChanged = false;
           final newItems = items.where((item) {
-            // Buscamos si el ítem de este mes empieza con el concepto base
-            if (item.startsWith('$conceptBase (')) {
-              foundInThisMonth = true;
-              return false; // Lo eliminamos de la lista
+            final itemParts = item.split(' - ');
+            if (itemParts.isEmpty) return true;
+            final itemIdentifier = itemParts[0];
+
+            // Identificar si este ítem debe ser borrado
+            bool shouldRemove = false;
+            if (itemIdentifier == fullIdentifier) {
+              shouldRemove = true;
+            } else if (conceptBase.isNotEmpty && itemIdentifier.startsWith('$conceptBase (')) {
+              shouldRemove = true;
+            } else if (conceptBase.isEmpty && fullIdentifier.startsWith('Cuota ') && itemIdentifier.startsWith('Cuota ')) {
+              final fullTotal = fullIdentifier.split('/').last.replaceAll(')', '');
+              final itemTotal = itemIdentifier.split('/').last.replaceAll(')', '');
+              if (fullTotal == itemTotal) shouldRemove = true;
             }
-            return true;
+
+            if (shouldRemove) itemsChanged = true;
+            return !shouldRemove;
           }).toList();
 
-          if (foundInThisMonth) {
+          if (itemsChanged) {
+            // RECALCULAR TOTAL DESDE CERO basado en lo que quedó en la lista
+            double newTotal = 0;
+            for (var remainingItem in newItems) {
+              final rParts = remainingItem.split(' - ');
+              if (rParts.length >= 2) {
+                newTotal += _parseFormattedAmount(rParts[1]);
+              }
+            }
+
             await ref.doc(cardDoc.id).update({
               'description': newItems.join(', '),
-              'amount': (currentTotal - amountToSubtract).clamp(0.0, double.infinity)
+              'amount': _round(newTotal)
             });
           }
         }
@@ -740,6 +794,16 @@ class FirebaseService {
     } catch (e) {
       print("Error removeCreditCardExpense: $e");
     }
+  }
+
+  double _parseFormattedAmount(String text) {
+    // Maneja formato en_US: $8,525.86 -> 8525.86
+    String clean = text
+        .replaceAll(r'$', '')
+        .replaceAll(r'U$S', '')
+        .replaceAll(',', '') // Quitar separador de miles
+        .trim();
+    return double.tryParse(clean) ?? 0.0;
   }
 
   String _formatAmount(double amount, String currency) {
@@ -789,7 +853,7 @@ class FirebaseService {
       if (ref == null) return;
       await ref.add({
         ...data,
-        'currentAmount': data['currentAmount'] ?? 0.0,
+        'currentAmount': _round(data['currentAmount'] ?? 0.0),
         'createdAt': Timestamp.now(),
       });
     } catch (e) {
@@ -832,19 +896,19 @@ class FirebaseService {
       // 1. Restar de la cuenta origen
       final fromDoc = await fromRef.get();
       final double fromCurrent = (fromDoc.data() as Map<String, dynamic>)['amount'] ?? 0.0;
-      batch.update(fromRef, {'amount': fromCurrent - amount, 'updatedAt': Timestamp.now()});
+      batch.update(fromRef, {'amount': _round(fromCurrent - amount), 'updatedAt': Timestamp.now()});
 
       // 2. Sumar al destino (Cuenta o Meta)
       if (toAccountId != null) {
         final toRef = _balancesRef!.doc(toAccountId);
         final toDoc = await toRef.get();
         final double toCurrent = (toDoc.data() as Map<String, dynamic>)['amount'] ?? 0.0;
-        batch.update(toRef, {'amount': toCurrent + amount, 'updatedAt': Timestamp.now()});
+        batch.update(toRef, {'amount': _round(toCurrent + amount), 'updatedAt': Timestamp.now()});
       } else if (toGoalId != null) {
         final goalRef = _goalsRef!.doc(toGoalId);
         final goalDoc = await goalRef.get();
         final double goalCurrent = (goalDoc.data() as Map<String, dynamic>)['currentAmount'] ?? 0.0;
-        batch.update(goalRef, {'currentAmount': goalCurrent + amount});
+        batch.update(goalRef, {'currentAmount': _round(goalCurrent + amount)});
       }
 
       await batch.commit();

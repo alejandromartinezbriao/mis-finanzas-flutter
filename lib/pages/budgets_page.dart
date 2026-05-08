@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../services/firebase_service.dart';
 import '../models/transaction_model.dart';
-import 'package:cuentas_personales/pages/setup_page.dart';
+import 'package:mis_finanzas/pages/setup_page.dart';
 import '../utils/icon_utils.dart';
 
 class BudgetsPage extends StatefulWidget {

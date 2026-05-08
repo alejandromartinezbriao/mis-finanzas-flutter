@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../services/firebase_service.dart';
 import '../../utils/icon_utils.dart';
+import '../../utils/currency_formatter.dart';
 
 class BudgetsTab extends StatefulWidget {
   final FirebaseService service;
@@ -78,9 +79,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
                       final String budgetCurrency = budget['currency'] ?? 'UYU';
                       final controller = TextEditingController(
                         text: (budget['amount'] as num) > 0 
-                            ? (budgetCurrency == 'UYU' 
-                                ? (budget['amount'] as num).toStringAsFixed(0) 
-                                : (budget['amount'] as num).toStringAsFixed(2)) 
+                            ? CurrencyUtils.formatForInput((budget['amount'] as num).toDouble())
                             : '',
                       );
 
@@ -117,7 +116,8 @@ class _BudgetsTabState extends State<BudgetsTab> {
                               Expanded(
                                 child: TextField(
                                   controller: controller,
-                                  keyboardType: TextInputType.number,
+                                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                  inputFormatters: [ThousandsSeparatorInputFormatter()],
                                   textAlign: TextAlign.end,
                                   decoration: InputDecoration(
                                     prefixText: budgetCurrency == 'UYU' ? r'$ ' : r'U$S ',

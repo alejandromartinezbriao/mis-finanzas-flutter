@@ -59,8 +59,8 @@ class TransactionModel {
     return {
       'title': title,
       'description': description,
-      'amount': amount,
-      'minimumAmount': minimumAmount,
+      'amount': double.parse(amount.toStringAsFixed(2)),
+      'minimumAmount': minimumAmount != null ? double.parse(minimumAmount!.toStringAsFixed(2)) : null,
       'date': Timestamp.fromDate(date),
       'dueDate': dueDate != null ? Timestamp.fromDate(dueDate!) : null,
       'category': category,
