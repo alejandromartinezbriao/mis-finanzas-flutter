@@ -838,7 +838,7 @@ class _EditTransactionDialogState extends State<EditTransactionDialog> {
                   }
 
                   return DropdownButtonFormField<String>(
-                    value: selectedCategoryId,
+                    initialValue: selectedCategoryId,
                     hint: const Text('Categoría'),
                     decoration: const InputDecoration(labelText: 'Categoría', border: OutlineInputBorder(), prefixIcon: Icon(Icons.category)),
                     items: [

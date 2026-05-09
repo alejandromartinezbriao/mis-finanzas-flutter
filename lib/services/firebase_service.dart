@@ -478,8 +478,36 @@ class FirebaseService {
   Future<void> updateTemplate(String id, Map<String, dynamic> data) async {
     try {
       final ref = _templatesRef;
-      if (ref == null) return;
-      await ref.doc(id).update(data);
+      final expenseRef = _transactionsRef;
+      if (ref == null || expenseRef == null) return;
+
+      final batch = _db.batch();
+
+      // 1. Actualizar la plantilla
+      batch.update(ref.doc(id), data);
+
+      // 2. Propagar el cambio de logo a los movimientos ya cargados del mismo concepto
+      // Buscamos desde el mes pasado para cubrir el mes actual y proyecciones
+      final String title = data['title'] ?? '';
+      final String? newLogo = data['brandLogo'];
+      
+      if (title.isNotEmpty) {
+        final now = DateTime.now();
+        final startDate = DateTime(now.year, now.month - 1, 1);
+        
+        final relatedExpenses = await expenseRef
+            .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
+            .get();
+
+        for (var doc in relatedExpenses.docs) {
+          final docData = doc.data() as Map<String, dynamic>;
+          if (_norm(docData['title'] ?? '') == _norm(title)) {
+            batch.update(doc.reference, {'brandLogo': newLogo});
+          }
+        }
+      }
+
+      await batch.commit();
     } catch (e) {
       print("Error updateTemplate: $e");
     }

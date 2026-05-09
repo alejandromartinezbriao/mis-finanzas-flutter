@@ -82,7 +82,7 @@ class _SetupPageState extends State<SetupPage> with SingleTickerProviderStateMix
             Tab(icon: Icon(Icons.account_balance), text: 'Mis Cuentas'),
             Tab(icon: Icon(Icons.category_outlined), text: 'Categorías'),
             Tab(icon: Icon(Icons.bar_chart), text: 'Presupuestos'),
-            Tab(icon: Icon(Icons.flag_outlined), text: 'Metas'),
+            Tab(icon: Icon(Icons.savings_outlined), text: 'Metas'),
           ],
         ),
       ),

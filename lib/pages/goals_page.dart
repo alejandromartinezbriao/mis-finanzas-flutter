@@ -41,7 +41,7 @@ class _GoalsPageState extends State<GoalsPage> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.flag_outlined, size: 60, color: Colors.grey),
+                  const Icon(Icons.savings_outlined, size: 60, color: Colors.grey),
                   const SizedBox(height: 16),
                   const Text('Aún no tienes metas definidas.'),
                   TextButton(

@@ -16,7 +16,7 @@ class IconUtils {
     'brush', 'computer', 'smartphone', 'directions_bus',
     'train', 'self_improvement', 'theater_comedy', 'piano',
     'videogame_asset', 'child_care', 'beach_access', 'directions_run',
-    'shopping_bag', 'build', 'flag', 'category'
+    'shopping_bag', 'build', 'flag', 'category', 'sports_score'
   ];
 
   // Lista unificada de logos personalizados en assets
@@ -85,6 +85,7 @@ class IconUtils {
       case 'directions_run': return Icons.directions_run;
       case 'shopping_bag': return Icons.shopping_bag;
       case 'build': return Icons.build;
+      case 'sports_score': return Icons.sports_score;
       default: return Icons.category;
     }
   }

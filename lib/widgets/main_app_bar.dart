@@ -69,7 +69,7 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
           onPressed: () => Navigator.pushNamed(context, '/statistics'),
         ),
         IconButton(
-          icon: const Icon(Icons.flag_outlined, size: 22),
+          icon: const Icon(Icons.savings_outlined, size: 22),
           tooltip: 'Metas',
           onPressed: () => Navigator.pushNamed(context, '/goals'),
         ),

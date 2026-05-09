@@ -28,7 +28,7 @@ Lugar para definir tu estructura financiera antes de empezar.
 
 ## 3. HERRAMIENTAS DE CONTROL
 Ubicadas en el menú lateral o iconos de acceso directo.
-*   **Metas de Ahorro (Icono Bandera):** 
+*   **Metas de Ahorro (Icono Chanchita):**
     *   Permite "reservar" dinero de una cuenta real para que no se cuente como disponible para gastos.
 *   **Estadísticas (Icono Gráfico):**
     *   Evolución de los últimos 6 meses.

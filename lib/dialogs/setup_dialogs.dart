@@ -183,7 +183,7 @@ class SetupDialogs {
       text: goal != null ? CurrencyUtils.formatForInput((goal['currentAmount'] ?? 0.0).toDouble()) : ''
     );
     String currency = goal?['currency'] ?? 'UYU';
-    String selectedIcon = goal?['icon'] ?? 'flag';
+    String selectedIcon = goal?['icon'] ?? 'savings';
     String? linkedAccountId = goal?['linkedAccountId'];
 
     showDialog(
@@ -275,7 +275,7 @@ class SetupDialogs {
                           context: context,
                           selectedValue: selectedIcon,
                           isSelectedValueAsset: selectedIcon.endsWith('.png'),
-                          onSelected: (newVal, isAsset) => setS(() => selectedIcon = newVal ?? 'flag'),
+                          onSelected: (newVal, isAsset) => setS(() => selectedIcon = newVal ?? 'savings'),
                         ),
                         icon: const Icon(Icons.grid_view, size: 16),
                         label: const Text('Cambiar'),
