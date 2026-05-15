@@ -47,9 +47,9 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  // Formateadores sin separadores de miles y con punto decimal
-  final NumberFormat _uyuFormat = NumberFormat.currency(locale: 'en_US', symbol: r'$', decimalDigits: 2);
-  final NumberFormat _usdFormat = NumberFormat.currency(locale: 'en_US', symbol: r'U$S', decimalDigits: 2);
+  // Formateadores sin separadores de miles y con punto decimal (Regla de Oro: Sin Comas)
+  final NumberFormat _uyuFormat = NumberFormat.currency(locale: 'en_US', symbol: r'$', decimalDigits: 2, customPattern: '¤#0.00');
+  final NumberFormat _usdFormat = NumberFormat.currency(locale: 'en_US', symbol: r'U$S', decimalDigits: 2, customPattern: '¤#0.00');
 
   @override
   Widget build(BuildContext context) {
@@ -86,9 +86,9 @@ class _HomePageState extends State<HomePage> {
                           builder: (context, txSnapshot) {
                             final txs = txSnapshot.data ?? [];
                             double inUYU = txs.where((t) => t.type == 'INCOME' && t.currency == 'UYU').fold(0, (sum, t) => sum + t.amount);
-                            double outUYU = txs.where((t) => t.type == 'EXPENSE' && t.currency == 'UYU').fold(0, (sum, t) => sum + t.amount);
+                            double outUYU = txs.where((t) => t.type == 'EXPENSE' && t.currency == 'UYU' && !t.includedInCard).fold(0, (sum, t) => sum + t.amount);
                             double inUSD = txs.where((t) => t.type == 'INCOME' && t.currency == 'USD').fold(0, (sum, t) => sum + t.amount);
-                            double outUSD = txs.where((t) => t.type == 'EXPENSE' && t.currency == 'USD').fold(0, (sum, t) => sum + t.amount);
+                            double outUSD = txs.where((t) => t.type == 'EXPENSE' && t.currency == 'USD' && !t.includedInCard).fold(0, (sum, t) => sum + t.amount);
                             
                             double debtUYU = txs.where((t) => t.type == 'EXPENSE' && t.currency == 'UYU' && !t.isCompleted && !t.includedInCard).fold(0, (sum, t) => sum + t.amount);
                             double debtUSD = txs.where((t) => t.type == 'EXPENSE' && t.currency == 'USD' && !t.isCompleted && !t.includedInCard).fold(0, (sum, t) => sum + t.amount);
@@ -102,8 +102,12 @@ class _HomePageState extends State<HomePage> {
                                     final balances = balSnapshot.data ?? [];
                                     final goals = goalSnapshot.data ?? [];
                                     
-                                    double totalUYU = balances.where((b) => b['currency'] == 'UYU').fold(0, (sum, b) => sum + (b['amount'] ?? 0));
-                                    double totalUSD = balances.where((b) => b['currency'] == 'USD').fold(0, (sum, b) => sum + (b['amount'] ?? 0));
+                                    double totalUYU = balances
+                                        .where((b) => b['currency'] == 'UYU' && (b['includeInCoverage'] ?? true))
+                                        .fold(0.0, (sum, b) => sum + (b['amount'] ?? 0));
+                                    double totalUSD = balances
+                                        .where((b) => b['currency'] == 'USD' && (b['includeInCoverage'] ?? true))
+                                        .fold(0.0, (sum, b) => sum + (b['amount'] ?? 0));
                                     
                                     double reservedUYU = goals
                                         .where((g) => g['currency'] == 'UYU' && g['linkedAccountId'] != null)
@@ -124,27 +128,16 @@ class _HomePageState extends State<HomePage> {
 
                                     return Column(
                                       children: [
-                                        SummaryBalanceCard(
-                                          inUYU: inUYU,
-                                          outUYU: outUYU,
-                                          inUSD: inUSD,
-                                          outUSD: outUSD,
+                                        DebtCoverageCard(
+                                          realUYU: isPast ? inUYU : (isFuture ? inUYU : freeUYU),
+                                          debtUYU: isPast ? outUYU : (isFuture ? outUYU : debtUYU),
+                                          realUSD: isPast ? inUSD : (isFuture ? inUSD : freeUSD),
+                                          debtUSD: isPast ? outUSD : (isFuture ? outUSD : debtUSD),
                                           uyuFormat: _uyuFormat,
                                           usdFormat: _usdFormat,
-                                          isVertical: true,
+                                          isClosureMode: isPast,
+                                          isProjectionMode: isFuture,
                                         ),
-                                        if (!isFuture) ...[
-                                          const SizedBox(height: 20),
-                                          DebtCoverageCard(
-                                            realUYU: isPast ? inUYU : freeUYU,
-                                            debtUYU: isPast ? outUYU : debtUYU,
-                                            realUSD: isPast ? inUSD : freeUSD,
-                                            debtUSD: isPast ? outUSD : debtUSD,
-                                            uyuFormat: _uyuFormat,
-                                            usdFormat: _usdFormat,
-                                            isClosureMode: isPast,
-                                          ),
-                                        ],
                                       ],
                                     );
                                   }
@@ -260,15 +253,6 @@ class _HomePageState extends State<HomePage> {
         return Column(
           children: [
             if (MediaQuery.of(context).size.width <= 900) ...[
-              SummaryBalanceCard(
-                inUYU: inUYU,
-                outUYU: outUYU,
-                inUSD: inUSD,
-                outUSD: outUSD,
-                uyuFormat: _uyuFormat,
-                usdFormat: _usdFormat,
-                isCompact: true,
-              ),
               StreamBuilder<List<Map<String, dynamic>>>(
                 stream: _service.getBalances(),
                 builder: (context, balSnap) {
@@ -278,8 +262,12 @@ class _HomePageState extends State<HomePage> {
                       final balances = balSnap.data ?? [];
                       final goals = goalSnap.data ?? [];
                       
-                      double totalUYU = balances.where((b) => b['currency'] == 'UYU').fold(0, (sum, b) => sum + (b['amount'] ?? 0));
-                      double totalUSD = balances.where((b) => b['currency'] == 'USD').fold(0, (sum, b) => sum + (b['amount'] ?? 0));
+                      double totalUYU = balances
+                          .where((b) => b['currency'] == 'UYU' && (b['includeInCoverage'] ?? true))
+                          .fold(0.0, (sum, b) => sum + (b['amount'] ?? 0));
+                      double totalUSD = balances
+                          .where((b) => b['currency'] == 'USD' && (b['includeInCoverage'] ?? true))
+                          .fold(0.0, (sum, b) => sum + (b['amount'] ?? 0));
                       
                       double reservedUYU = goals
                           .where((g) => g['currency'] == 'UYU' && g['linkedAccountId'] != null)
@@ -288,17 +276,16 @@ class _HomePageState extends State<HomePage> {
                           .where((g) => g['currency'] == 'USD' && g['linkedAccountId'] != null)
                           .fold(0, (sum, g) => sum + (g['currentAmount'] ?? 0));
 
-                      if (isFuture) return const SizedBox.shrink();
-
                       return DebtCoverageCard(
-                        realUYU: isPast ? inUYU : totalUYU - reservedUYU,
-                        debtUYU: isPast ? outUYU : debtUYU,
-                        realUSD: isPast ? inUSD : totalUSD - reservedUSD,
-                        debtUSD: isPast ? outUSD : debtUSD,
+                        realUYU: isPast ? inUYU : (isFuture ? inUYU : totalUYU - reservedUYU),
+                        debtUYU: isPast ? outUYU : (isFuture ? outUYU : debtUYU),
+                        realUSD: isPast ? inUSD : (isFuture ? inUSD : totalUSD - reservedUSD),
+                        debtUSD: isPast ? outUSD : (isFuture ? outUSD : debtUSD),
                         uyuFormat: _uyuFormat,
                         usdFormat: _usdFormat,
                         isMobile: true,
                         isClosureMode: isPast,
+                        isProjectionMode: isFuture,
                       );
                     }
                   );

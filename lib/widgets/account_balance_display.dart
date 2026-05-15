@@ -106,13 +106,21 @@ class AccountBalanceGrid extends StatelessWidget {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Text(
-                                      b['accountName'],
-                                      style: const TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            b['accountName'],
+                                            style: const TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ),
+                                        if (b['includeInCoverage'] == false)
+                                          const Icon(Icons.visibility_off_outlined, size: 10, color: Colors.orange),
+                                      ],
                                     ),
                                     Text(
                                       format.format(availableAmount),
@@ -207,46 +215,6 @@ class AccountBalanceRow extends StatelessWidget {
                     scrollDirection: Axis.horizontal,
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     children: [
-                      // CARD DE SUMA TOTAL (MÓVIL)
-                      Container(
-                        width: 140,
-                        margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(colors: [Colors.teal.shade600, Colors.teal.shade400]),
-                          borderRadius: BorderRadius.circular(8),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.teal.withValues(alpha: 0.1),
-                              blurRadius: 2,
-                              offset: const Offset(0, 1),
-                            )
-                          ],
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'TOTAL LIBRE',
-                              style: TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold),
-                            ),
-                            Text(
-                              uyuFormat.format(totalUYUAvailable),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            if (totalUSDAvailable > 0)
-                              Text(
-                                usdFormat.format(totalUSDAvailable),
-                                style: const TextStyle(color: Colors.white, fontSize: 11),
-                              ),
-                          ],
-                        ),
-                      ),
                       // LISTA DE CUENTAS INDIVIDUALES
                       ...balances.map((b) {
                         final double reserved = goals
@@ -282,13 +250,21 @@ class AccountBalanceRow extends StatelessWidget {
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      Text(
-                                        b['accountName'],
-                                        style: const TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.bold,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              b['accountName'],
+                                              style: const TextStyle(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.bold,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                          ),
+                                          if (b['includeInCoverage'] == false)
+                                            const Icon(Icons.visibility_off_outlined, size: 10, color: Colors.orange),
+                                        ],
                                       ),
                                       Text(
                                         format.format(available),

@@ -1,62 +1,45 @@
-# Log de Desarrollo - Cuentas Personales
+# Log de Desarrollo - Mis Finanzas (v2.0.0)
 
-## Estado Actual (Última actualización: 06/05/2026)
+## Estado Actual (Última actualización: 10/05/2026)
+- **Versión**: 2.0.0 "Evolución Estructural".
 - **Interfaz**: Profesional y minimalista, optimizada para Web y Móvil.
-- **Identidad**: Proyecto renombrado formalmente a **Mis Finanzas**.
-- **Aritmética**: Estandarización total de 2 decimales en toda la cadena de datos (Ingreso, Firebase, Visualización) eliminando ruido de punto flotante.
+- **Aritmética**: Estandarización total de punto decimal (`.`) como único separador. Eliminación física de comas (`,`) de miles en toda la interfaz para evitar ambigüedades.
 - **Usabilidad**: 
-    - **Registro Instantáneo**: Capacidad de registrar un gasto y descontar el saldo de una cuenta en un solo paso.
-    - **Edición Flexible**: Edición total de conceptos, categorías y montos en transacciones ya registradas.
-    - **Confirmación Activa**: Diálogos de confirmación antes de guardar registros para prevenir errores accidentales.
-    - **Reordenamiento Total**: Soporte para reordenar cuentas bancarias por prioridad del usuario.
-- **Infraestructura**: Firebase (Auth/Firestore), QuickActions, fl_chart y persistencia local activa.
+    - **Registro de Cuotas Flexible**: Nuevo campo "Cuota Próxima" para registrar deudas existentes facilitando la migración.
+    - **Mantenimiento Avanzado**: Suite interactiva para corrección de decimales (error 100x), normalización y sincronización supervisada.
+    - **Presupuestos Seguros**: Flujo de confirmación manual para garantizar la persistencia de presupuestos.
+    - **Control de Cobertura Selectivo**: Opción para excluir cuentas específicas del cálculo de dinero disponible.
+- **Sincronización Bimonetaria Inteligente**: Las plantillas de tarjeta bimonetarias ahora se mantienen sincronizadas automáticamente. Al editar el vencimiento, logo o categoría en una parte (UYU/USD), los cambios se replican instantáneamente en su gemela.
+- **Registro de Efectivo Agilizado**: Se añadió la opción "Pago en Efectivo (Sin cuenta)" directamente en el selector de cuentas del registro rápido, permitiendo marcar movimientos como pagados sin afectar balances bancarios en un solo paso.
+- **Optimización de Formularios**: Rediseño lógico del diálogo de plantillas. Se ocultan opciones irrelevantes (como "incluido en tarjeta" para las propias tarjetas) y se agrupan las opciones bimonetarias para mayor claridad.
+- **Infraestructura**: Soporte PWA completo (iconos Web/iOS), Firebase, fl_chart y persistencia local.
 
-## Decisiones Arquitectónicas Tomadas
-1. **Desacoplamiento (Widgets)**: Extracción de componentes visuales clave a `lib/widgets/`.
-2. **Modularización de Diálogos**: Traslado de formularios complejos a `lib/dialogs/` para mejorar la mantenibilidad.
-3. **Utilidades Centralizadas**: Creación de `IconUtils` con selector unificado de iconos Material y logos locales.
-4. **Inteligencia Temporal**: Implementación de lógica dinámica para el cuadro de cobertura (Pasado/Presente/Futuro).
+## Decisiones Arquitectónicas Tomadas (v2.0)
+1. **Regla de Oro de Datos**: El punto decimal es la verdad absoluta del sistema. Cualquier coma entrante se convierte o se ignora para proteger la integridad de Firestore.
+2. **Cobertura Temporal Proyectada**: Evolución del widget de cobertura para soportar modos histórico (Cierre), actual (Disponibilidad) y futuro (Proyección).
+3. **Mantenimiento Supervisado**: Filosofía de "Detección -> Propuesta -> Aprobación" para todas las herramientas de limpieza de base de datos.
+4. **Optimización PWA**: Configuración de manifiestos y cabeceras para experiencia nativa en iPhone y Android.
 
-## Hoja de Ruta (Roadmap) - Estado de Situación
+## Hoja de Ruta (Roadmap) - Versión 2.x
+- [ ] **Modo Familiar**: Sistema de "Hogares" para compartir gastos con visibilidad selectiva.
+- [ ] **Migración de Datos Locales**: Proceso para usuarios que pasan de modo offline a nube.
+- [ ] **Refactorización a Repositorios**: Abstracción total de la capa de persistencia.
 
-### ✅ Fase 1: Estabilización y Arquitectura (Completado)
-- [x] Refactorización de `HomePage` y separación de componentes.
-- [x] Soporte para Quick Actions y visualización con `fl_chart`.
+## Hito: Lanzamiento Versión 2.0 (10/05/2026)
+Se declara oficialmente el salto a la **Versión 2.0** debido a la reestructuración completa del núcleo de la aplicación.
+- **Motor Bimonetario**: Implementación nativa en todas las cuentas y tarjetas.
+- **Automatización**: Nuevo módulo de suscripciones vinculado a la lógica de tarjetas.
+- **Inteligencia de Datos**: Suite de mantenimiento interactivo para asegurar la integridad aritmética.
+- **Rediseño de Cobertura**: Sistema de proyecciones dinámicas (Pasado/Presente/Futuro).
+- **Compatibilidad Total**: Optimización para iPhone (teclado y PWA) y Web.
 
-### 🚀 Fase 2: Robustez de Datos (Completado)
-- [x] **Modo Offline**: Persistencia de Firestore habilitada.
-- [x] **Validación Estricta**: Formateo de coma decimal y bloqueo de puntos.
-- [x] **Presupuestos**: Control de límites mensuales por categoría.
-
-### 📊 Fase 3: Análisis y Reportes (Completado)
-- [x] **Exportación**: Generación de reportes CSV (Excel).
-- [x] **Metas y Transferencias**: Sistema de ahorro vinculado a cuentas reales.
-- [x] **Cierre de Mes**: Cálculo automático de Superávit/Déficit en el historial.
-
-### 💎 Fase 4: Monetización y Multi-usuario (Siguiente Paso)
-- [ ] **Estrategia Híbrida de Datos**: 
-    - Usuarios Gratuitos: Almacenamiento puramente local (sin Firebase Auth/Firestore).
-    - Usuarios Premium: Sincronización completa con Firebase (Acceso Web, Multi-dispositivo).
-- [ ] **Modo Familiar**: Implementación de "Hogares" para compartir gastos, con soporte para visibilidad selectiva (Privado/Compartido).
-- [ ] **Proceso de Migración**: Sistema de "ascensión" de datos locales a la nube al adquirir suscripción Premium.
-- [ ] **Refactorización a Repositorios**: Abstracción de la capa de datos para alternar entre DB Local y Firestore de forma transparente.
-
-## Últimos Avances (06/05/2026)
-- **Estandarización Numérica**: Implementación de redondeo a 2 decimales en el core de Firebase Service para evitar cifras con excesiva precisión decimal.
-- **Registro de Gasto con Pago**: Optimización del flujo de "Nuevo Movimiento" permitiendo seleccionar la cuenta de pago al instante, eliminando la necesidad de marcar el gasto como pagado manualmente después de crearlo.
-- **Edición Avanzada**: Apertura de campos "Concepto" y "Categoría" en el diálogo de edición de movimientos.
-- **Cuentas Reordenables**: Extensión del sistema de drag-and-drop a la pestaña de "Mis Cuentas" en la configuración maestra.
-- **Confirmación de Seguridad**: Implementación de diálogos de confirmación previa al guardado de cualquier movimiento o compra con tarjeta.
-- **Robustez en Tarjetas**: Mejora en la lógica de eliminación de consumos de tarjeta; ahora el sistema recalcula el total sumando los ítems restantes para evitar errores de redondeo o pérdida de datos.
-- **Gráficos Precisos**: Estandarización de los tooltips en estadísticas para mostrar cifras monetarias formateadas.
-
-## Historial de Hitos Recientes
-- **Documentación In-App**: Integración de las pantallas "Acerca de" y "Manual del Usuario" con diseño responsivo.
-- **Estrategia de Negocio**: Elaboración del plan detallado de monetización y proyecciones.
-- **Pagos Automáticos**: Lógica para descontar saldos bancarios al completar transacciones.
-- **Robustez de Montos**: Implementación de formateadores estrictos y visualización de 2 decimales.
-- **Gestión de Ahorros**: Metas vinculadas a cuentas reales con reserva de saldo automática.
-- **Multiplataforma**: Contenedores con ancho controlado para visualización web impecable.
+## Últimos Avances (10/05/2026)
+- **Registro de Tarjetas Flexible**: Introducción del campo "Cuota Próxima" para registrar deudas existentes desde un punto arbitrario.
+- **Seguridad en Presupuestos**: Eliminación del guardado automático inline en favor de un flujo de confirmación supervisado para garantizar la persistencia.
+- **Normalización de Formatos**: Herramienta interactiva para purificar descripciones antiguas eliminando comas de miles.
+- **Soporte PWA (Web & iOS)**: Generación de iconos optimizados y metatags para visualización impecable del logo en todas las plataformas.
+- **Compatibilidad iPhone (Teclado)**: El formateador acepta comas del teclado iOS y las convierte a puntos en tiempo real.
+- **Control de Cobertura Selectivo**: Nueva configuración por cuenta ("Considerar para Cobertura") para cálculos más conservadores.
 
 ---
-*Desarrollado con enfoque en modularidad y escalabilidad.*
+*Mis Finanzas v2.0 - Desarrollado con enfoque en integridad y usabilidad.*

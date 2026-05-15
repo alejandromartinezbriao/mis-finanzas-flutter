@@ -11,7 +11,7 @@ class UserManualPage extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Manual del Usuario'),
+        title: const Text('Manual del Usuario v2.0'),
         elevation: 0,
       ),
       body: Center(
@@ -20,61 +20,61 @@ class UserManualPage extends StatelessWidget {
           child: ListView(
             padding: const EdgeInsets.all(24.0),
             children: [
-              _buildHeader('Guía Rápida de Uso', titleColor),
+              _buildHeader('Guía de Uso Profesional', titleColor),
               const SizedBox(height: 8),
               Text(
-                'Esta guía detalla dónde encontrar y cómo utilizar las funciones principales de la aplicación.',
+                'Novedades y herramientas de gestión avanzada de la Versión 2.0.',
                 style: TextStyle(fontSize: 16, color: textColor, fontStyle: FontStyle.italic),
               ),
               const SizedBox(height: 24),
               
-              _buildSectionTitle('1. PANTALLA PRINCIPAL (Gestión Mensual)', titleColor),
+              _buildSectionTitle('1. PANTALLA PRINCIPAL (Gestión Temporal)', titleColor),
               _buildParagraph(
-                'Es el centro de operaciones diario:\n\n'
-                '• Selector de Mes (Barra Superior): Flechas para navegar entre meses pasados (historial), el actual y futuros (proyecciones).\n'
-                '• Cuadro de Cobertura (Arriba): Comparación visual de tu dinero disponible vs. deudas pendientes del mes.\n'
-                '• Saldos de Cuentas: Visualización rápida del dinero real en tus bancos y billeteras.\n'
-                '• Lista de Movimientos: Ingresos (Verde) y Gastos (Naranja).\n'
-                '• Botón REGISTRAR MOVIMIENTO: Acceso rápido para crear Ingresos, Gastos o Compras con Tarjeta.',
+                '• Tarjeta de Cobertura Inteligente: \n'
+                '  - Pasado: Muestra el Cierre de Mes (Superávit/Déficit real).\n'
+                '  - Presente: Disponibilidad real vs deudas pendientes.\n'
+                '  - Futuro: Proyecciones basadas en plantillas cargadas.\n'
+                '• Saldos de Cuentas: Si ves un icono de ojo tachado, la cuenta está excluida del cálculo de cobertura.\n'
+                '• Lista de Movimientos: Elimina registros deslizando hacia la DERECHA.',
                 textColor
               ),
 
-              _buildSectionTitle('2. CONFIGURACIÓN MAESTRA (Menú > Configuración)', titleColor),
+              _buildSectionTitle('2. HERRAMIENTAS DE MANTENIMIENTO', titleColor),
               _buildParagraph(
-                'Lugar para definir tu estructura financiera antes de empezar:\n\n'
-                '• Pestaña Gastos / Tarjetas: Gestión de pagos fijos y tarjetas. Arrastra desde el icono de las flechas para reordenar.\n'
-                '• Pestaña Ingresos: Gestión de sueldos o rentas fijas.\n'
-                '• Pestaña Mis Cuentas: Registro de bancos (Santander, BROU, etc.) y efectivo.\n'
-                '• Pestaña Categorías: Personalización de iconos y colores.\n'
-                '• Pestaña Presupuestos: Configuración de topes de gasto mensuales.\n'
-                '• Pestaña Metas: Creación de fondos de ahorro (ej. "Vacaciones").',
+                'Suite interactiva para garantizar la integridad de tus datos (Menú > Mantenimiento):\n\n'
+                '• Normalizar Formatos: Elimina comas de miles en bloque para purificar tu base de datos (Paso inicial recomendado).\n'
+                '• Corregir Error 100x: Detecta y corrige montos inflados por errores de coma (ej: 52700 -> 527.00) mediante aprobación manual.\n'
+                '• Sincronizar Cuotas: Compara series históricas y propone corregir montos discrepantes.\n'
+                '• Reconexión Manual: Vincula gastos sueltos a sus plantillas para un mejor control histórico.\n'
+                '• Reparación de Emergencia: Limpia consumos duplicados dentro de una misma tarjeta.\n'
+                '• Recuperar Cuotas Perdidas: Restaura cuotas que faltan en meses pasados basándose en el futuro.\n'
+                '• Unificación Global: Unifica variaciones de nombres de tarjetas o comercios en toda la historia.',
                 textColor
               ),
 
-              _buildSectionTitle('3. HERRAMIENTAS DE CONTROL', titleColor),
+              _buildSectionTitle('3. CONFIGURACIÓN Y AUTOMATIZACIÓN', titleColor),
               _buildParagraph(
-                'Ubicadas en el menú lateral o iconos de acceso directo:\n\n'
-                '• Metas de Ahorro (Icono Bandera): Permite "reservar" dinero de una cuenta real para que no se cuente como disponible para gastos.\n'
-                '• Estadísticas (Icono Gráfico): Evolución de los últimos 6 meses y reparto de gastos por categoría.\n'
-                '• Presupuestos (Icono Barras): Control visual de cuánto has gastado frente al límite definido.\n'
-                '• Exportación (Menú ... > Exportar): Descarga el mes actual en formato CSV (Excel).',
+                '• Tarjetas Bimonetarias: Al editar el vencimiento o logo en una parte (UYU/USD), se sincroniza su gemela automáticamente.\n'
+                '• Suscripciones: Vincula pagos fijos directamente a tus tarjetas para carga automática mensual.\n'
+                '• Control de Cobertura: Puedes apagar el switch "Considerar para Cobertura" en cuentas de ahorro para no sumarlas al dinero para gastos.\n'
+                '• Presupuestos: Ahora incluyen un diálogo de confirmación para asegurar el guardado correcto.\n'
+                '• Categorías: Personaliza iconos y colores para organizar tus gastos.\n'
+                '• Metas de Ahorro: Reserva dinero de cuentas reales para objetivos específicos. El saldo se resta del "disponible" para evitar gastos accidentales.',
                 textColor
               ),
 
               _buildSectionTitle('4. OPERACIONES CLAVE', titleColor),
               _buildParagraph(
-                '• Carga Mensual: Al iniciar un nuevo mes, presiona "Cargar Plantillas" en el centro para traer tus gastos fijos automáticamente.\n'
-                '• Pago Automático: Al marcar un gasto como "Completado" (check), la app descuenta el dinero de la cuenta elegida.\n'
-                '• Ingreso Inteligente: Al crear un ingreso, elige la cuenta de destino para sumar el saldo automáticamente.\n'
-                '• Compras en Cuotas: Indica el número de cuotas y la app las distribuirá en los meses correspondientes.',
+                '• Pago en Efectivo: Al crear un gasto, elige "Pago en Efectivo (Sin cuenta)" para no afectar tus balances bancarios.\n'
+                '• Inicio de Cuotas Flexible: Usa el campo "Cuota Próxima" al registrar una tarjeta para empezar desde donde te toca pagar ahora.\n'
+                '• Instalación en iPhone: En Safari, usa "Añadir a pantalla de inicio" para activar el modo app nativa con logo personalizado.',
                 textColor
               ),
 
-              _buildSectionTitle('5. TIPS DE CARGA DE DATOS', titleColor),
+              _buildSectionTitle('5. REGLAS DE ORO (Integridad de Datos)', titleColor),
               _buildParagraph(
-                '• Decimales: Utiliza siempre el punto (.) para separar decimales.\n'
-                '• Símbolos: No escribas "\$" ni "U\$S", la app los asigna según la moneda.\n'
-                '• Iconos: Pulsa sobre el icono de cualquier movimiento para cambiar su imagen o logo.',
+                '• Punto Decimal Estricto: Usa siempre el punto (.) para decimales. La app convertirá las comas de tu teclado automáticamente.\n'
+                '• Cero Comas de Miles: No uses comas para separar miles. La app las oculta visualmente para evitar errores aritméticos.',
                 textColor
               ),
 

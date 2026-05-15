@@ -116,16 +116,28 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
           ],
         ),
       ),
+      const PopupMenuDivider(),
       const PopupMenuItem(
         value: 'generate',
         child: Row(
           children: [
-            Icon(Icons.auto_awesome, size: 20, color: Colors.teal),
+            Icon(Icons.auto_awesome, size: 20, color: Colors.amber),
             SizedBox(width: 12),
             Text('Cargar Plantillas'),
           ],
         ),
       ),
+      const PopupMenuItem(
+        value: 'maintenance',
+        child: Row(
+          children: [
+            Icon(Icons.build_circle_outlined, size: 20, color: Colors.teal),
+            SizedBox(width: 12),
+            Text('Mantenimiento'),
+          ],
+        ),
+      ),
+      const PopupMenuDivider(),
       const PopupMenuItem(
         value: 'export',
         child: Row(
@@ -146,6 +158,7 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
           ],
         ),
       ),
+      const PopupMenuDivider(),
       const PopupMenuItem(
         value: 'manual',
         child: Row(
@@ -191,6 +204,8 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
       if (confirm == true) {
         await AuthService().signOut();
       }
+    } else if (value == 'maintenance') {
+      Navigator.pushNamed(context, '/maintenance');
     } else if (value == 'manual') {
       Navigator.pushNamed(context, '/manual');
     } else if (value == 'about') {

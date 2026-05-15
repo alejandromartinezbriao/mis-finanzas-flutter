@@ -7,7 +7,8 @@ class DebtCoverageCard extends StatelessWidget {
   final double realUSD;
   final double debtUSD;
   final bool isMobile;
-  final bool isClosureMode; // Nueva bandera
+  final bool isClosureMode;
+  final bool isProjectionMode;
   final NumberFormat uyuFormat;
   final NumberFormat usdFormat;
 
@@ -21,10 +22,21 @@ class DebtCoverageCard extends StatelessWidget {
     required this.usdFormat,
     this.isMobile = false,
     this.isClosureMode = false,
+    this.isProjectionMode = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    String headerText = 'COBERTURA DE DEUDAS';
+    IconData headerIcon = Icons.compare_arrows;
+    if (isClosureMode) {
+      headerText = 'CIERRE DE MES';
+      headerIcon = Icons.assignment_turned_in_outlined;
+    } else if (isProjectionMode) {
+      headerText = 'PROYECCIÓN DEL MES';
+      headerIcon = Icons.auto_graph;
+    }
+
     return Card(
       margin: EdgeInsets.symmetric(horizontal: 16, vertical: isMobile ? 4 : 0),
       color: Theme.of(context).colorScheme.primaryContainer,
@@ -37,13 +49,13 @@ class DebtCoverageCard extends StatelessWidget {
             Row(
               children: [
                 Icon(
-                  isClosureMode ? Icons.assignment_turned_in_outlined : Icons.compare_arrows, 
+                  headerIcon, 
                   color: Colors.amber, 
                   size: 14
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  isClosureMode ? 'CIERRE DE MES' : 'COBERTURA DE DEUDAS',
+                  headerText,
                   style: TextStyle(
                     color: Theme.of(context).colorScheme.onPrimaryContainer,
                     fontSize: isMobile ? 11 : 12,
@@ -54,13 +66,13 @@ class DebtCoverageCard extends StatelessWidget {
               ],
             ),
             SizedBox(height: isMobile ? 8 : 16),
-            _comparisonRow(context, 'Pesos (UYU)', realUYU, debtUYU, uyuFormat, isMobile: isMobile, isClosure: isClosureMode),
+            _comparisonRow(context, 'Pesos (UYU)', realUYU, debtUYU, uyuFormat, isMobile: isMobile, isClosure: isClosureMode, isProjection: isProjectionMode),
             if (debtUSD > 0 || realUSD > 0) ...[
               Divider(
                 color: Theme.of(context).colorScheme.onPrimaryContainer.withValues(alpha: 0.1),
                 height: isMobile ? 12 : 24,
               ),
-              _comparisonRow(context, 'Dólares (USD)', realUSD, debtUSD, usdFormat, isMobile: isMobile, isClosure: isClosureMode),
+              _comparisonRow(context, 'Dólares (USD)', realUSD, debtUSD, usdFormat, isMobile: isMobile, isClosure: isClosureMode, isProjection: isProjectionMode),
             ],
           ],
         ),
@@ -76,6 +88,7 @@ class DebtCoverageCard extends StatelessWidget {
     NumberFormat format, {
     bool isMobile = false,
     bool isClosure = false,
+    bool isProjection = false,
   }) {
     double maxVal = real > debt ? real : debt;
     if (maxVal == 0) maxVal = 1;
@@ -84,6 +97,22 @@ class DebtCoverageCard extends StatelessWidget {
     double debtProgress = debt / maxVal;
 
     bool isCovered = real >= debt;
+
+    String statusText = '';
+    if (isClosure) {
+      statusText = isCovered ? 'SUPERÁVIT: ${format.format(real - debt)}' : 'DÉFICIT: ${format.format(debt - real)}';
+    } else if (isProjection) {
+      statusText = isCovered ? 'SOBRANTE: ${format.format(real - debt)}' : 'A CUBRIR: ${format.format(debt - real)}';
+    } else {
+      statusText = isCovered ? 'CUBIERTO' : 'FALTANTE: ${format.format(debt - real)}';
+    }
+
+    String realLabel = 'Disponible';
+    String debtLabel = 'Deuda';
+    if (isClosure || isProjection) {
+      realLabel = 'Ingresos';
+      debtLabel = 'Gastos';
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -106,9 +135,7 @@ class DebtCoverageCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
-                isClosure 
-                  ? (isCovered ? 'SUPERÁVIT: ${format.format(real - debt)}' : 'DÉFICIT: ${format.format(debt - real)}')
-                  : (isCovered ? 'CUBIERTO' : 'FALTANTE: ${format.format(debt - real)}'),
+                statusText,
                 style: TextStyle(
                   color: isCovered ? Colors.greenAccent : Colors.deepOrangeAccent,
                   fontSize: 11,
@@ -119,13 +146,13 @@ class DebtCoverageCard extends StatelessWidget {
           ],
         ),
         SizedBox(height: isMobile ? 4 : 12),
-        // Barra 1: Disponible (Actual) o Ingresos (Cierre)
+        // Barra 1
         Row(
           children: [
             SizedBox(
               width: isMobile ? 65 : 80,
               child: Text(
-                isClosure ? 'Ingresos' : 'Disponible',
+                realLabel,
                 style: TextStyle(
                   color: Theme.of(context).colorScheme.onPrimaryContainer.withValues(alpha: 0.7),
                   fontSize: isMobile ? 10 : 9,
@@ -159,13 +186,13 @@ class DebtCoverageCard extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 4),
-        // Barra 2: Deuda (Actual) o Egresos (Cierre)
+        // Barra 2
         Row(
           children: [
             SizedBox(
               width: isMobile ? 65 : 80,
               child: Text(
-                isClosure ? 'Egresos' : 'Deuda',
+                debtLabel,
                 style: TextStyle(
                   color: Theme.of(context).colorScheme.onPrimaryContainer.withValues(alpha: 0.7),
                   fontSize: isMobile ? 10 : 9,

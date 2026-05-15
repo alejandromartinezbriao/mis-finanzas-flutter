@@ -16,7 +16,7 @@ class _BudgetsPageState extends State<BudgetsPage> {
   final FirebaseService _service = FirebaseService();
   DateTime _viewingDate = DateTime.now();
 
-  final NumberFormat _uyuFormat = NumberFormat.currency(locale: 'es_UY', symbol: r'$', decimalDigits: 0);
+  final NumberFormat _uyuFormat = NumberFormat.currency(locale: 'en_US', symbol: r'$', decimalDigits: 0, customPattern: '\u00A4#0');
 
   @override
   Widget build(BuildContext context) {
@@ -140,8 +140,8 @@ class _BudgetsPageState extends State<BudgetsPage> {
     final isOver = spent > budget && budget > 0;
     final Color catColor = Color(cat['color'] ?? 0xFF9E9E9E);
     final format = currency == 'UYU' 
-        ? NumberFormat.currency(locale: 'es_UY', symbol: r'$', decimalDigits: 0)
-        : NumberFormat.currency(locale: 'en_US', symbol: r'U$S', decimalDigits: 2);
+        ? NumberFormat.currency(locale: 'en_US', symbol: r'$', decimalDigits: 0, customPattern: '¤#0')
+        : NumberFormat.currency(locale: 'en_US', symbol: r'U$S', decimalDigits: 2, customPattern: '¤#0.00');
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),

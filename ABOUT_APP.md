@@ -1,30 +1,30 @@
-# Mis Finanzas - Tu Salud Financiera en Control
+# Mis Finanzas - Tu Salud Financiera en Control (v2.0)
 
-¡Bienvenido a **Mis Finanzas**! Esta aplicación ha sido creada con el propósito de simplificar la gestión de tu dinero, brindándote herramientas profesionales en la palma de tu mano.
+¡Bienvenido a **Mis Finanzas v2.0**! Esta plataforma ha sido evolucionada para ofrecer un ecosistema bimonetario robusto y herramientas de mantenimiento de datos que garantizan la integridad de tu información.
 
-## 📱 ¿Qué puedes hacer con esta App?
+## 📱 ¿Qué hay de nuevo en la Versión 2.0?
 
-### 1. Control Real de Saldos (Arqueo)
-No solo anotas lo que gastas. La app te permite registrar el saldo real de tus cuentas bancarias y billeteras, comparándolo automáticamente con tus deudas pendientes del mes. Puedes organizar tus cuentas en el orden que prefieras.
+### 1. Cobertura Proyectada
+Ya no solo ves el presente. La nueva lógica de cobertura te permite navegar al futuro para ver proyecciones basadas en tus plantillas y suscripciones, o al pasado para analizar cierres de mes con superávit o déficit real.
 
-### 2. Gestión Inteligente de Tarjetas
-Registra tus compras en cuotas una sola vez. La aplicación se encarga de distribuir los montos en los meses correspondientes y te avisa cuánto deberás pagar en cada cierre de tarjeta. Si te equivocas, puedes borrar consumos y el sistema recalculará el total automáticamente.
+### 2. Suite de Mantenimiento de Datos
+Herramientas interactivas exclusivas de la v2.0 para normalizar formatos, corregir errores aritméticos de decimales (error 100x) y sincronizar cuotas históricas con supervisión manual del usuario.
 
-### 3. Metas de Ahorro con Reserva
-Define metas (ej. "Vacaciones" o "Fondo de Emergencia") y vincula una cuenta real. El dinero que ahorres se "reserva" lógicamente, restándose de tu disponible para gastos para que no lo uses por error.
+### 3. Registro de Cuotas Retroactivo
+Flexibilidad total para empezar a usar la app. Puedes registrar una compra de 12 cuotas indicando que la próxima a pagar es la número 5, y el sistema generará solo las cuotas restantes.
 
-### 4. Automatización con Plantillas
-Configura tus ingresos y gastos fijos (alquiler, luz, sueldo) una sola vez. Cada mes, con un solo toque, puedes cargar todas tus plantillas y ahorrar tiempo.
+### 4. Motor Bimonetario Unificado
+Toda la aplicación (Cuentas, Tarjetas, Suscripciones y Presupuestos) opera bajo un motor nativo UYU/USD con sincronización automática de atributos compartidos (vencimientos, logos) y la "Regla de Oro" del punto decimal estricto para eliminar errores de interpretación.
 
-### 5. Análisis y Exportación
-Visualiza la distribución de tus gastos por categoría y exporta tus datos a Excel (CSV) para llevar un control aún más profundo.
+### 5. Suscripciones Inteligentes y Registro de Efectivo
+Gestión automatizada de servicios recurrentes y rapidez en el registro de gastos de bolsillo mediante la opción de "Pago en Efectivo" sin afectar cuentas bancarias.
 
 ---
 
 ## 🛠️ Detalles Técnicos
-*   **Versión Actual:** 1.0.0
-*   **Tecnología:** Flutter + Firebase (Google Cloud)
-*   **Seguridad:** Autenticación personal y persistencia offline.
+*   **Versión Actual:** 2.0.0 "Evolución Estructural"
+*   **Tecnología:** Flutter (Multiplataforma) + Firebase (Google Cloud)
+*   **Integridad:** Parser de punto decimal estricto y blindaje contra comas de miles.
 
 ---
-*Desarrollado para ayudarte a tomar mejores decisiones financieras.*
+*Desarrollado para brindarte un control financiero profesional y transparente.*

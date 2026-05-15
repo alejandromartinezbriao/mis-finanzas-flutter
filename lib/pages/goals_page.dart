@@ -68,8 +68,8 @@ class _GoalsPageState extends State<GoalsPage> {
               final currency = g['currency'] ?? 'UYU';
               
               final format = currency == 'UYU' 
-                  ? NumberFormat.currency(locale: 'es_UY', symbol: r'$', decimalDigits: 0)
-                  : NumberFormat.currency(locale: 'en_US', symbol: r'U$S', decimalDigits: 2);
+                  ? NumberFormat.currency(locale: 'en_US', symbol: r'$', decimalDigits: 0, customPattern: '¤#0')
+                  : NumberFormat.currency(locale: 'en_US', symbol: r'U$S', decimalDigits: 2, customPattern: '¤#0.00');
 
               return GestureDetector(
                 onTap: () => Navigator.push(

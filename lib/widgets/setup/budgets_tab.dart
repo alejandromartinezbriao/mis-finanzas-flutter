@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../../services/firebase_service.dart';
 import '../../utils/icon_utils.dart';
 import '../../utils/currency_formatter.dart';
+import '../../utils/dialog_utils.dart';
 
 class BudgetsTab extends StatefulWidget {
   final FirebaseService service;
@@ -76,12 +77,8 @@ class _BudgetsTabState extends State<BudgetsTab> {
                         orElse: () => {'amount': 0.0, 'currency': 'UYU'},
                       );
                       
+                      final double budgetAmount = (budget['amount'] as num).toDouble();
                       final String budgetCurrency = budget['currency'] ?? 'UYU';
-                      final controller = TextEditingController(
-                        text: (budget['amount'] as num) > 0 
-                            ? CurrencyUtils.formatForInput((budget['amount'] as num).toDouble())
-                            : '',
-                      );
 
                       return ListTile(
                         leading: CircleAvatar(
@@ -89,57 +86,21 @@ class _BudgetsTabState extends State<BudgetsTab> {
                           child: Icon(IconUtils.getIconData(cat['icon']), color: Color(cat['color'] ?? 0xFF9E9E9E)),
                         ),
                         title: Text(cat['name']),
-                        trailing: SizedBox(
-                          width: 180,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              DropdownButton<String>(
-                                value: budgetCurrency,
-                                underline: const SizedBox(),
-                                style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold),
-                                items: ['UYU', 'USD'].map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
-                                onChanged: (newCurrency) {
-                                  if (newCurrency != null) {
-                                    final amount = double.tryParse(controller.text) ?? 0.0;
-                                    widget.service.setBudget(
-                                      cat['name'], 
-                                      amount, 
-                                      _budgetDate.month, 
-                                      _budgetDate.year, 
-                                      newCurrency
-                                    );
-                                  }
-                                },
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: TextField(
-                                  controller: controller,
-                                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                  inputFormatters: [ThousandsSeparatorInputFormatter()],
-                                  textAlign: TextAlign.end,
-                                  decoration: InputDecoration(
-                                    prefixText: budgetCurrency == 'UYU' ? r'$ ' : r'U$S ',
-                                    hintText: '0',
-                                    border: const UnderlineInputBorder(),
-                                    isDense: true,
-                                  ),
-                                  onSubmitted: (val) {
-                                    final amount = double.tryParse(val) ?? 0.0;
-                                    widget.service.setBudget(
-                                      cat['name'], 
-                                      amount, 
-                                      _budgetDate.month, 
-                                      _budgetDate.year, 
-                                      budgetCurrency
-                                    );
-                                  },
-                                ),
-                              ),
-                            ],
+                        subtitle: Text(
+                          budgetAmount > 0 
+                            ? 'Presupuesto: $budgetCurrency $budgetAmount'
+                            : 'Sin presupuesto definido',
+                          style: TextStyle(
+                            fontSize: 12, 
+                            color: budgetAmount > 0 ? Colors.teal : Colors.grey,
+                            fontWeight: budgetAmount > 0 ? FontWeight.bold : FontWeight.normal,
                           ),
                         ),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.edit_note, color: Colors.blue),
+                          onPressed: () => _showEditBudgetDialog(context, cat, budget),
+                        ),
+                        onTap: () => _showEditBudgetDialog(context, cat, budget),
                       );
                     },
                   );
@@ -149,6 +110,100 @@ class _BudgetsTabState extends State<BudgetsTab> {
           ),
         ),
       ],
+    );
+  }
+
+  void _showEditBudgetDialog(BuildContext context, Map<String, dynamic> cat, Map<String, dynamic> budget) {
+    final amountCtrl = TextEditingController(
+      text: (budget['amount'] as num) > 0 
+          ? CurrencyUtils.formatForInput((budget['amount'] as num).toDouble()) 
+          : ''
+    );
+    String selectedCurrency = budget['currency'] ?? 'UYU';
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setS) => AlertDialog(
+          title: Row(
+            children: [
+              Icon(IconUtils.getIconData(cat['icon']), color: Color(cat['color'] ?? 0xFF9E9E9E)),
+              const SizedBox(width: 10),
+              Expanded(child: Text('Presupuesto: ${cat['name']}')),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Define el tope de gasto mensual para esta categoría.',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: amountCtrl,
+                      autofocus: true,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      inputFormatters: [ThousandsSeparatorInputFormatter()],
+                      decoration: const InputDecoration(
+                        labelText: 'Monto Máximo',
+                        border: OutlineInputBorder(),
+                        helperText: 'Usa punto (.) para decimales.',
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Container(
+                    height: 56,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Theme.of(context).colorScheme.outline),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: selectedCurrency,
+                        items: ['UYU', 'USD'].map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                        onChanged: (v) => setS(() => selectedCurrency = v!),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+            FilledButton(
+              onPressed: () async {
+                final double amount = double.tryParse(amountCtrl.text) ?? 0.0;
+                
+                final confirm = await DialogUtils.confirmAction(
+                  context,
+                  title: 'Confirmar Presupuesto',
+                  message: '¿Deseas registrar un presupuesto de $selectedCurrency $amount para ${cat['name']} en el mes de ${DateFormat('MMMM', 'es_ES').format(_budgetDate)}?',
+                  confirmText: 'Registrar',
+                );
+
+                if (confirm == true) {
+                  await widget.service.setBudget(
+                    cat['name'], 
+                    amount, 
+                    _budgetDate.month, 
+                    _budgetDate.year, 
+                    selectedCurrency
+                  );
+                  if (ctx.mounted) Navigator.pop(ctx);
+                }
+              },
+              child: const Text('Guardar'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

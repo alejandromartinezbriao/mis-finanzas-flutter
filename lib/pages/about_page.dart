@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 
-class AboutPage extends StatelessWidget {
+class AboutPage extends StatefulWidget {
   const AboutPage({super.key});
 
+  @override
+  State<AboutPage> createState() => _AboutPageState();
+}
+
+class _AboutPageState extends State<AboutPage> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -54,7 +59,7 @@ class AboutPage extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          'Versión 1.0.0',
+                          'Versión 2.0.0',
                           style: TextStyle(
                             fontSize: 16,
                             color: secondaryTextColor,
@@ -75,12 +80,12 @@ class AboutPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 32),
                   _buildSection(
-                    'Capacidades del Sistema',
-                    '• Consolidación de saldos en moneda nacional y extranjera.\n'
-                    '• Monitoreo de cobertura de deuda y obligaciones pendientes.\n'
-                    '• Automatización de proyecciones para compras financiadas.\n'
-                    '• Gestión segregada de ahorros y fondos de reserva.\n'
-                    '• Generación de reportes estructurados para análisis de datos.',
+                    'Capacidades del Sistema v2.0',
+                    '• Motor bimonetario nativo con sincronización automática de gemelas.\n'
+                    '• Monitoreo de cobertura dinámica con modo de proyecciones futuras.\n'
+                    '• Suite de mantenimiento interactivo para integridad de datos.\n'
+                    '• Registro ágil de gastos en efectivo y compras financiadas.\n'
+                    '• Automatización de suscripciones vinculadas a tarjetas.',
                     primaryTextColor,
                     secondaryTextColor,
                   ),

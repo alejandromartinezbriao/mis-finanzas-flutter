@@ -13,6 +13,7 @@ import 'pages/goals_page.dart';
 import 'pages/statistics_page.dart';
 import 'pages/about_page.dart';
 import 'pages/user_manual_page.dart';
+import 'pages/maintenance_page.dart';
 import 'services/auth_service.dart';
 
 void main() async {
@@ -111,6 +112,7 @@ class _MyAppState extends State<MyApp> {
         '/statistics': (context) => const StatisticsPage(),
         '/about': (context) => const AboutPage(),
         '/manual': (context) => const UserManualPage(),
+        '/maintenance': (context) => const MaintenancePage(),
         '/login': (context) => const LoginPage(),
       },
       home: StreamBuilder<User?>(

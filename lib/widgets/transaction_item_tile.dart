@@ -27,10 +27,10 @@ class TransactionItemTile extends StatelessWidget {
 
     return Dismissible(
       key: Key(transaction.id),
-      direction: DismissDirection.endToStart,
+      direction: DismissDirection.startToEnd,
       background: Container(
         color: Colors.red.shade400,
-        alignment: Alignment.centerRight,
+        alignment: Alignment.centerLeft,
         padding: const EdgeInsets.symmetric(horizontal: 20),
         child: const Icon(Icons.delete_sweep, color: Colors.white),
       ),
@@ -54,12 +54,20 @@ class TransactionItemTile extends StatelessWidget {
             if (transaction.includedInCard)
               const Padding(
                 padding: EdgeInsets.only(right: 4),
-                child: Icon(Icons.credit_card, size: 12, color: Colors.blueGrey),
+                child: Icon(Icons.link, size: 12, color: Colors.blueGrey),
               ),
             if (transaction.dueDate != null)
               Text(
                 'Vence: ${DateFormat('dd/MM').format(transaction.dueDate!)}',
                 style: const TextStyle(fontSize: 11),
+              ),
+            if (transaction.includedInCard)
+              Padding(
+                padding: const EdgeInsets.only(left: 4),
+                child: Text(
+                  '(Ya sumado)',
+                  style: TextStyle(fontSize: 10, color: Colors.grey.shade500, fontStyle: FontStyle.italic),
+                ),
               ),
           ],
         ),

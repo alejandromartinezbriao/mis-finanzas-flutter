@@ -65,7 +65,8 @@ class _StatisticsPageState extends State<StatisticsPage> {
               if (snapshot.hasError) return Center(child: Text('Error: ${snapshot.error}'));
               if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
 
-              final txs = snapshot.data!.where((t) => t.currency == _currency).toList();
+              // Excluir gastos incluidos en tarjeta para no duplicar en las gráficas y totales
+              final txs = snapshot.data!.where((t) => t.currency == _currency && !t.includedInCard).toList();
               final data = _processHistoricalData(txs, now);
               
               // Categorías que el usuario definió
@@ -178,8 +179,8 @@ class _StatisticsPageState extends State<StatisticsPage> {
     double avgMonthly = monthsWithData > 0 ? totalExpense / monthsWithData : 0;
 
     final format = _currency == 'UYU' 
-      ? NumberFormat.currency(locale: 'es_UY', symbol: r'$', decimalDigits: 0)
-      : NumberFormat.currency(locale: 'en_US', symbol: r'U$S', decimalDigits: 0);
+      ? NumberFormat.currency(locale: 'en_US', symbol: r'$', decimalDigits: 0, customPattern: '¤#0')
+      : NumberFormat.currency(locale: 'en_US', symbol: r'U$S', decimalDigits: 0, customPattern: '¤#0');
 
     return Card(
       elevation: 0,
@@ -214,8 +215,8 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
   Widget _buildBarChart(List<_MonthlyData> data) {
     final format = _currency == 'UYU' 
-      ? NumberFormat.currency(locale: 'es_UY', symbol: r'$', decimalDigits: 0)
-      : NumberFormat.currency(locale: 'en_US', symbol: r'U$S', decimalDigits: 0);
+      ? NumberFormat.currency(locale: 'en_US', symbol: r'$', decimalDigits: 0, customPattern: '¤#0')
+      : NumberFormat.currency(locale: 'en_US', symbol: r'U$S', decimalDigits: 0, customPattern: '¤#0');
 
     return BarChart(
       BarChartData(
@@ -273,8 +274,8 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
   Widget _buildDetailsList(List<_MonthlyData> data) {
     final format = _currency == 'UYU' 
-      ? NumberFormat.currency(locale: 'es_UY', symbol: r'$', decimalDigits: 0)
-      : NumberFormat.currency(locale: 'en_US', symbol: r'U$S', decimalDigits: 0);
+      ? NumberFormat.currency(locale: 'en_US', symbol: r'$', decimalDigits: 0, customPattern: '¤#0')
+      : NumberFormat.currency(locale: 'en_US', symbol: r'U$S', decimalDigits: 0, customPattern: '¤#0');
 
     return Column(
       children: data.reversed.map((d) {
@@ -300,8 +301,8 @@ class _StatisticsPageState extends State<StatisticsPage> {
     double maxVal = 0;
 
     final format = _currency == 'UYU' 
-      ? NumberFormat.currency(locale: 'es_UY', symbol: r'$', decimalDigits: 0)
-      : NumberFormat.currency(locale: 'en_US', symbol: r'U$S', decimalDigits: 0);
+      ? NumberFormat.currency(locale: 'en_US', symbol: r'$', decimalDigits: 0, customPattern: '¤#0')
+      : NumberFormat.currency(locale: 'en_US', symbol: r'U$S', decimalDigits: 0, customPattern: '¤#0');
 
     for (int i = 0; i < _monthCount; i++) {
       DateTime d = DateTime(now.year, now.month - (_monthCount - 1 - i), 1);

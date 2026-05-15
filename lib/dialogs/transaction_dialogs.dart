@@ -126,12 +126,12 @@ class _SimpleTransactionDialogState extends State<SimpleTransactionDialog> {
                       ),
                       items: [
                         const DropdownMenuItem<String>(
-                          value: null,
+                          value: 'CASH_PAYMENT',
                           child: Row(
                             children: [
-                              Icon(Icons.money_off_csred_outlined, color: Colors.grey, size: 20),
+                              Icon(Icons.money_off_csred_outlined, color: Colors.blueGrey, size: 20),
                               SizedBox(width: 10),
-                              Text('Solo registro / Efectivo', style: TextStyle(color: Colors.grey)),
+                              Text('Solo registro / Efectivo', style: TextStyle(color: Colors.blueGrey)),
                             ],
                           ),
                         ),
@@ -178,6 +178,16 @@ class _SimpleTransactionDialogState extends State<SimpleTransactionDialog> {
                               Icon(Icons.pending_actions, color: Colors.orange, size: 20),
                               SizedBox(width: 10),
                               Text('Dejar como Pendiente', style: TextStyle(color: Colors.orange)),
+                            ],
+                          ),
+                        ),
+                        const DropdownMenuItem<String>(
+                          value: 'CASH_PAYMENT',
+                          child: Row(
+                            children: [
+                              Icon(Icons.money_off_csred_outlined, color: Colors.blueGrey, size: 20),
+                              SizedBox(width: 10),
+                              Text('Pago en Efectivo (Sin cuenta)', style: TextStyle(color: Colors.blueGrey)),
                             ],
                           ),
                         ),
@@ -309,8 +319,8 @@ class _SimpleTransactionDialogState extends State<SimpleTransactionDialog> {
                 includedInCard: includedInCard,
               );
 
-              if (selectedAccountId != null) {
-                // Si seleccionó cuenta (sea Ingreso o Gasto), usamos la lógica atómica
+              if (selectedAccountId != null && selectedAccountId != 'CASH_PAYMENT') {
+                // Si seleccionó cuenta real (sea Ingreso o Gasto), usamos la lógica atómica
                 await widget.service.addTransactionWithBalanceUpdate(
                   transaction: transaction,
                   accountId: selectedAccountId,
@@ -348,6 +358,7 @@ class _CreditCardTransactionDialogState extends State<CreditCardTransactionDialo
   final _formKey = GlobalKey<FormState>();
   final amountController = TextEditingController();
   final installmentsController = TextEditingController(text: '1');
+  final initialInstallmentController = TextEditingController(text: '1');
   final conceptController = TextEditingController();
   String? selectedCard;
   String? selectedCategoryId;
@@ -368,6 +379,7 @@ class _CreditCardTransactionDialogState extends State<CreditCardTransactionDialo
   void dispose() {
     amountController.dispose();
     installmentsController.dispose();
+    initialInstallmentController.dispose();
     conceptController.dispose();
     super.dispose();
   }
@@ -388,7 +400,7 @@ class _CreditCardTransactionDialogState extends State<CreditCardTransactionDialo
               );
             }
 
-            final cards = snapshot.data?.where((t) => t['isCreditCard'] == true).toList() ?? [];
+            final cards = snapshot.data?.where((t) => t['isCreditCard'] == true && t['currency'] == currency).toList() ?? [];
 
             return AlertDialog(
               title: Row(children: [
@@ -396,25 +408,58 @@ class _CreditCardTransactionDialogState extends State<CreditCardTransactionDialo
                 const SizedBox(width: 10),
                 const Text('Compra con Tarjeta')
               ]),
-              content: cards.isEmpty
-                  ? Column(
-                      mainAxisSize: MainAxisSize.min,
+              scrollable: true,
+              content: Container(
+                width: double.maxFinite,
+                constraints: const BoxConstraints(maxWidth: 450),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
                       children: [
-                        const Text('No tienes plantillas marcadas como "Tarjeta de Crédito".'),
-                        const SizedBox(height: 15),
-                        const Text(
-                          'Si quieres usar una de tus cuentas (ej: Prex o Débito), usa el botón "Registrar Movimiento" y selecciona la cuenta en "Cuenta de Pago".',
-                          style: TextStyle(fontSize: 12, color: Colors.grey),
-                        ),
-                        const SizedBox(height: 15),
-                        const Text(
-                          'Si es una tarjeta de crédito tradicional, primero márcala como tal en la Configuración de Gastos.',
-                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                        const Text("Moneda:", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: SegmentedButton<String>(
+                            segments: const [
+                              ButtonSegment(value: 'UYU', label: Text('UYU', style: TextStyle(fontSize: 12))),
+                              ButtonSegment(value: 'USD', label: Text('USD', style: TextStyle(fontSize: 12))),
+                            ],
+                            selected: {currency},
+                            onSelectionChanged: (val) => setState(() {
+                              currency = val.first;
+                              selectedCard = null;
+                            }),
+                          ),
                         ),
                       ],
-                    )
-                  : SingleChildScrollView(
-                      child: Form(
+                    ),
+                    const SizedBox(height: 20),
+                    if (cards.isEmpty)
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.red.withOpacity(0.3)),
+                        ),
+                        child: Column(
+                          children: [
+                            Text('No tienes tarjetas de crédito en $currency.', 
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 13)
+                            ),
+                            const SizedBox(height: 8),
+                            const Text(
+                              'Configúralas en Menú > Configuración > Gastos.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(fontSize: 12, color: Colors.blueGrey),
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      Form(
                         key: _formKey,
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
@@ -422,19 +467,29 @@ class _CreditCardTransactionDialogState extends State<CreditCardTransactionDialo
                             DropdownButtonFormField<String>(
                               initialValue: selectedCard,
                               hint: const Text('Seleccionar Tarjeta'),
+                              isExpanded: true,
                               items: cards.map((c) => DropdownMenuItem<String>(
                                 value: c['title'],
-                                child: Text(c['title'])
+                                child: Text(c['title'], overflow: TextOverflow.ellipsis)
                               )).toList(),
                               onChanged: (v) => setState(() => selectedCard = v),
-                              decoration: const InputDecoration(labelText: 'Tarjeta', border: OutlineInputBorder()),
-                              validator: (v) => v == null ? 'Selecciona una tarjeta' : null,
+                              decoration: const InputDecoration(
+                                labelText: 'Tarjeta', 
+                                border: OutlineInputBorder(),
+                                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              ),
+                              validator: (v) => v == null ? 'Requerido' : null,
                             ),
-                            const SizedBox(height: 10),
+                            const SizedBox(height: 16),
                             DropdownButtonFormField<String>(
                               initialValue: selectedCategoryId,
                               hint: const Text('Categoría (Opcional)'),
-                              decoration: const InputDecoration(labelText: 'Categoría', border: OutlineInputBorder()),
+                              isExpanded: true,
+                              decoration: const InputDecoration(
+                                labelText: 'Categoría', 
+                                border: OutlineInputBorder(),
+                                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              ),
                               items: [
                                 const DropdownMenuItem<String>(
                                   value: null,
@@ -444,76 +499,112 @@ class _CreditCardTransactionDialogState extends State<CreditCardTransactionDialo
                                   value: c['id'] as String,
                                   child: Row(
                                     children: [
-                                      Icon(IconUtils.getIconData(c['icon'] ?? 'category'), color: Color(c['color'] ?? 0xFF9E9E9E), size: 20),
+                                      Icon(IconUtils.getIconData(c['icon'] ?? 'category'), color: Color(c['color'] ?? 0xFF9E9E9E), size: 18),
                                       const SizedBox(width: 10),
-                                      Text(c['name']),
+                                      Expanded(child: Text(c['name'], overflow: TextOverflow.ellipsis)),
                                     ],
                                   ),
                                 )),
                               ],
                               onChanged: (v) => setState(() => selectedCategoryId = v),
                             ),
-                            const SizedBox(height: 10),
+                            const SizedBox(height: 16),
                             TextFormField(
                               controller: conceptController,
-                              decoration: const InputDecoration(labelText: 'Concepto (Opcional)', hintText: 'Ej: Televisor, Supermercado', border: OutlineInputBorder()),
+                              decoration: const InputDecoration(
+                                labelText: 'Concepto', 
+                                hintText: 'Ej: Televisor, Super...', 
+                                border: OutlineInputBorder(),
+                                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                              ),
                             ),
-                            const SizedBox(height: 10),
+                            const SizedBox(height: 16),
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Expanded(
+                                  flex: 3,
                                   child: TextFormField(
                                     controller: amountController,
                                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
                                     inputFormatters: [ThousandsSeparatorInputFormatter()],
                                     decoration: const InputDecoration(
-                                      labelText: 'Monto Total', 
+                                      labelText: 'Monto Total de Compra', 
                                       border: OutlineInputBorder(),
-                                      helperText: 'Usa punto (.) para decimales.',
+                                      helperText: 'Decimales con punto (.).',
+                                      helperStyle: TextStyle(fontSize: 10),
+                                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                    ),
+                                    validator: (v) => (v == null || v.isEmpty) ? 'Requerido' : null,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Container(
+                                  height: 48,
+                                  width: 60,
+                                  alignment: Alignment.center,
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                                    borderRadius: BorderRadius.circular(4),
+                                    border: Border.all(color: Theme.of(context).colorScheme.outline.withOpacity(0.5)),
+                                  ),
+                                  child: Text(currency, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                                )
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: TextFormField(
+                                    controller: installmentsController,
+                                    keyboardType: TextInputType.number,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Cuotas Totales', 
+                                      border: OutlineInputBorder(),
+                                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                                     ),
                                     validator: (v) {
-                                      if (v == null || v.isEmpty) return 'Ingresa un monto';
+                                      if (v == null || v.isEmpty) return 'Error';
+                                      final n = int.tryParse(v);
+                                      if (n == null || n < 1) return 'Min 1';
                                       return null;
                                     },
                                   ),
                                 ),
-                                const SizedBox(width: 10),
-                                Container(
-                                  height: 56,
-                                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                                  decoration: BoxDecoration(
-                                    border: Border.all(color: Theme.of(context).colorScheme.outline),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: DropdownButtonHideUnderline(
-                                    child: DropdownButton<String>(
-                                      value: currency,
-                                      onChanged: (v) => setState(() => currency = v!),
-                                      items: ['UYU', 'USD'].map((c) => DropdownMenuItem(value: c, child: Text(c))).toList()
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: TextFormField(
+                                    controller: initialInstallmentController,
+                                    keyboardType: TextInputType.number,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Cuota Próxima', 
+                                      border: OutlineInputBorder(),
+                                      helperText: 'Inicio de carga',
+                                      helperStyle: TextStyle(fontSize: 10),
+                                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                                     ),
+                                    validator: (v) {
+                                      if (v == null || v.isEmpty) return 'Error';
+                                      final n = int.tryParse(v);
+                                      final total = int.tryParse(installmentsController.text) ?? 1;
+                                      if (n == null || n < 1) return 'Min 1';
+                                      if (n > total) return 'Max $total';
+                                      return null;
+                                    },
                                   ),
-                                )
+                                ),
                               ],
                             ),
-                            const SizedBox(height: 10),
-                            TextFormField(
-                              controller: installmentsController,
-                              keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(labelText: 'Cantidad de Cuotas', border: OutlineInputBorder()),
-                              validator: (v) {
-                                if (v == null || v.isEmpty) return 'Ingresa cuotas';
-                                final n = int.tryParse(v);
-                                if (n == null || n < 1) return 'Mínimo 1';
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 10),
+                            const SizedBox(height: 8),
                             ListTile(
                               dense: true,
                               contentPadding: EdgeInsets.zero,
-                              leading: const Icon(Icons.calendar_today),
-                              title: Text('Mes de inicio: ${DateFormat('MMMM yyyy', 'es_ES').format(selectedDate)}'),
+                              visualDensity: VisualDensity.compact,
+                              leading: const Icon(Icons.calendar_month, size: 20),
+                              title: Text('Mes de inicio: ${DateFormat('MMM yyyy', 'es_ES').format(selectedDate)}', style: const TextStyle(fontSize: 13)),
+                              trailing: const Icon(Icons.edit, size: 16),
                               onTap: () async {
                                 final DateTime? picked = await showDatePicker(
                                   context: context,
@@ -527,7 +618,9 @@ class _CreditCardTransactionDialogState extends State<CreditCardTransactionDialo
                           ],
                         ),
                       ),
-                    ),
+                  ],
+                ),
+              ),
               actions: [
                 TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
                 if (cards.isNotEmpty)
@@ -557,6 +650,7 @@ class _CreditCardTransactionDialogState extends State<CreditCardTransactionDialo
                           cardName: selectedCard!,
                           totalAmount: double.tryParse(amountController.text) ?? 0.0,
                           installments: int.parse(installmentsController.text),
+                          initialInstallment: int.parse(initialInstallmentController.text),
                           currency: currency,
                           startDate: selectedDate,
                           concept: conceptController.text.isNotEmpty ? conceptController.text : null,
