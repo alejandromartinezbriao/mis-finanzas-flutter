@@ -3,7 +3,6 @@ import 'package:intl/intl.dart';
 import '../models/transaction_model.dart';
 import '../services/firebase_service.dart';
 import '../widgets/debt_coverage_card.dart';
-import '../widgets/summary_balance_card.dart';
 import '../widgets/account_balance_display.dart';
 import '../widgets/transaction_item_tile.dart';
 import '../widgets/month_selector.dart';

@@ -39,11 +39,12 @@ class UserManualPage extends StatelessWidget {
                 textColor
               ),
 
-              _buildSectionTitle('2. HERRAMIENTAS DE MANTENIMIENTO', titleColor),
+              _buildSectionTitle('2. MANTENIMIENTO E IA', titleColor),
               _buildParagraph(
-                'Suite interactiva para garantizar la integridad de tus datos (Menú > Mantenimiento):\n\n'
+                'Suite interactiva para tus datos y consejos inteligentes:\n\n'
+                '• Asesor Financiero IA: Analiza tus gastos con Gemini y recibe alertas, detección de gastos altos y consejos de ahorro personalizados.\n'
                 '• Normalizar Formatos: Elimina comas de miles en bloque para purificar tu base de datos (Paso inicial recomendado).\n'
-                '• Corregir Error 100x: Detecta y corrige montos inflados por errores de coma (ej: 52700 -> 527.00) mediante aprobación manual.\n'
+                '• Corregir Error 100x: Detecta y corrige montos inflados por errores de coma mediante aprobación manual.\n'
                 '• Sincronizar Cuotas: Compara series históricas y propone corregir montos discrepantes.\n'
                 '• Reconexión Manual: Vincula gastos sueltos a sus plantillas para un mejor control histórico.\n'
                 '• Reparación de Emergencia: Limpia consumos duplicados dentro de una misma tarjeta.\n'

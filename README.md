@@ -6,6 +6,7 @@ Una aplicación de finanzas personales desarrollada en Flutter, diseñada para o
 
 - **Gestión Bimonetaria Nativa:** Manejo nativo y simultáneo de Pesos Uruguayos (UYU) y Dólares (USD) en cuentas, tarjetas, presupuestos y suscripciones.
 - **Análisis de Cobertura Inteligente:** Compara tu **disponible libre** contra tus **deudas** en el mes actual, visualiza el **cierre de mes** (superávit/déficit) en el pasado, o proyecta tu salud financiera en meses **futuros**.
+- **Asesor Financiero IA (v2.0):** Integración con Gemini AI para recibir alertas críticas, detección de mayores gastos y consejos de ahorro ultra-concretos basados en tus datos reales.
 - **Mantenimiento y Calidad de Datos:** Suite de utilidades interactivas para corregir errores aritméticos (error 100x), normalizar formatos de texto y sincronizar cuotas mediante aprobación manual.
 - **Sincronización Inteligente de Tarjetas:** Las tarjetas bimonetarias mantienen sus atributos (vencimiento, logo, categoría) sincronizados automáticamente entre Pesos y Dólares.
 - **Registro de Efectivo Directo:** Opción para registrar pagos de bolsillo sin necesidad de vincularlos a una cuenta bancaria desde el primer paso.

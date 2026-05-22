@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/firebase_service.dart';
 import '../services/auth_service.dart';
 import '../dialogs/category_distribution_dialog.dart';
+import '../dialogs/ai_analysis_dialog.dart';
 import '../utils/export_utils.dart';
 import '../utils/dialog_utils.dart';
 import 'package:intl/intl.dart';
@@ -104,6 +105,35 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
     });
   }
 
+  void _showAiAdvisor(BuildContext context, String monthLabel) async {
+    // 1. Obtener transacciones del mes
+    final txs = await service.getTransactions(month: viewingDate.month, year: viewingDate.year).first;
+    
+    // 2. Obtener presupuestos del mes
+    final budgets = await service.getBudgets(viewingDate.month, viewingDate.year).first;
+    
+    // 3. Calcular presupuesto total (sumando todos los límites de categorías)
+    double totalBudget = budgets.fold(0.0, (sum, b) => sum + (b['amount'] ?? 0.0));
+
+    if (!context.mounted) return;
+
+    if (txs.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No hay gastos este mes para analizar.'))
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) => AiAnalysisDialog(
+        transactions: txs,
+        monthlyBudget: totalBudget > 0 ? totalBudget : 1000.0, // Fallback si no hay presupuesto definido
+        monthLabel: monthLabel,
+      ),
+    );
+  }
+
   List<PopupMenuEntry<String>> _buildMenuItems() {
     return [
       const PopupMenuItem(
@@ -117,6 +147,16 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
         ),
       ),
       const PopupMenuDivider(),
+      const PopupMenuItem(
+        value: 'ai_advisor',
+        child: Row(
+          children: [
+            Icon(Icons.auto_awesome, size: 20, color: Colors.purpleAccent),
+            SizedBox(width: 12),
+            Text('Asesor Financiero IA'),
+          ],
+        ),
+      ),
       const PopupMenuItem(
         value: 'generate',
         child: Row(
@@ -212,6 +252,8 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
       Navigator.pushNamed(context, '/about');
     } else if (value == 'setup') {
       Navigator.pushNamed(context, '/setup');
+    } else if (value == 'ai_advisor') {
+      _showAiAdvisor(context, label);
     } else if (value == 'export') {
       final txs = await service.getTransactions(month: viewingDate.month, year: viewingDate.year).first;
       if (txs.isNotEmpty) {

@@ -6,6 +6,7 @@
 - **Aritmética**: Estandarización total de punto decimal (`.`) como único separador. Eliminación física de comas (`,`) de miles en toda la interfaz para evitar ambigüedades.
 - **Usabilidad**: 
     - **Registro de Cuotas Flexible**: Nuevo campo "Cuota Próxima" para registrar deudas existentes facilitando la migración.
+    - **Asistente Financiero IA**: Integración con Google AI Studio (Gemini) mediante Cloud Functions para análisis automatizado de gastos y consejos de ahorro personalizados.
     - **Mantenimiento Avanzado**: Suite interactiva para corrección de decimales (error 100x), normalización y sincronización supervisada.
     - **Presupuestos Seguros**: Flujo de confirmación manual para garantizar la persistencia de presupuestos.
     - **Control de Cobertura Selectivo**: Opción para excluir cuentas específicas del cálculo de dinero disponible.
@@ -34,6 +35,7 @@ Se declara oficialmente el salto a la **Versión 2.0** debido a la reestructurac
 - **Compatibilidad Total**: Optimización para iPhone (teclado y PWA) y Web.
 
 ## Últimos Avances (10/05/2026)
+- **Integración de Inteligencia Artificial**: Implementación del módulo "Asesor Financiero IA" accesible desde el menú principal. Utiliza un modelo de lenguaje avanzado (Gemini 2.5 Flash) para analizar la salud financiera del usuario y proponer acciones concretas de ahorro basadas en sus datos reales de Firestore.
 - **Registro de Tarjetas Flexible**: Introducción del campo "Cuota Próxima" para registrar deudas existentes desde un punto arbitrario.
 - **Seguridad en Presupuestos**: Eliminación del guardado automático inline en favor de un flujo de confirmación supervisado para garantizar la persistencia.
 - **Normalización de Formatos**: Herramienta interactiva para purificar descripciones antiguas eliminando comas de miles.

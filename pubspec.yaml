@@ -47,6 +47,7 @@ dependencies:
   quick_actions: ^1.0.9
   share_plus: ^10.1.0
   path_provider: ^2.1.4
+  http: ^1.6.0
 
 dev_dependencies:
   flutter_test:
