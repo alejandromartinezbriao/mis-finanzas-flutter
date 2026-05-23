@@ -128,7 +128,7 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
       context: context,
       builder: (context) => AiAnalysisDialog(
         transactions: txs,
-        monthlyBudget: totalBudget > 0 ? totalBudget : 1000.0, // Fallback si no hay presupuesto definido
+        monthlyBudget: totalBudget > 0 ? totalBudget : 1000.0,
         monthLabel: monthLabel,
       ),
     );

@@ -1,10 +1,24 @@
 const { onRequest } = require("firebase-functions/v2/https");
-const { GoogleGenerativeAI } = require("@google/generative-ai");
+const { VertexAI } = require("@google-cloud/vertexai");
+
+// Inicializa Vertex AI apuntando directamente a tu ID de proyecto de Google Cloud
+// Esto asocia el consumo al plan Blaze pospago y consume tus $300 USD de regalo
+const vertexAI = new VertexAI({
+  project: "cuentaspersonales-36328",
+  location: "us-central1"
+});
 
 exports.analizarGastosMensuales = onRequest(
-  { secrets: ["GEMINI_API_KEY"], cors: true },
+  { cors: true }, // Permite que tu app de Flutter Web se conecte sin bloqueos de navegador
   async (req, res) => {
-    if (req.method !== 'POST') return res.status(405).send('Method Not Allowed');
+    // Manejo de peticiones preflight CORS de los navegadores web
+    if (req.method === 'OPTIONS') {
+      return res.status(204).send('');
+    }
+
+    if (req.method !== 'POST') {
+      return res.status(405).send('Method Not Allowed');
+    }
 
     const { presupuestoTotal, gastos } = req.body;
     if (presupuestoTotal === undefined || !gastos) {
@@ -12,38 +26,52 @@ exports.analizarGastosMensuales = onRequest(
     }
 
     try {
-      const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
-      // CAMBIO CLAVE: Usamos 'gemini-1.5-flash-latest' que es el alias más compatible
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
+      // Consumimos el modelo Gemini 2.5 Flash de grado empresarial en Vertex AI
+      const generativeModel = vertexAI.getGenerativeModel({
+        model: "gemini-2.5-flash",
+      });
 
       const prompt = `
-        Actúas como un asesor financiero experto.
-        Presupuesto: $${presupuestoTotal}.
-        Gastos: ${JSON.stringify(gastos)}.
+        Actúas como un asesor financiero experto y analista de datos.
+        Presupuesto Mensual Total: $${presupuestoTotal}.
+        Lista de Gastos por Categoría: ${JSON.stringify(gastos)}.
 
-        Responde SOLO un objeto JSON (sin markdown):
+        Reglas estrictas de respuesta:
+        1. Debes responder EXCLUSIVAMENTE en formato JSON válido.
+        2. No incluyas textos de introducción, saludos ni bloques markdown (\`\`\`json).
+        3. Sé muy breve y directo con los textos.
+
+        Estructura exacta del JSON que debes devolver:
         {
-          "alerta_critica": "texto breve o null",
-          "categoria_mayor_gasto": "nombre",
-          "consejo_ahorro": "consejo concreto max 15 palabras"
+          "alerta_critica": "un texto breve de alerta si gastó de más, o null si todo está bajo control",
+          "categoria_mayor_gasto": "nombre de la categoría con mayor egreso",
+          "consejo_ahorro": "un consejo financiero concreto de máximo 15 palabras"
         }
       `;
 
-      const result = await model.generateContent(prompt);
-      const text = result.response.text().trim();
+      // Llamada al motor de Vertex AI
+      const resp = await generativeModel.generateContent({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      });
 
-      // Limpieza ultra-robusta de JSON
+      // Extracción limpia del texto del candidato de respuesta
+      const text = resp.response.candidates[0].content.parts[0].text.trim();
+
+      // Limpieza robusta de marcas JSON
       const start = text.indexOf('{');
       const end = text.lastIndexOf('}') + 1;
-      const cleanedText = text.substring(start, end);
 
+      if (start === -1 || end === 0) {
+        throw new Error("La IA de Vertex no devolvió un formato JSON válido.");
+      }
+
+      const cleanedText = text.substring(start, end);
       return res.status(200).json(JSON.parse(cleanedText));
 
     } catch (error) {
-      console.error("Error Gemini:", error);
+      console.error("Error en Vertex AI:", error);
       return res.status(500).json({
-        error: "Error del motor de IA",
+        error: "Error del motor de IA empresarial",
         details: error.message
       });
     }

@@ -1,41 +1,29 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'package:dio/dio.dart';
 
 class GeminiService {
-  // URL de la Cloud Function desplegada
   final String _url = 'https://analizargastosmensuales-cjiedaavia-uc.a.run.app';
+  final Dio _dio = Dio();
 
   Future<Map<String, dynamic>?> analizarFinanzas({
     required double presupuestoTotal,
-    required Map<String, double> gastosPorCategoria,
+    required Map<String, dynamic> gastosPorCategoria,
   }) async {
     try {
-      final response = await http.post(
-        Uri.parse(_url),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
+      final response = await _dio.post(
+        _url,
+        data: {
           'presupuestoTotal': presupuestoTotal,
           'gastos': gastosPorCategoria,
-        }),
+        },
       );
 
       if (response.statusCode == 200) {
-        // Mapeamos el JSON exacto estructurado en la Cloud Function
-        final Map<String, dynamic> data = jsonDecode(response.body);
-        return data;
-      } else {
-        print('Error en el servidor de IA: ${response.statusCode} - ${response.body}');
-        // Retornamos el cuerpo para ver si hay un mensaje de error útil
-        try {
-          return jsonDecode(response.body);
-        } catch (_) {
-          return {'error': 'Código de estado: ${response.statusCode}'};
-        }
+        return response.data is String ? jsonDecode(response.data) : response.data;
       }
+      return null;
     } catch (e) {
-      print('Error de conexión al analizar finanzas: $e');
+      print('Error: $e');
       return null;
     }
   }

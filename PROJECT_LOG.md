@@ -22,6 +22,7 @@
 4. **Optimización PWA**: Configuración de manifiestos y cabeceras para experiencia nativa en iPhone y Android.
 
 ## Hoja de Ruta (Roadmap) - Versión 2.x
+- [x] **Monetización Inteligente**: Implementación de límites de uso para el asesor de IA. Usuarios gratuitos tienen 1 análisis por mes; usuarios Premium tienen acceso ilimitado.
 - [ ] **Modo Familiar**: Sistema de "Hogares" para compartir gastos con visibilidad selectiva.
 - [ ] **Migración de Datos Locales**: Proceso para usuarios que pasan de modo offline a nube.
 - [ ] **Refactorización a Repositorios**: Abstracción total de la capa de persistencia.
@@ -35,7 +36,8 @@ Se declara oficialmente el salto a la **Versión 2.0** debido a la reestructurac
 - **Compatibilidad Total**: Optimización para iPhone (teclado y PWA) y Web.
 
 ## Últimos Avances (10/05/2026)
-- **Integración de Inteligencia Artificial**: Implementación del módulo "Asesor Financiero IA" accesible desde el menú principal. Utiliza un modelo de lenguaje avanzado (Gemini 2.5 Flash) para analizar la salud financiera del usuario y proponer acciones concretas de ahorro basadas en sus datos reales de Firestore.
+- **Estrategia de Monetización IA**: Implementación de un sistema de cuotas para el uso de Gemini a través de Vertex AI. El sistema rastrea el mes del último análisis realizado por el usuario. Si el usuario no es Premium, se bloquea el acceso tras el primer uso mensual para proteger el presupuesto de infraestructura del proyecto.
+- **Integración de Inteligencia Artificial**: Implementación del módulo "Asesor Financiero IA" accesible desde el menú principal. Utiliza un modelo de lenguaje avanzado (Gemini 1.5 Flash) para analizar la salud financiera del usuario y proponer acciones concretas de ahorro basadas en sus datos reales de Firestore.
 - **Registro de Tarjetas Flexible**: Introducción del campo "Cuota Próxima" para registrar deudas existentes desde un punto arbitrario.
 - **Seguridad en Presupuestos**: Eliminación del guardado automático inline en favor de un flujo de confirmación supervisado para garantizar la persistencia.
 - **Normalización de Formatos**: Herramienta interactiva para purificar descripciones antiguas eliminando comas de miles.

@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb; // Añadido para verificar entorno Web
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:quick_actions/quick_actions.dart';
 import 'firebase_options.dart';
@@ -18,16 +19,25 @@ import 'services/auth_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
-    // Habilitar persistencia offline explícitamente
-    FirebaseFirestore.instance.settings = const Settings(
-      persistenceEnabled: true,
-      cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
-    );
+
+    // MODIFICACIÓN DE SEGURIDAD: Solo habilitamos persistencia offline si NO es entorno Web
+    if (!kIsWeb) {
+      FirebaseFirestore.instance.settings = const Settings(
+        persistenceEnabled: true,
+        cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+      );
+    } else {
+      // Configuración ligera y segura para el caché de Firestore en Navegadores Web
+      FirebaseFirestore.instance.settings = const Settings(
+        persistenceEnabled: false,
+      );
+    }
+
     runApp(const MyApp());
   } catch (e) {
     runApp(MaterialApp(
@@ -52,7 +62,10 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
-    _setupQuickActions();
+    // MODIFICACIÓN DE ACCIONES: Solo iniciamos los accesos rápidos en celulares Android/iOS
+    if (!kIsWeb) {
+      _setupQuickActions();
+    }
   }
 
   void _setupQuickActions() {
@@ -118,7 +131,6 @@ class _MyAppState extends State<MyApp> {
       home: StreamBuilder<User?>(
         stream: AuthService().user,
         builder: (context, snapshot) {
-          // Si hay error en el stream de auth
           if (snapshot.hasError) {
             return Scaffold(body: Center(child: Text('Error de Autenticación: ${snapshot.error}')));
           }
@@ -126,10 +138,9 @@ class _MyAppState extends State<MyApp> {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Scaffold(body: Center(child: CircularProgressIndicator()));
           }
-          
+
           if (snapshot.hasData) {
             final String? currentAction = shortcutType;
-            // Consumimos el tipo de shortcut para que no se vuelva a abrir al reconstruir
             if (currentAction != null) shortcutType = null;
             return HomePage(initialAction: currentAction);
           }

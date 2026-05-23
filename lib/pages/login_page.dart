@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:local_auth/local_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -44,6 +45,7 @@ class _LoginPageState extends State<LoginPage> {
 
   // Verificar si el dispositivo soporta biometría
   Future<void> _checkBiometrics() async {
+    if (kIsWeb) return; // La biometría no está soportada en Web vía este plugin
     try {
       bool canCheck = await _localAuth.canCheckBiometrics || await _localAuth.isDeviceSupported();
       setState(() => _canCheckBiometrics = canCheck);
