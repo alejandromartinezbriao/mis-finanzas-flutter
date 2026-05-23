@@ -25,6 +25,7 @@ class GeminiService {
           'ingresoTotal': ingresoTotal,
           'saldosActuales': saldosActuales,
           'userName': userName ?? 'Usuario',
+          'tipoCambio': 43.0, // Valor de referencia para Uruguay
         },
       );
 
@@ -35,6 +36,46 @@ class GeminiService {
     } catch (e) {
       print('Error en IA: $e');
       return {'error': 'Error de comunicación con el asesor.'};
+    }
+  }
+
+  Future<Map<String, dynamic>?> obtenerCotizacionDolar() async {
+    try {
+      final response = await _dio.get('https://obtenercotizaciondolar-cjiedaavia-uc.a.run.app');
+      if (response.statusCode == 200) {
+        return response.data is String ? jsonDecode(response.data) : response.data;
+      }
+      return null;
+    } catch (e) {
+      print('Error cotización: $e');
+      return null;
+    }
+  }
+
+  Future<Map<String, dynamic>?> analizarPlanificacion({
+    required List<Map<String, dynamic>> presupuestos,
+    required List<Map<String, dynamic>> ingresosPrevistos,
+    required Map<String, double> saldosActuales,
+    String? userName,
+  }) async {
+    try {
+      final response = await _dio.post(
+        'https://analizarsostenibilidadplan-cjiedaavia-uc.a.run.app', // URL de la nueva función
+        data: {
+          'presupuestos': presupuestos,
+          'ingresosPrevistos': ingresosPrevistos,
+          'saldosActuales': saldosActuales,
+          'userName': userName ?? 'Usuario',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        return response.data is String ? jsonDecode(response.data) : response.data;
+      }
+      return null;
+    } catch (e) {
+      print('Error en IA Planificación: $e');
+      return {'error': 'No se pudo conectar con el motor de estrategia.'};
     }
   }
 }

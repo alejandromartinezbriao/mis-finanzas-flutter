@@ -16,6 +16,7 @@ import 'pages/about_page.dart';
 import 'pages/user_manual_page.dart';
 import 'pages/maintenance_page.dart';
 import 'pages/ai_history_page.dart';
+import 'pages/ai_advisor_selector_page.dart';
 import 'services/auth_service.dart';
 
 void main() async {
@@ -128,6 +129,7 @@ class _MyAppState extends State<MyApp> {
         '/manual': (context) => const UserManualPage(),
         '/maintenance': (context) => const MaintenancePage(),
         '/ai_history': (context) => const AiHistoryPage(),
+        '/ai_advisor': (context) => const AiAdvisorSelectorPage(),
         '/login': (context) => const LoginPage(),
       },
       home: StreamBuilder<User?>(

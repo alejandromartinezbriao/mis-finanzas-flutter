@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../services/firebase_service.dart';
 import '../services/gemini_service.dart';
 import '../models/transaction_model.dart';
+import 'package:intl/intl.dart';
 
 class AiAnalysisDialog extends StatefulWidget {
   final List<TransactionModel> transactions;
@@ -68,20 +69,25 @@ class _AiAnalysisDialogState extends State<AiAnalysisDialog> {
 
   Future<void> _runAnalysis() async {
     try {
-      // 1. Preparar la Huella Digital de los datos actuales (Data Fingerprint)
+      // 1. Obtener el nombre del usuario desde el perfil
       final profile = await widget.service.getUserProfile().first;
       final String userName = profile?['displayName'] ?? 'Usuario';
 
+      // 2. Obtener saldos disponibles para cobertura e identificar cuentas
       final balances = await widget.service.getBalances().first;
       final Map<String, double> saldosResumen = {};
+      final List<String> cuentasActivas = [];
+      
       for (var b in balances) {
         if (b['includeInCoverage'] != false) {
           final String cur = b['currency'] ?? 'UYU';
           final double amt = (b['amount'] ?? 0.0).toDouble();
           saldosResumen[cur] = (saldosResumen[cur] ?? 0.0) + amt;
+          cuentasActivas.add("${b['accountName']} ($cur)");
         }
       }
 
+      // 3. Calcular Pagado vs Pendiente e Ingreso Total por moneda
       final Map<String, double> pagadoPorMoneda = {'UYU': 0, 'USD': 0};
       final Map<String, double> pendientePorMoneda = {'UYU': 0, 'USD': 0};
       final Map<String, double> ingresoPorMoneda = {'UYU': 0, 'USD': 0};
@@ -99,13 +105,15 @@ class _AiAnalysisDialogState extends State<AiAnalysisDialog> {
         }
       }
 
-      // Creamos un identificador único basado en los valores numéricos
-      // Si un solo número cambia, este string cambiará.
+      // 4. Obtener ingresos fijos/previstos
+      final incomeTemplates = await widget.service.getTemplates(type: 'INCOME').first;
+
+      // 5. Crear Huella Digital Súper Sensible
       final String dataFingerprint = "$userName|${widget.monthlyBudget}|"
           "$pagadoPorMoneda|$pendientePorMoneda|$ingresoPorMoneda|"
-          "$gastosPorCatYMoneda|$saldosResumen";
+          "$gastosPorCatYMoneda|$saldosResumen|$cuentasActivas|$incomeTemplates";
 
-      // 2. Intentar recuperar desde la Caché de Firestore
+      // 6. Intentar recuperar desde la Caché de Firestore (Último reporte idéntico)
       final String monthId = widget.monthLabel.replaceAll(' ', '_');
       final cachedReport = await widget.service.getCachedAiReport(monthId, dataFingerprint);
 
@@ -116,10 +124,10 @@ class _AiAnalysisDialogState extends State<AiAnalysisDialog> {
             _isLoading = false;
           });
         }
-        return; // ¡ÉXITO! Usamos la caché y ahorramos una llamada a la IA.
+        return;
       }
 
-      // 3. Si no hay caché, llamar a Finanz-IA
+      // 7. Si no hay caché, llamar a Finanz-IA
       if (mounted) setState(() => _loadingMessage = 'Finanz-IA está analizando nuevos datos...');
       
       final res = await _gemini.analizarFinanzas(
@@ -136,7 +144,7 @@ class _AiAnalysisDialogState extends State<AiAnalysisDialog> {
         setState(() {
           if (res != null) {
             _result = res;
-            // 4. GUARDAR EN CACHÉ para la próxima vez
+            // Guardar con ID único por generación
             widget.service.saveAiReport(monthId, dataFingerprint, res);
           } else {
             _error = "Finanz-IA no pudo responder en este momento.";
@@ -221,7 +229,6 @@ class _AiAnalysisDialogState extends State<AiAnalysisDialog> {
                         ),
                         const SizedBox(height: 20),
                         
-                        // Nuevo: Indicador visual de Score
                         if (_result?['score'] != null) ...[
                           Center(
                             child: Column(
@@ -282,16 +289,15 @@ class _AiAnalysisDialogState extends State<AiAnalysisDialog> {
                           icon: Icons.lightbulb_outline,
                         ),
 
-                        if (_result?['meta_sugerida'] != null)
+                        if (_result?['meta_sugerida'] != null) ...[
                           const SizedBox(height: 12),
-                        
-                        if (_result?['meta_sugerida'] != null)
                           _buildInsightCard(
                             title: 'Meta Recomendada',
                             content: _result!['meta_sugerida'],
                             color: Colors.amber,
                             icon: Icons.flag_outlined,
                           ),
+                        ],
                         
                         const SizedBox(height: 24),
                         const Center(

@@ -1,30 +1,27 @@
-# Mis Finanzas - Tu Salud Financiera en Control (v2.0)
+# Mis Finanzas - Tu Salud Financiera en Control (v3.0)
 
-¡Bienvenido a **Mis Finanzas v2.0**! Esta plataforma ha sido evolucionada para ofrecer un ecosistema bimonetario robusto y herramientas de mantenimiento de datos que garantizan la integridad de tu información.
+¡Bienvenido a **Mis Finanzas v3.0**! Esta versión marca un antes y un después al integrar un ecosistema de Inteligencia Artificial que actúa como tu asesor personal.
 
-## 📱 ¿Qué hay de nuevo en la Versión 2.0?
+## 📱 ¿Qué hay de nuevo en la Versión 3.0 "Cerebro"?
 
-### 1. Cobertura Proyectada
-Ya no solo ves el presente. La nueva lógica de cobertura te permite navegar al futuro para ver proyecciones basadas en tus plantillas y suscripciones, o al pasado para analizar cierres de mes con superávit o déficit real.
+### 1. El Centro de Inteligencia
+Un nuevo corazón para la App donde Finanz-IA te saluda y te ofrece herramientas de análisis avanzado. Ya no solo ves números, recibes una consultoría financiera real.
 
-### 2. Suite de Mantenimiento de Datos
-Herramientas interactivas exclusivas de la v2.0 para normalizar formatos, corregir errores aritméticos de decimales (error 100x) y sincronizar cuotas históricas con supervisión manual del usuario.
+### 2. Conciencia de Mercado
+Gracias a la integración con APIs financieras, la App ahora conoce el valor oficial del dólar hoy. Finanz-IA usa este dato para decirte exactamente cuántos pesos necesitas para cubrir tus deudas en dólares, eliminando la incertidumbre.
 
-### 3. Registro de Cuotas Retroactivo
-Flexibilidad total para empezar a usar la app. Puedes registrar una compra de 12 cuotas indicando que la próxima a pagar es la número 5, y el sistema generará solo las cuotas restantes.
+### 3. Planificación Estratégica
+Finanz-IA audita tus presupuestos ideales frente a tus ingresos reales previstos. Te dirá si tu nivel de vida es sostenible o si estás en riesgo de agotar tus ahorros en el mediano plazo.
 
-### 4. Motor Bimonetario Unificado
-Toda la aplicación (Cuentas, Tarjetas, Suscripciones y Presupuestos) opera bajo un motor nativo UYU/USD con sincronización automática de atributos compartidos (vencimientos, logos) y la "Regla de Oro" del punto decimal estricto para eliminar errores de interpretación.
-
-### 5. Suscripciones Inteligentes y Registro de Efectivo
-Gestión automatizada de servicios recurrentes y rapidez en el registro de gastos de bolsillo mediante la opción de "Pago en Efectivo" sin afectar cuentas bancarias.
+### 4. Personalidad y Consistencia
+El asesor ahora te habla de forma amable, directa y consistente. Gracias al sistema de "Huella Digital", sus análisis son sólidos y no varían a menos que tus datos cambien.
 
 ---
 
 ## 🛠️ Detalles Técnicos
-*   **Versión Actual:** 2.0.0 "Evolución Estructural"
-*   **Tecnología:** Flutter (Multiplataforma) + Firebase (Google Cloud)
-*   **Integridad:** Parser de punto decimal estricto y blindaje contra comas de miles.
+*   **Versión Actual:** 3.0.0 "Inteligencia Real"
+*   **Tecnología:** Flutter + Firebase + Vertex AI (Gemini 2.5 Flash)
+*   **Integridad:** Control bimonetario estricto y conversión de divisas dinámica.
 
 ---
-*Desarrollado para brindarte un control financiero profesional y transparente.*
+*Finanz-IA: El asesor que te ayuda a tomar decisiones, no solo a contar gastos.*

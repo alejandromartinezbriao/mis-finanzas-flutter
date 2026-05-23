@@ -46,12 +46,16 @@ mixin UserService on FirebaseBase {
     final uid = auth.currentUser?.uid;
     if (uid == null) return null;
 
-    final doc = await db.collection('users').doc(uid).collection('ai_reports').doc(monthId).get();
-    if (doc.exists) {
-      final data = doc.data()!;
-      if (data['dataHash'] == dataHash) {
-        return Map<String, dynamic>.from(data['report']);
-      }
+    // Buscamos el reporte más reciente de ese mes que coincida con el Hash
+    final snap = await db.collection('users').doc(uid).collection('ai_reports')
+        .where('monthId', isEqualTo: monthId)
+        .where('dataHash', isEqualTo: dataHash)
+        .orderBy('updatedAt', descending: true)
+        .limit(1)
+        .get();
+
+    if (snap.docs.isNotEmpty) {
+      return Map<String, dynamic>.from(snap.docs.first.data()['report']);
     }
     return null;
   }
@@ -60,11 +64,21 @@ mixin UserService on FirebaseBase {
     final uid = auth.currentUser?.uid;
     if (uid == null) return;
 
-    await db.collection('users').doc(uid).collection('ai_reports').doc(monthId).set({
+    // Usar un ID único por reporte (timestamp) para permitir múltiples versiones
+    final String reportId = "${monthId}_${DateTime.now().millisecondsSinceEpoch}";
+
+    await db.collection('users').doc(uid).collection('ai_reports').doc(reportId).set({
+      'monthId': monthId, // Guardamos a qué mes pertenece
       'dataHash': dataHash,
       'report': report,
       'updatedAt': Timestamp.now(),
     });
+  }
+
+  Future<void> deleteAiReport(String reportDocId) async {
+    final uid = auth.currentUser?.uid;
+    if (uid == null) return;
+    await db.collection('users').doc(uid).collection('ai_reports').doc(reportDocId).delete();
   }
 
   Stream<List<Map<String, dynamic>>> getAiReportsHistory() {

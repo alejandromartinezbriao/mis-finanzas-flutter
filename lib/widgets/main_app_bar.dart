@@ -264,7 +264,7 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
     } else if (value == 'setup') {
       Navigator.pushNamed(context, '/setup');
     } else if (value == 'ai_advisor') {
-      _showAiAdvisor(context, label);
+      Navigator.pushNamed(context, '/ai_advisor');
     } else if (value == 'ai_history') {
       Navigator.pushNamed(context, '/ai_history');
     } else if (value == 'export') {

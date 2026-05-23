@@ -59,7 +59,7 @@ class _AboutPageState extends State<AboutPage> {
                           ),
                         ),
                         Text(
-                          'Versión 2.0.0',
+                          'Versión 3.0.0',
                           style: TextStyle(
                             fontSize: 16,
                             color: secondaryTextColor,
@@ -80,12 +80,12 @@ class _AboutPageState extends State<AboutPage> {
                   ),
                   const SizedBox(height: 32),
                   _buildSection(
-                    'Capacidades del Sistema v2.0',
-                    '• Motor bimonetario nativo con sincronización automática de gemelas.\n'
-                    '• Monitoreo de cobertura dinámica con modo de proyecciones futuras.\n'
-                    '• Suite de mantenimiento interactivo para integridad de datos.\n'
-                    '• Registro ágil de gastos en efectivo y compras financiadas.\n'
-                    '• Automatización de suscripciones vinculadas a tarjetas.',
+                    'Capacidades del Sistema v3.0',
+                    '• Centro de Inteligencia Finanz-IA con personalidad personalizada.\n'
+                    '• Integración en tiempo real con cotización oficial del dólar.\n'
+                    '• Auditoría bimonetaria con detección de erosión de ahorro.\n'
+                    '• Planificación estratégica con proyecciones a 6 meses.\n'
+                    '• Caché inteligente para consistencia absoluta de informes.',
                     primaryTextColor,
                     secondaryTextColor,
                   ),

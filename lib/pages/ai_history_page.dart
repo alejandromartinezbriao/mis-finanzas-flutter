@@ -42,41 +42,54 @@ class AiHistoryPage extends StatelessWidget {
             itemCount: reports.length,
             itemBuilder: (context, index) {
               final r = reports[index];
+              final String reportId = r['id'].toString();
               final reportData = r['report'] as Map<String, dynamic>;
               final DateTime date = r['updatedAt'].toDate();
-              final String monthLabel = r['id'].toString().replaceAll('_', ' ');
-              final int score = reportData['score'] ?? 0;
+              
+              // Detectar tipo de informe
+              final bool isPlanning = reportId.startsWith('plan_');
+              final String monthLabel = isPlanning 
+                ? reportId.replaceAll('plan_', '').replaceAll('_', ' ').toUpperCase()
+                : reportId.replaceAll('_', ' ');
 
               return Card(
                 margin: const EdgeInsets.only(bottom: 16),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 child: ExpansionTile(
-                  leading: CircleAvatar(
-                    backgroundColor: _getScoreColor(score).withOpacity(0.1),
-                    child: Text('$score', style: TextStyle(color: _getScoreColor(score), fontWeight: FontWeight.bold, fontSize: 12)),
-                  ),
-                  title: Text(monthLabel, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  leading: isPlanning 
+                    ? _buildPlanningLeading(reportData['viabilidad'] ?? '')
+                    : _buildAuditLeading(reportData['score'] ?? 0),
+                  title: Text(isPlanning ? 'Planificación: $monthLabel' : monthLabel, 
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                   subtitle: Text(
                     'Generado el ${DateFormat('dd/MM HH:mm').format(date)}',
                     style: const TextStyle(fontSize: 11, color: Colors.grey),
                   ),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.delete_outline, size: 20, color: Colors.grey),
+                    onPressed: () async {
+                      final bool? confirm = await showDialog<bool>(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          title: const Text('Eliminar Informe'),
+                          content: const Text('¿Estás seguro de que quieres eliminar este informe del historial?'),
+                          actions: [
+                            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
+                            TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Eliminar', style: TextStyle(color: Colors.red))),
+                          ],
+                        ),
+                      );
+                      if (confirm == true) {
+                        await service.deleteAiReport(r['id']);
+                      }
+                    },
+                  ),
                   children: [
                     Padding(
                       padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildDetailItem(context, 'Alerta', reportData['alerta_critica'], Colors.red),
-                          const SizedBox(height: 12),
-                          _buildDetailItem(context, 'Categoría Crítica', reportData['categoria_mayor_gasto'], Colors.blue),
-                          const SizedBox(height: 12),
-                          _buildDetailItem(context, 'Consejo de Ahorro', reportData['consejo_ahorro'], Colors.teal),
-                          if (reportData['meta_sugerida'] != null) ...[
-                            const SizedBox(height: 12),
-                            _buildDetailItem(context, 'Meta Recomendada', reportData['meta_sugerida'], Colors.orange),
-                          ],
-                        ],
-                      ),
+                      child: isPlanning 
+                        ? _buildPlanningDetails(context, reportData)
+                        : _buildAuditDetails(context, reportData),
                     ),
                   ],
                 ),
@@ -85,6 +98,64 @@ class AiHistoryPage extends StatelessWidget {
           );
         },
       ),
+    );
+  }
+
+  Widget _buildAuditLeading(int score) {
+    return CircleAvatar(
+      backgroundColor: _getScoreColor(score).withOpacity(0.1),
+      child: Text('$score', style: TextStyle(color: _getScoreColor(score), fontWeight: FontWeight.bold, fontSize: 12)),
+    );
+  }
+
+  Widget _buildPlanningLeading(String viabilidad) {
+    Color color = Colors.grey;
+    if (viabilidad.contains('Viable')) color = Colors.green;
+    else if (viabilidad.contains('Arriesgada')) color = Colors.orange;
+    else if (viabilidad.contains('Inviable')) color = Colors.red;
+
+    return CircleAvatar(
+      backgroundColor: color.withOpacity(0.1),
+      child: Icon(Icons.psychology_outlined, color: color, size: 20),
+    );
+  }
+
+  Widget _buildAuditDetails(BuildContext context, Map<String, dynamic> data) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildDetailItem(context, 'Alerta', data['alerta_critica'], Colors.red),
+        const SizedBox(height: 12),
+        _buildDetailItem(context, 'Categoría Crítica', data['categoria_mayor_gasto'], Colors.blue),
+        const SizedBox(height: 12),
+        _buildDetailItem(context, 'Consejo de Ahorro', data['consejo_ahorro'], Colors.teal),
+        if (data['meta_sugerida'] != null) ...[
+          const SizedBox(height: 12),
+          _buildDetailItem(context, 'Meta Recomendada', data['meta_sugerida'], Colors.orange),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildPlanningDetails(BuildContext context, Map<String, dynamic> data) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildDetailItem(context, 'Análisis de Viabilidad', data['analisis_detalle'], Colors.indigo),
+        const SizedBox(height: 12),
+        _buildDetailItem(context, 'Ahorro Proyectado', data['ahorro_proyectado'], Colors.teal),
+        const SizedBox(height: 12),
+        _buildDetailItem(context, 'Proyección a 6 meses', data['proyeccion_6_meses'], Colors.blueGrey),
+        if (data['recomendaciones'] != null) ...[
+          const SizedBox(height: 12),
+          Text('RECOMENDACIONES ESTRATÉGICAS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.indigo.shade300, letterSpacing: 0.5)),
+          const SizedBox(height: 4),
+          ...(data['recomendaciones'] as List).map((r) => Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Text('• ${r.toString()}', style: const TextStyle(fontSize: 13)),
+          )),
+        ],
+      ],
     );
   }
 
