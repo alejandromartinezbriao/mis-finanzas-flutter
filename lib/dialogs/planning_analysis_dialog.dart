@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import '../services/gemini_service.dart';
 import '../services/firebase_service.dart';
@@ -26,14 +28,27 @@ class _PlanningAnalysisDialogState extends State<PlanningAnalysisDialog> {
     try {
       final now = DateTime.now();
       
-      // 1. Obtener Presupuestos
+      // 1. Obtener Datos Maestros
       final budgets = await widget.service.getBudgets(now.month, now.year).first;
-      
-      // 2. Obtener Plantillas de Ingreso
       final incomeTemplates = await widget.service.getTemplates(type: 'INCOME').first;
-      
-      // 3. Obtener Saldos Actuales
+      final subscriptions = await widget.service.getSubscriptions().first;
       final balances = await widget.service.getBalances().first;
+      final actualTxs = await widget.service.getTransactions(month: now.month, year: now.year).first;
+
+      // 2. Procesar Datos Reales del Mes (BIMONETARIO)
+      final Map<String, Map<String, double>> gastosActualesBimonetarios = {
+        'UYU': {},
+        'USD': {},
+      };
+      
+      for (var t in actualTxs) {
+        if (t.type == 'EXPENSE') {
+          final String cur = t.currency;
+          gastosActualesBimonetarios[cur]![t.category] = 
+              (gastosActualesBimonetarios[cur]![t.category] ?? 0.0) + t.amount;
+        }
+      }
+
       final Map<String, double> saldosActuales = {};
       for (var b in balances) {
         if (b['includeInCoverage'] != false) {
@@ -42,30 +57,28 @@ class _PlanningAnalysisDialogState extends State<PlanningAnalysisDialog> {
         }
       }
 
-      // 4. Obtener Perfil
       final profile = await widget.service.getUserProfile().first;
       final String userName = profile?['displayName'] ?? 'Usuario';
 
-      // 5. Crear Huella Digital de Planificación
-      final String dataFingerprint = "PLAN|$userName|$budgets|$incomeTemplates|$saldosActuales";
+      // 3. Huella Digital
+      final String rawFingerprint = "PLAN_V3|$userName|$budgets|$incomeTemplates|$saldosActuales|$subscriptions|$gastosActualesBimonetarios";
+      final String dataFingerprint = md5.convert(utf8.encode(rawFingerprint)).toString();
       final String planMonthId = "plan_${now.year}_${now.month}";
 
-      // 6. Intentar recuperar desde Caché (Reporte idéntico más reciente)
+      // 4. Intentar recuperar desde Caché
       final cached = await widget.service.getCachedAiReport(planMonthId, dataFingerprint);
       if (cached != null) {
-        if (mounted) {
-          setState(() {
-            _result = cached;
-            _isLoading = false;
-          });
-        }
+        if (mounted) setState(() { _result = cached; _isLoading = false; });
         return;
       }
 
+      // 5. Llamar a la IA
       final res = await _gemini.analizarPlanificacion(
         presupuestos: budgets,
         ingresosPrevistos: incomeTemplates,
         saldosActuales: saldosActuales,
+        gastosActuales: gastosActualesBimonetarios, // AHORA SÍ VA POR MONEDA
+        suscripciones: subscriptions,
         userName: userName,
       );
 
@@ -73,10 +86,9 @@ class _PlanningAnalysisDialogState extends State<PlanningAnalysisDialog> {
         setState(() {
           if (res != null) {
             _result = res;
-            // 7. Guardar en Caché con ID único por generación
             widget.service.saveAiReport(planMonthId, dataFingerprint, res);
           } else {
-            _error = "No se pudo realizar el análisis de planificación.";
+            _error = "No se pudo realizar el análisis estratégico.";
           }
           _isLoading = false;
         });
@@ -106,7 +118,7 @@ class _PlanningAnalysisDialogState extends State<PlanningAnalysisDialog> {
                   SizedBox(height: 40),
                   CircularProgressIndicator(color: Colors.indigo),
                   SizedBox(height: 20),
-                  Text('Finanz-IA está auditando tu plan...', style: TextStyle(fontStyle: FontStyle.italic)),
+                  Text('Finanz-IA está auditando tu futuro...', style: TextStyle(fontStyle: FontStyle.italic)),
                   SizedBox(height: 40),
                 ],
               )
@@ -140,6 +152,8 @@ class _PlanningAnalysisDialogState extends State<PlanningAnalysisDialog> {
                         const SizedBox(height: 20),
                         _buildSectionTitle('PROYECCIÓN A 6 MESES'),
                         Text(_result?['proyeccion_6_meses'] ?? '', style: const TextStyle(fontSize: 13, fontStyle: FontStyle.italic)),
+                        const SizedBox(height: 24),
+                        const Center(child: Text('Análisis inteligente generado con Google Gen AI', style: TextStyle(fontSize: 9, color: Colors.grey))),
                       ],
                     ),
                   ),
@@ -161,11 +175,7 @@ class _PlanningAnalysisDialogState extends State<PlanningAnalysisDialog> {
 
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
+      decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(16), border: Border.all(color: color.withOpacity(0.3))),
       child: Row(
         children: [
           Icon(icon, color: color, size: 32),

@@ -124,6 +124,10 @@ class AiHistoryPage extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (data['resumen_ejecutivo'] != null) ...[
+          _buildDetailItem(context, 'Análisis Estratégico', data['resumen_ejecutivo'], Colors.purple),
+          const SizedBox(height: 12),
+        ],
         _buildDetailItem(context, 'Alerta', data['alerta_critica'], Colors.red),
         const SizedBox(height: 12),
         _buildDetailItem(context, 'Categoría Crítica', data['categoria_mayor_gasto'], Colors.blue),

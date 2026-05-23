@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 
 class GeminiService {
-  final String _url = 'https://analizargastosmensuales-cjiedaavia-uc.a.run.app';
   final Dio _dio = Dio();
+  final String _base = 'https://us-central1-cuentaspersonales-36328.cloudfunctions.net';
 
   Future<Map<String, dynamic>?> analizarFinanzas({
     required double presupuestoTotal,
@@ -11,71 +11,67 @@ class GeminiService {
     required Map<String, double> pagadoTotal,
     required Map<String, double> pendienteTotal,
     required Map<String, double> ingresoTotal,
+    required List<String> cuentasActivas,
+    List<Map<String, dynamic>>? suscripciones, // Nuevo
     Map<String, double>? saldosActuales,
     String? userName,
+    double? tipoCambio,
   }) async {
     try {
       final response = await _dio.post(
-        _url,
+        '$_base/analizarGastosMensuales',
         data: {
           'presupuestoTotal': presupuestoTotal,
           'gastos': gastosPorCategoria,
           'pagadoTotal': pagadoTotal,
           'pendienteTotal': pendienteTotal,
           'ingresoTotal': ingresoTotal,
+          'cuentasActivas': cuentasActivas,
+          'suscripciones': suscripciones,
           'saldosActuales': saldosActuales,
-          'userName': userName ?? 'Usuario',
-          'tipoCambio': 43.0, // Valor de referencia para Uruguay
+          'userName': userName,
+          'tipoCambio': tipoCambio,
         },
       );
-
-      if (response.statusCode == 200) {
-        return response.data is String ? jsonDecode(response.data) : response.data;
-      }
-      return null;
-    } catch (e) {
-      print('Error en IA: $e');
-      return {'error': 'Error de comunicación con el asesor.'};
-    }
-  }
-
-  Future<Map<String, dynamic>?> obtenerCotizacionDolar() async {
-    try {
-      final response = await _dio.get('https://obtenercotizaciondolar-cjiedaavia-uc.a.run.app');
-      if (response.statusCode == 200) {
-        return response.data is String ? jsonDecode(response.data) : response.data;
-      }
-      return null;
-    } catch (e) {
-      print('Error cotización: $e');
-      return null;
-    }
+      return _processResponse(response);
+    } catch (e) { return {'error': 'Error de conexión.'}; }
   }
 
   Future<Map<String, dynamic>?> analizarPlanificacion({
     required List<Map<String, dynamic>> presupuestos,
     required List<Map<String, dynamic>> ingresosPrevistos,
     required Map<String, double> saldosActuales,
+    required Map<String, dynamic> gastosActuales, // Nuevo: Base real del mes
+    List<Map<String, dynamic>>? suscripciones,
     String? userName,
   }) async {
     try {
       final response = await _dio.post(
-        'https://analizarsostenibilidadplan-cjiedaavia-uc.a.run.app', // URL de la nueva función
+        '$_base/analizarSostenibilidadPlan',
         data: {
           'presupuestos': presupuestos,
           'ingresosPrevistos': ingresosPrevistos,
           'saldosActuales': saldosActuales,
-          'userName': userName ?? 'Usuario',
+          'gastosActuales': gastosActuales,
+          'suscripciones': suscripciones,
+          'userName': userName,
         },
       );
+      return _processResponse(response);
+    } catch (e) { return {'error': 'Error de conexión estratégica.'}; }
+  }
 
-      if (response.statusCode == 200) {
-        return response.data is String ? jsonDecode(response.data) : response.data;
-      }
-      return null;
-    } catch (e) {
-      print('Error en IA Planificación: $e');
-      return {'error': 'No se pudo conectar con el motor de estrategia.'};
+  Future<Map<String, dynamic>?> obtenerCotizacionDolar() async {
+    try {
+      final response = await _dio.get('$_base/obtenerCotizacionDolar');
+      return _processResponse(response);
+    } catch (e) { return null; }
+  }
+
+  Map<String, dynamic>? _processResponse(Response response) {
+    if (response.statusCode == 200) {
+      return response.data is String ? jsonDecode(response.data) : response.data;
     }
+    return null;
   }
 }

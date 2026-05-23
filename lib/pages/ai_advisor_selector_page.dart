@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../services/firebase_service.dart';
@@ -78,19 +80,14 @@ class _AiAdvisorSelectorPageState extends State<AiAdvisorSelectorPage> {
                   padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 40.0),
                   child: Column(
                     children: [
-                      // Avatar Personalizado de Finanz-IA
                       _buildAiAvatar(),
-                      
                       const SizedBox(height: 32),
-                      
                       Text(
                         '¡${_getGreetingBase()}, $userName!',
                         textAlign: TextAlign.center,
                         style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900, letterSpacing: -0.5),
                       ),
-                      
                       const SizedBox(height: 12),
-                      
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 20),
                         child: Text(
@@ -99,22 +96,17 @@ class _AiAdvisorSelectorPageState extends State<AiAdvisorSelectorPage> {
                           style: TextStyle(fontSize: 15, color: isDark ? Colors.grey.shade400 : Colors.grey.shade700, height: 1.5),
                         ),
                       ),
-                      
                       const SizedBox(height: 40),
-                      
-                      // Sección de Mercado (Cotización)
                       _buildCotizacionBanner(isDark),
-                      
                       const SizedBox(height: 32),
 
-                      // Opciones de Análisis
                       _buildOptionCard(
                         context: context,
                         title: 'Auditoría Mensual',
-                        subtitle: 'Analiza tus gastos reales de este mes y detecta fugas de dinero.',
+                        subtitle: 'Analiza mis gastos reales de este mes y dime cómo voy.',
                         icon: Icons.analytics_rounded,
                         color: Colors.purple,
-                        onTap: () => _startMonthlyAudit(context, service),
+                        onTap: () => _startMonthlyAudit(context, service, userName),
                       ),
 
                       const SizedBox(height: 16),
@@ -125,17 +117,10 @@ class _AiAdvisorSelectorPageState extends State<AiAdvisorSelectorPage> {
                         subtitle: 'Evalúa si tu plan de gastos es sostenible frente a tus ingresos futuros.',
                         icon: Icons.psychology_rounded,
                         color: Colors.indigo,
-                        onTap: () {
-                          showDialog(
-                            context: context,
-                            builder: (ctx) => PlanningAnalysisDialog(service: service),
-                          );
-                        },
+                        onTap: () => _startStrategicPlanning(context, service, userName),
                       ),
 
                       const SizedBox(height: 40),
-                      
-                      // Footer: Historial
                       InkWell(
                         onTap: () => Navigator.pushNamed(context, '/ai_history'),
                         borderRadius: BorderRadius.circular(12),
@@ -175,35 +160,19 @@ class _AiAdvisorSelectorPageState extends State<AiAdvisorSelectorPage> {
       alignment: Alignment.center,
       children: [
         Container(
-          height: 120,
-          width: 120,
+          height: 120, width: 120,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            gradient: LinearGradient(
-              colors: [Colors.purple.shade400, Colors.indigo.shade600],
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.purple.withOpacity(0.3),
-                blurRadius: 20,
-                spreadRadius: 2,
-              )
-            ]
+            gradient: LinearGradient(colors: [Colors.purple.shade400, Colors.indigo.shade600]),
+            boxShadow: [BoxShadow(color: Colors.purple.withOpacity(0.3), blurRadius: 20, spreadRadius: 2)]
           ),
         ),
         const Icon(Icons.auto_awesome, size: 60, color: Colors.white),
-        // Pequeño indicador de "Online"
         Positioned(
-          bottom: 5,
-          right: 5,
+          bottom: 5, right: 5,
           child: Container(
-            height: 25,
-            width: 25,
-            decoration: BoxDecoration(
-              color: Colors.greenAccent,
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 3),
-            ),
+            height: 25, width: 25,
+            decoration: BoxDecoration(color: Colors.greenAccent, shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 3)),
           ),
         )
       ],
@@ -212,24 +181,18 @@ class _AiAdvisorSelectorPageState extends State<AiAdvisorSelectorPage> {
 
   Widget _buildCotizacionBanner(bool isDark) {
     if (_isLoadingCotizacion) {
-      return Container(
-        padding: const EdgeInsets.all(12),
-        child: const Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)),
-            SizedBox(width: 12),
-            Text('Consultando mercado oficial...', style: TextStyle(fontSize: 13, fontStyle: FontStyle.italic)),
-          ],
-        ),
+      return const Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)),
+          SizedBox(width: 12),
+          Text('Consultando mercado oficial...', style: TextStyle(fontSize: 13, fontStyle: FontStyle.italic)),
+        ],
       );
     }
     
     if (_cotizacion == null) {
-      return Container(
-        padding: const EdgeInsets.all(12),
-        child: const Text('⚠️ Cotización no disponible momentáneamente', style: TextStyle(fontSize: 12, color: Colors.orange)),
-      );
+      return const Text('⚠️ Cotización no disponible', style: TextStyle(fontSize: 12, color: Colors.orange));
     }
 
     return Container(
@@ -249,10 +212,7 @@ class _AiAdvisorSelectorPageState extends State<AiAdvisorSelectorPage> {
               children: [
                 const Text('MERCADO URUGUAY (BROU)', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, letterSpacing: 1, color: Colors.teal)),
                 const SizedBox(height: 2),
-                Text(
-                  'Dólar oficial a \$${(_cotizacion!['venta'] as num).toStringAsFixed(2)}',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
-                ),
+                Text('Dólar oficial a \$${(_cotizacion!['venta'] as num).toStringAsFixed(2)}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900)),
               ],
             ),
           ),
@@ -266,19 +226,45 @@ class _AiAdvisorSelectorPageState extends State<AiAdvisorSelectorPage> {
     );
   }
 
-  Future<void> _startMonthlyAudit(BuildContext context, FirebaseService service) async {
+  Future<void> _startMonthlyAudit(BuildContext context, FirebaseService service, String userName) async {
     final now = DateTime.now();
     final String monthLabel = '${_getMonthName(now.month)} ${now.year}';
     final String monthId = monthLabel.replaceAll(' ', '_');
 
+    // Generar Hash idéntico al diálogo para consistencia de caché
     final txs = await service.getTransactions(month: now.month, year: now.year).first;
     final budgets = await service.getBudgets(now.month, now.year).first;
     final double totalBudget = budgets.fold(0.0, (sum, b) => sum + (b['amount'] ?? 0.0));
+    final balances = await service.getBalances().first;
+    final incomeTemplates = await service.getTemplates(type: 'INCOME').first;
     
-    final profile = await service.getUserProfile().first;
-    final String userName = profile?['displayName'] ?? 'Usuario';
-    
-    final String dataFingerprint = "$userName|$totalBudget|${txs.length}";
+    final Map<String, double> saldosResumen = {};
+    final List<String> cuentasActivas = [];
+    for (var b in balances) {
+      if (b['includeInCoverage'] != false) {
+        final String cur = b['currency'] ?? 'UYU';
+        saldosResumen[cur] = (saldosResumen[cur] ?? 0.0) + (b['amount'] ?? 0.0).toDouble();
+        cuentasActivas.add("${b['accountName']} ($cur)");
+      }
+    }
+
+    final Map<String, double> pagadoPorMoneda = {'UYU': 0, 'USD': 0};
+    final Map<String, double> pendientePorMoneda = {'UYU': 0, 'USD': 0};
+    final Map<String, double> ingresoPorMoneda = {'UYU': 0, 'USD': 0};
+    final Map<String, Map<String, double>> gastosPorCatYMoneda = {'UYU': {}, 'USD': {}};
+
+    for (var t in txs) {
+      final String cur = t.currency;
+      final double amt = (t.amount ?? 0.0).toDouble();
+      if (t.type == 'EXPENSE') {
+        gastosPorCatYMoneda[cur]![t.category] = (gastosPorCatYMoneda[cur]![t.category] ?? 0.0) + amt;
+        if (t.isCompleted) pagadoPorMoneda[cur] = (pagadoPorMoneda[cur] ?? 0.0) + amt;
+        else pendientePorMoneda[cur] = (pendientePorMoneda[cur] ?? 0.0) + amt;
+      } else if (t.type == 'INCOME') ingresoPorMoneda[cur] = (ingresoPorMoneda[cur] ?? 0.0) + amt;
+    }
+
+    final String rawFingerprint = "$userName|$totalBudget|$pagadoPorMoneda|$pendientePorMoneda|$ingresoPorMoneda|$gastosPorCatYMoneda|$saldosResumen|$cuentasActivas|$incomeTemplates";
+    final String dataFingerprint = md5.convert(utf8.encode(rawFingerprint)).toString();
 
     final cached = await service.getCachedAiReport(monthId, dataFingerprint);
 
@@ -286,37 +272,51 @@ class _AiAdvisorSelectorPageState extends State<AiAdvisorSelectorPage> {
       final bool? update = await DialogUtils.confirmAction(
         context,
         title: 'Análisis Existente',
-        message: 'Hola $userName, ya tienes un análisis para este mes. ¿Quieres que Finanz-IA lo actualice con la cotización de hoy?',
+        message: '¡Hola $userName! Ya tienes un análisis con estos datos. ¿Quieres actualizarlo con la cotización de hoy?',
         confirmText: 'Actualizar',
       );
-      
       if (update != true) {
-        if (context.mounted) {
-          showDialog(
-            context: context,
-            builder: (ctx) => AiAnalysisDialog(
-              transactions: txs,
-              monthlyBudget: totalBudget > 0 ? totalBudget : 1000.0,
-              monthLabel: monthLabel,
-              service: service,
-            ),
-          );
-        }
+        if (context.mounted) showDialog(context: context, builder: (ctx) => AiAnalysisDialog(transactions: txs, monthlyBudget: totalBudget, monthLabel: monthLabel, service: service));
         return;
       }
     }
 
-    if (context.mounted) {
-      showDialog(
-        context: context,
-        builder: (ctx) => AiAnalysisDialog(
-          transactions: txs,
-          monthlyBudget: totalBudget > 0 ? totalBudget : 1000.0,
-          monthLabel: monthLabel,
-          service: service,
-        ),
-      );
+    if (context.mounted) showDialog(context: context, builder: (ctx) => AiAnalysisDialog(transactions: txs, monthlyBudget: totalBudget > 0 ? totalBudget : 1000.0, monthLabel: monthLabel, service: service));
+  }
+
+  Future<void> _startStrategicPlanning(BuildContext context, FirebaseService service, String userName) async {
+    final now = DateTime.now();
+    final budgets = await service.getBudgets(now.month, now.year).first;
+    final incomeTemplates = await service.getTemplates(type: 'INCOME').first;
+    final balances = await service.getBalances().first;
+    final Map<String, double> saldosActuales = {};
+    for (var b in balances) {
+      if (b['includeInCoverage'] != false) {
+        final String cur = b['currency'] ?? 'UYU';
+        saldosActuales[cur] = (saldosActuales[cur] ?? 0.0) + (b['amount'] ?? 0.0).toDouble();
+      }
     }
+
+    final String rawFingerprint = "PLAN|$userName|$budgets|$incomeTemplates|$saldosActuales";
+    final String dataFingerprint = md5.convert(utf8.encode(rawFingerprint)).toString();
+    final String planMonthId = "plan_${now.year}_${now.month}";
+
+    final cached = await service.getCachedAiReport(planMonthId, dataFingerprint);
+
+    if (cached != null) {
+      final bool? update = await DialogUtils.confirmAction(
+        context,
+        title: 'Plan Estratégico',
+        message: '¡Hola $userName! Ya tienes un plan auditado con estos datos. ¿Quieres generar uno nuevo?',
+        confirmText: 'Nuevo',
+      );
+      if (update != true) {
+        if (context.mounted) showDialog(context: context, builder: (ctx) => PlanningAnalysisDialog(service: service));
+        return;
+      }
+    }
+
+    if (context.mounted) showDialog(context: context, builder: (ctx) => PlanningAnalysisDialog(service: service));
   }
 
   Widget _buildOptionCard({
@@ -328,11 +328,8 @@ class _AiAdvisorSelectorPageState extends State<AiAdvisorSelectorPage> {
     required VoidCallback onTap,
   }) {
     return Card(
-      elevation: 4,
-      shadowColor: color.withOpacity(0.1),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(24),
-      ),
+      elevation: 4, shadowColor: color.withOpacity(0.1),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(24),
@@ -342,10 +339,7 @@ class _AiAdvisorSelectorPageState extends State<AiAdvisorSelectorPage> {
             children: [
               Container(
                 padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(18),
-                ),
+                decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(18)),
                 child: Icon(icon, color: color, size: 32),
               ),
               const SizedBox(width: 20),
@@ -355,10 +349,7 @@ class _AiAdvisorSelectorPageState extends State<AiAdvisorSelectorPage> {
                   children: [
                     Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
                     const SizedBox(height: 6),
-                    Text(
-                      subtitle,
-                      style: TextStyle(fontSize: 13, color: Colors.grey.shade600, height: 1.3),
-                    ),
+                    Text(subtitle, style: TextStyle(fontSize: 13, color: Colors.grey.shade600, height: 1.3)),
                   ],
                 ),
               ),
