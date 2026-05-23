@@ -26,8 +26,18 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    // Asegurar que el perfil del usuario existe (y es Premium por defecto en esta fase)
-    _service.createUserProfileIfNotExist();
+    _initializeUser();
+  }
+
+  Future<void> _initializeUser() async {
+    // 1. Asegurar perfil básico
+    await _service.createUserProfileIfNotExist();
+    
+    // 2. Verificar si falta el nombre
+    final profile = await _service.getUserProfile().first;
+    if (profile != null && (profile['displayName'] == null || profile['displayName'].toString().isEmpty)) {
+      if (mounted) _showNameRequestDialog();
+    }
 
     if (widget.initialAction != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -44,6 +54,52 @@ class _HomePageState extends State<HomePage> {
         }
       });
     }
+  }
+
+  void _showNameRequestDialog() {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      barrierDismissible: false, // Forzar a que responda
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.face, color: Colors.purple),
+            SizedBox(width: 10),
+            Text('¡Hola!', style: TextStyle(fontWeight: FontWeight.w900)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Para que Finanz-IA pueda darte consejos personalizados, ¿cómo te gustaría que te llame?'),
+            const SizedBox(height: 20),
+            TextField(
+              controller: controller,
+              autofocus: true,
+              decoration: const InputDecoration(
+                labelText: 'Tu nombre o apodo',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.edit),
+              ),
+              textCapitalization: TextCapitalization.words,
+            ),
+          ],
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () async {
+              if (controller.text.trim().isNotEmpty) {
+                await _service.updateUserName(controller.text.trim());
+                if (ctx.mounted) Navigator.pop(ctx);
+              }
+            },
+            child: const Text('Comenzar'),
+          ),
+        ],
+      ),
+    );
   }
 
   // Formateadores sin separadores de miles y con punto decimal (Regla de Oro: Sin Comas)

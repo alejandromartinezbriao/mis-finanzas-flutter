@@ -8,6 +8,11 @@ class GeminiService {
   Future<Map<String, dynamic>?> analizarFinanzas({
     required double presupuestoTotal,
     required Map<String, dynamic> gastosPorCategoria,
+    required Map<String, double> pagadoTotal,
+    required Map<String, double> pendienteTotal,
+    required Map<String, double> ingresoTotal,
+    Map<String, double>? saldosActuales,
+    String? userName,
   }) async {
     try {
       final response = await _dio.post(
@@ -15,6 +20,11 @@ class GeminiService {
         data: {
           'presupuestoTotal': presupuestoTotal,
           'gastos': gastosPorCategoria,
+          'pagadoTotal': pagadoTotal,
+          'pendienteTotal': pendienteTotal,
+          'ingresoTotal': ingresoTotal,
+          'saldosActuales': saldosActuales,
+          'userName': userName ?? 'Usuario',
         },
       );
 
@@ -23,8 +33,8 @@ class GeminiService {
       }
       return null;
     } catch (e) {
-      print('Error: $e');
-      return null;
+      print('Error en IA: $e');
+      return {'error': 'Error de comunicación con el asesor.'};
     }
   }
 }

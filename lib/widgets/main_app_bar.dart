@@ -130,6 +130,7 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
         transactions: txs,
         monthlyBudget: totalBudget > 0 ? totalBudget : 1000.0,
         monthLabel: monthLabel,
+        service: service,
       ),
     );
   }

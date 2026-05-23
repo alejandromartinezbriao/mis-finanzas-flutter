@@ -1,79 +1,71 @@
 const { onRequest } = require("firebase-functions/v2/https");
 const { VertexAI } = require("@google-cloud/vertexai");
 
-// Inicializa Vertex AI apuntando directamente a tu ID de proyecto de Google Cloud
-// Esto asocia el consumo al plan Blaze pospago y consume tus $300 USD de regalo
 const vertexAI = new VertexAI({
   project: "cuentaspersonales-36328",
   location: "us-central1"
 });
 
 exports.analizarGastosMensuales = onRequest(
-  { cors: true }, // Permite que tu app de Flutter Web se conecte sin bloqueos de navegador
+  { cors: true, maxInstances: 10 },
   async (req, res) => {
-    // Manejo de peticiones preflight CORS de los navegadores web
-    if (req.method === 'OPTIONS') {
-      return res.status(204).send('');
-    }
+    if (req.method === 'OPTIONS') return res.status(204).send('');
+    if (req.method !== 'POST') return res.status(405).send('Method Not Allowed');
 
-    if (req.method !== 'POST') {
-      return res.status(405).send('Method Not Allowed');
-    }
-
-    const { presupuestoTotal, gastos } = req.body;
-    if (presupuestoTotal === undefined || !gastos) {
-      return res.status(400).json({ error: "Faltan datos de presupuesto o gastos." });
-    }
+    const { presupuestoTotal, gastos, userName, saldosActuales, pagadoTotal, pendienteTotal, ingresoTotal } = req.body;
 
     try {
-      // Consumimos el modelo Gemini 2.5 Flash de grado empresarial en Vertex AI
       const generativeModel = vertexAI.getGenerativeModel({
         model: "gemini-2.5-flash",
+        generationConfig: { temperature: 0.1, responseMimeType: "application/json" }
       });
 
       const prompt = `
-        Actúas como un asesor financiero experto y analista de datos.
-        Presupuesto Mensual Total: $${presupuestoTotal}.
-        Lista de Gastos por Categoría: ${JSON.stringify(gastos)}.
+        Eres Finanz-IA, un auditor financiero de élite. Tu análisis debe ser bimonetario y matemáticamente exacto.
+        Usuario: ${userName}.
 
-        Reglas estrictas de respuesta:
-        1. Debes responder EXCLUSIVAMENTE en formato JSON válido.
-        2. No incluyas textos de introducción, saludos ni bloques markdown (\`\`\`json).
-        3. Sé muy breve y directo con los textos.
+        DATOS CRUDOS POR MONEDA (UYU y USD):
+        - Ingresos (Entradas): ${JSON.stringify(ingresoTotal)}
+        - Ya pagado: ${JSON.stringify(pagadoTotal)}
+        - Pendiente (Deuda actual): ${JSON.stringify(pendienteTotal)}
+        - Liquidez en cuentas: ${JSON.stringify(saldosActuales)}
+        - Gastos por categoría: ${JSON.stringify(gastos)}
+        - Presupuesto objetivo (Referencia en UYU): $${presupuestoTotal}
 
-        Estructura exacta del JSON que debes devolver:
+        PROCESO DE AUDITORÍA OBLIGATORIO:
+        1. ANALIZA CADA MONEDA POR SEPARADO:
+           - Calcula Balance (Ingresos - Gastos Totales) para UYU y para USD.
+           - Si (Gastos > Ingresos) en cualquiera de las dos: Identifícalo como "Erosión de Ahorros".
+           - Si todo está pagado (Pendiente=0) pero el Balance es negativo: Felicita el cumplimiento, pero advierte que el ahorro previo está financiando el mes.
+        2. CAPACIDAD DE PAGO: Compara Pendiente vs Liquidez en cada moneda.
+        3. DISCIPLINA: Compara Gasto Total (UYU) vs Presupuesto.
+
+        INSTRUCCIONES DE RESPUESTA:
+        - Si hubo erosión de ahorros en Pesos o Dólares, el Score NO puede ser mayor a 75.
+        - Menciona específicamente en qué moneda se detectó el desequilibrio.
+        - Usa lenguaje técnico y motivador.
+
+        Responde SOLO JSON:
         {
-          "alerta_critica": "un texto breve de alerta si gastó de más, o null si todo está bajo control",
-          "categoria_mayor_gasto": "nombre de la categoría con mayor egreso",
-          "consejo_ahorro": "un consejo financiero concreto de máximo 15 palabras"
+          "score": número (1-100),
+          "score_label": "Excelente/Bueno/Regular/Crítico",
+          "alerta_critica": "Análisis sobre balances mensuales por moneda y uso de reservas.",
+          "categoria_mayor_gasto": "Nombre de la categoría real",
+          "consejo_ahorro": "Consejo técnico de max 15 palabras para ${userName}",
+          "meta_sugerida": "Acción para frenar la erosión de ahorro o mejorar liquidez"
         }
       `;
 
-      // Llamada al motor de Vertex AI
       const resp = await generativeModel.generateContent({
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
       });
 
-      // Extracción limpia del texto del candidato de respuesta
       const text = resp.response.candidates[0].content.parts[0].text.trim();
-
-      // Limpieza robusta de marcas JSON
-      const start = text.indexOf('{');
-      const end = text.lastIndexOf('}') + 1;
-
-      if (start === -1 || end === 0) {
-        throw new Error("La IA de Vertex no devolvió un formato JSON válido.");
-      }
-
-      const cleanedText = text.substring(start, end);
-      return res.status(200).json(JSON.parse(cleanedText));
+      return res.status(200).json(JSON.parse(text));
 
     } catch (error) {
-      console.error("Error en Vertex AI:", error);
-      return res.status(500).json({
-        error: "Error del motor de IA empresarial",
-        details: error.message
-      });
+      console.error("Error IA:", error);
+      return res.status(500).json({ error: "Error del motor de análisis" });
     }
   }
 );
