@@ -10,8 +10,10 @@
     - **Mantenimiento Avanzado**: Suite interactiva para corrección de decimales (error 100x), normalización y sincronización supervisada.
     - **Presupuestos Seguros**: Flujo de confirmación manual para garantizar la persistencia de presupuestos.
     - **Control de Cobertura Selectivo**: Opción para excluir cuentas específicas del cálculo de dinero disponible.
-- **Sincronización Bimonetaria Inteligente**: Las plantillas de tarjeta bimonetarias ahora se mantienen sincronizadas automáticamente. Al editar el vencimiento, logo o categoría en una parte (UYU/USD), los cambios se replican instantáneamente en su gemela.
-- **Registro de Efectivo Agilizado**: Se añadió la opción "Pago en Efectivo (Sin cuenta)" directamente en el selector de cuentas del registro rápido, permitiendo marcar movimientos como pagados sin afectar balances bancarios en un solo paso.
+- **Sincronización Bimonetaria Inteligente**: Las plantillas de tarjeta bimonetarias ahora se mantienen sincronizadas automáticamente.
+- **Inteligencia de Datos (Caché IA)**: Implementación de un sistema de "Huella Digital de Datos" para el Asesor Financiero. La App ahora genera una firma única basada en los números del mes; si los datos no cambian, se recupera el análisis previo desde Firestore.
+- **Historial de Asesoría IA**: Nueva sección dedicada para consultar todos los informes generados por Finanz-IA. Los informes se guardan permanentemente con fecha y hora, permitiendo un seguimiento evolutivo de los consejos financieros.
+- **Registro de Efectivo Agilizado**: Se añadió la opción "Pago en Efectivo (Sin cuenta)" directamente en el selector de cuentas.
 - **Optimización de Formularios**: Rediseño lógico del diálogo de plantillas. Se ocultan opciones irrelevantes (como "incluido en tarjeta" para las propias tarjetas) y se agrupan las opciones bimonetarias para mayor claridad.
 - **Infraestructura**: Soporte PWA completo (iconos Web/iOS), Firebase, fl_chart y persistencia local.
 

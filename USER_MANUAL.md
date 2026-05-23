@@ -20,7 +20,8 @@ Es el centro de control donde monitoreas tu salud financiera mes a mes.
 Suite interactiva para garantizar que tus datos sean exactos y recibir consejos inteligentes.
 
 *   **Asesor Financiero IA:** Analiza tus gastos mensuales mediante Gemini AI. Ofrece alertas de exceso de gasto, identifica la categoría de mayor egreso y brinda consejos de ahorro personalizados.
-*   **Normalizar Formatos (Quitar Comas):** Purifica la base de datos eliminando comas de miles en las descripciones de consumos, forzando la "Regla de Oro" del punto decimal estricto. **Paso inicial recomendado.**
+*   **Historial de Asesoría:** Nueva sección donde puedes consultar todos los informes previos generados por Finanz-IA. Cada informe se guarda con su fecha, hora y el puntaje obtenido, permitiéndote ver cómo ha evolucionado tu salud financiera.
+*   **Normalizar Formatos (Quitar Comas):** Purifica la base de datos eliminando comas de miles en las descripciones de consumos.
 *   **Corregir Error 100x (Decimales):** Detecta montos que se guardaron 100 veces más grandes por errores de coma/punto (ej: registra 52700 en lugar de 527.00). Te muestra la lista de sospechosos y tú marcas cuáles arreglar.
 *   **Sincronizar Montos de Cuotas:** Compara los mismos consumos en distintos meses. Si un mes tiene un valor distinto, la app te propone corregirlo basándose en la mayoría estadística.
 *   **Mantenimiento Automático (Reconexión):** Identifica gastos que no están vinculados a sus plantillas originales y te permite reconectarlos para un mejor historial.

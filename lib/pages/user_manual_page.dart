@@ -43,6 +43,7 @@ class UserManualPage extends StatelessWidget {
               _buildParagraph(
                 'Suite interactiva para tus datos y consejos inteligentes:\n\n'
                 '• Asesor Financiero IA: Analiza tus gastos con Gemini y recibe alertas, detección de gastos altos y consejos de ahorro personalizados.\n'
+                '• Historial de Asesoría: Consulta todos tus informes previos guardados con fecha y hora para ver tu evolución financiera.\n'
                 '• Normalizar Formatos: Elimina comas de miles en bloque para purificar tu base de datos (Paso inicial recomendado).\n'
                 '• Corregir Error 100x: Detecta y corrige montos inflados por errores de coma mediante aprobación manual.\n'
                 '• Sincronizar Cuotas: Compara series históricas y propone corregir montos discrepantes.\n'

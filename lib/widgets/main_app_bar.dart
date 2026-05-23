@@ -159,6 +159,16 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
         ),
       ),
       const PopupMenuItem(
+        value: 'ai_history',
+        child: Row(
+          children: [
+            Icon(Icons.history_edu, size: 20, color: Colors.indigoAccent),
+            SizedBox(width: 12),
+            Text('Historial de Asesoría'),
+          ],
+        ),
+      ),
+      const PopupMenuItem(
         value: 'generate',
         child: Row(
           children: [
@@ -255,6 +265,8 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
       Navigator.pushNamed(context, '/setup');
     } else if (value == 'ai_advisor') {
       _showAiAdvisor(context, label);
+    } else if (value == 'ai_history') {
+      Navigator.pushNamed(context, '/ai_history');
     } else if (value == 'export') {
       final txs = await service.getTransactions(month: viewingDate.month, year: viewingDate.year).first;
       if (txs.isNotEmpty) {

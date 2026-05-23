@@ -39,4 +39,44 @@ mixin UserService on FirebaseBase {
       print("Error updateUserName: $e");
     }
   }
+
+  // --- CACHÉ DE INFORMES IA ---
+
+  Future<Map<String, dynamic>?> getCachedAiReport(String monthId, String dataHash) async {
+    final uid = auth.currentUser?.uid;
+    if (uid == null) return null;
+
+    final doc = await db.collection('users').doc(uid).collection('ai_reports').doc(monthId).get();
+    if (doc.exists) {
+      final data = doc.data()!;
+      if (data['dataHash'] == dataHash) {
+        return Map<String, dynamic>.from(data['report']);
+      }
+    }
+    return null;
+  }
+
+  Future<void> saveAiReport(String monthId, String dataHash, Map<String, dynamic> report) async {
+    final uid = auth.currentUser?.uid;
+    if (uid == null) return;
+
+    await db.collection('users').doc(uid).collection('ai_reports').doc(monthId).set({
+      'dataHash': dataHash,
+      'report': report,
+      'updatedAt': Timestamp.now(),
+    });
+  }
+
+  Stream<List<Map<String, dynamic>>> getAiReportsHistory() {
+    final uid = auth.currentUser?.uid;
+    if (uid == null) return Stream.value([]);
+
+    return db
+        .collection('users')
+        .doc(uid)
+        .collection('ai_reports')
+        .orderBy('updatedAt', descending: true)
+        .snapshots()
+        .map((snap) => snap.docs.map((doc) => {...doc.data(), 'id': doc.id}).toList());
+  }
 }

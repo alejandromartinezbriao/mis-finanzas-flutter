@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../services/firebase_service.dart';
 import '../services/gemini_service.dart';
 import '../models/transaction_model.dart';
-import 'package:intl/intl.dart';
 
 class AiAnalysisDialog extends StatefulWidget {
   final List<TransactionModel> transactions;
@@ -69,11 +68,10 @@ class _AiAnalysisDialogState extends State<AiAnalysisDialog> {
 
   Future<void> _runAnalysis() async {
     try {
-      // 1. Obtener el nombre del usuario desde el perfil
+      // 1. Preparar la Huella Digital de los datos actuales (Data Fingerprint)
       final profile = await widget.service.getUserProfile().first;
       final String userName = profile?['displayName'] ?? 'Usuario';
 
-      // 2. Obtener saldos disponibles para cobertura (Inteligencia Financiera)
       final balances = await widget.service.getBalances().first;
       final Map<String, double> saldosResumen = {};
       for (var b in balances) {
@@ -84,31 +82,46 @@ class _AiAnalysisDialogState extends State<AiAnalysisDialog> {
         }
       }
 
-      // 3. Calcular Pagado vs Pendiente e Ingreso Total por moneda
       final Map<String, double> pagadoPorMoneda = {'UYU': 0, 'USD': 0};
       final Map<String, double> pendientePorMoneda = {'UYU': 0, 'USD': 0};
       final Map<String, double> ingresoPorMoneda = {'UYU': 0, 'USD': 0};
-      final Map<String, Map<String, double>> gastosPorCatYMoneda = {
-        'UYU': {},
-        'USD': {},
-      };
+      final Map<String, Map<String, double>> gastosPorCatYMoneda = {'UYU': {}, 'USD': {}};
 
       for (var t in widget.transactions) {
         final String cur = t.currency;
         final double amt = (t.amount ?? 0.0).toDouble();
-        
         if (t.type == 'EXPENSE') {
           gastosPorCatYMoneda[cur]![t.category] = (gastosPorCatYMoneda[cur]![t.category] ?? 0.0) + amt;
-          if (t.isCompleted) {
-            pagadoPorMoneda[cur] = (pagadoPorMoneda[cur] ?? 0.0) + amt;
-          } else {
-            pendientePorMoneda[cur] = (pendientePorMoneda[cur] ?? 0.0) + amt;
-          }
+          if (t.isCompleted) pagadoPorMoneda[cur] = (pagadoPorMoneda[cur] ?? 0.0) + amt;
+          else pendientePorMoneda[cur] = (pendientePorMoneda[cur] ?? 0.0) + amt;
         } else if (t.type == 'INCOME') {
           ingresoPorMoneda[cur] = (ingresoPorMoneda[cur] ?? 0.0) + amt;
         }
       }
 
+      // Creamos un identificador único basado en los valores numéricos
+      // Si un solo número cambia, este string cambiará.
+      final String dataFingerprint = "$userName|${widget.monthlyBudget}|"
+          "$pagadoPorMoneda|$pendientePorMoneda|$ingresoPorMoneda|"
+          "$gastosPorCatYMoneda|$saldosResumen";
+
+      // 2. Intentar recuperar desde la Caché de Firestore
+      final String monthId = widget.monthLabel.replaceAll(' ', '_');
+      final cachedReport = await widget.service.getCachedAiReport(monthId, dataFingerprint);
+
+      if (cachedReport != null) {
+        if (mounted) {
+          setState(() {
+            _result = cachedReport;
+            _isLoading = false;
+          });
+        }
+        return; // ¡ÉXITO! Usamos la caché y ahorramos una llamada a la IA.
+      }
+
+      // 3. Si no hay caché, llamar a Finanz-IA
+      if (mounted) setState(() => _loadingMessage = 'Finanz-IA está analizando nuevos datos...');
+      
       final res = await _gemini.analizarFinanzas(
         presupuestoTotal: (widget.monthlyBudget ?? 0.0).toDouble(),
         gastosPorCategoria: gastosPorCatYMoneda,
@@ -123,6 +136,8 @@ class _AiAnalysisDialogState extends State<AiAnalysisDialog> {
         setState(() {
           if (res != null) {
             _result = res;
+            // 4. GUARDAR EN CACHÉ para la próxima vez
+            widget.service.saveAiReport(monthId, dataFingerprint, res);
           } else {
             _error = "Finanz-IA no pudo responder en este momento.";
           }
