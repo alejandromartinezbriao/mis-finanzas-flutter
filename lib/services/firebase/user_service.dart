@@ -40,6 +40,31 @@ mixin UserService on FirebaseBase {
     }
   }
 
+  /// Ejecuta migraciones estructurales de forma automática y silenciosa
+  Future<void> checkAndPerformMigrations() async {
+    try {
+      final uid = auth.currentUser?.uid;
+      if (uid == null) return;
+
+      final userDoc = await db.collection('users').doc(uid).get();
+      if (!userDoc.exists) return;
+
+      final userData = userDoc.data()!;
+      
+      // MIGRACIÓN v3.1: Presupuestos a Categorías
+      if (userData['migratedToV31'] != true) {
+        // Marcamos como completada PRIMERO para evitar bucles si falla algo parcial
+        await db.collection('users').doc(uid).update({'migratedToV31': true});
+        
+        print("Iniciando migración automática v3.1 para el usuario...");
+        final migratedCount = await (this as dynamic).migrateBudgetsToCategories();
+        print("Migración v3.1 finalizada. Se mudaron $migratedCount presupuestos.");
+      }
+    } catch (e) {
+      print("Error en checkAndPerformMigrations: $e");
+    }
+  }
+
   // --- CACHÉ DE INFORMES IA ---
 
   Future<Map<String, dynamic>?> getCachedAiReport(String monthId, String dataHash) async {

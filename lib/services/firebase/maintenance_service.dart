@@ -513,5 +513,57 @@ mixin MaintenanceService on FirebaseBase {
     } catch (e) { return 0; }
   }
 
+  /// MIGRADOR: Pasa los presupuestos de la colección vieja 'budgets' a los nuevos campos en 'categories'
+  Future<int> migrateBudgetsToCategories() async {
+    try {
+      final refB = budgetsRef;
+      final refC = categoriesRef;
+      if (refB == null || refC == null) return 0;
+
+      // 1. Obtener todos los presupuestos viejos (los más recientes)
+      final budgetsSnap = await refB.orderBy('year', descending: true).orderBy('month', descending: true).get();
+      final Map<String, Map<String, dynamic>> latestBudgets = {};
+      
+      for (var doc in budgetsSnap.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        // Usamos una normalización profunda para comparar nombres de categorías
+        final String catName = _deepNorm(data['categoryName'] ?? '');
+        if (catName.isNotEmpty && !latestBudgets.containsKey(catName)) {
+          latestBudgets[catName] = data;
+        }
+      }
+
+      if (latestBudgets.isEmpty) return 0;
+
+      // 2. Obtener todas las categorías actuales
+      final categoriesSnap = await refC.get();
+      WriteBatch batch = db.batch();
+      int migrated = 0;
+
+      for (var doc in categoriesSnap.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        final String name = _deepNorm(data['name'] ?? '');
+        
+        if (latestBudgets.containsKey(name)) {
+          final budgetData = latestBudgets[name]!;
+          batch.update(doc.reference, {
+            'budgetAmount': (budgetData['amount'] ?? 0.0).toDouble(),
+            'budgetCurrency': budgetData['currency'] ?? 'UYU',
+          });
+          migrated++;
+        }
+      }
+
+      if (migrated > 0) {
+        await batch.commit();
+        // IMPORTANTE: NO borrar la colección vieja 'budgets' todavía para tener respaldo físico
+      }
+      return migrated;
+    } catch (e) {
+      print("Error migración presupuestos: $e");
+      return 0;
+    }
+  }
+
   String _capitalize(String s) => s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
 }

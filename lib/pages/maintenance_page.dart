@@ -17,6 +17,7 @@ class MaintenancePage extends StatefulWidget {
 class _MaintenancePageState extends State<MaintenancePage> {
   final FirebaseService _service = FirebaseService();
   bool _isNormalizeLoading = false;
+  bool _isMigrationLoading = false; // Nuevo
 
   void _showReport(String title, String content) {
     showDialog(
@@ -51,6 +52,20 @@ class _MaintenancePageState extends State<MaintenancePage> {
     }
   }
 
+  Future<void> _runBudgetMigration() async {
+    setState(() => _isMigrationLoading = true);
+    try {
+      final migrated = await _service.migrateBudgetsToCategories();
+      if (mounted) {
+        _showReport('Migración Finalizada', 'Se han rescatado los presupuestos de $migrated categorías exitosamente.');
+      }
+    } catch (e) {
+      _showError(e);
+    } finally {
+      if (mounted) setState(() => _isMigrationLoading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -61,6 +76,17 @@ class _MaintenancePageState extends State<MaintenancePage> {
           child: ListView(
             padding: const EdgeInsets.all(24),
             children: [
+              // NUEVO: MIGRACIÓN DE PRESUPUESTOS
+              _buildMaintenanceCard(
+                title: 'Migrar Presupuestos (v3.1)',
+                subtitle: 'Rescata tus presupuestos definidos anteriormente y los integra en las nuevas categorías.',
+                icon: Icons.auto_mode,
+                iconColor: Colors.purple.shade700,
+                onTap: _isMigrationLoading ? null : _runBudgetMigration,
+                isLoading: _isMigrationLoading,
+              ),
+              const SizedBox(height: 16),
+
               // 1. FUNDACIÓN: Limpieza de texto
               _buildMaintenanceCard(
                 title: 'Normalizar Formatos (Quitar Comas)',

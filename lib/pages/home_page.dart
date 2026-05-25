@@ -32,8 +32,11 @@ class _HomePageState extends State<HomePage> {
   Future<void> _initializeUser() async {
     // 1. Asegurar perfil básico
     await _service.createUserProfileIfNotExist();
+
+    // 2. Ejecutar migraciones automáticas silenciosas (v3.1+)
+    await _service.checkAndPerformMigrations();
     
-    // 2. Verificar si falta el nombre
+    // 3. Verificar si falta el nombre
     final profile = await _service.getUserProfile().first;
     if (profile != null && (profile['displayName'] == null || profile['displayName'].toString().isEmpty)) {
       if (mounted) _showNameRequestDialog();
