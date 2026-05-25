@@ -2,38 +2,24 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'firebase_base.dart';
 
 mixin CategoryService on FirebaseBase {
-  // --- PRESUPUESTOS ---
+  // --- PRESUPUESTOS (Ahora integrados en Categorías) ---
 
   Stream<List<Map<String, dynamic>>> getBudgets(int month, int year) {
-    final ref = budgetsRef;
-    if (ref == null) return Stream.value([]);
-    return ref.where('month', isEqualTo: month).where('year', isEqualTo: year).snapshots().map((snap) => snap.docs.map((doc) {
-          final data = doc.data() as Map<String, dynamic>;
-          data['id'] = doc.id;
-          return data;
-        }).toList());
+    // Redirigimos a las categorías, ya que ahora el presupuesto es una propiedad de la categoría
+    return getCategories(type: 'EXPENSE');
   }
 
   Future<void> setBudget(String categoryName, double amount, int month, int year, String currency) async {
+    // Buscamos la categoría por nombre y actualizamos su presupuesto
     try {
-      final ref = budgetsRef;
+      final ref = categoriesRef;
       if (ref == null) return;
       
-      final existing = await ref
-          .where('categoryName', isEqualTo: categoryName)
-          .where('month', isEqualTo: month)
-          .where('year', isEqualTo: year)
-          .get();
-
-      if (existing.docs.isNotEmpty) {
-        await ref.doc(existing.docs.first.id).update({'amount': round(amount), 'currency': currency});
-      } else {
-        await ref.add({
-          'categoryName': categoryName,
-          'amount': round(amount),
-          'month': month,
-          'year': year,
-          'currency': currency,
+      final snap = await ref.where('name', isEqualTo: categoryName).limit(1).get();
+      if (snap.docs.isNotEmpty) {
+        await ref.doc(snap.docs.first.id).update({
+          'budgetAmount': round(amount),
+          'budgetCurrency': currency,
         });
       }
     } catch (e) {

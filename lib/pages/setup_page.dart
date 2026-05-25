@@ -26,9 +26,9 @@ class _SetupPageState extends State<SetupPage> with SingleTickerProviderStateMix
   void initState() {
     super.initState();
     _tabController = TabController(
-      length: 7, 
+      length: 6, // Reducido de 7 a 6
       vsync: this, 
-      initialIndex: widget.initialIndex
+      initialIndex: widget.initialIndex >= 6 ? 5 : widget.initialIndex
     );
     _tabController.addListener(() {
       if (mounted) setState(() {});
@@ -82,7 +82,6 @@ class _SetupPageState extends State<SetupPage> with SingleTickerProviderStateMix
             Tab(icon: Icon(Icons.attach_money), text: 'Ingresos'),
             Tab(icon: Icon(Icons.account_balance), text: 'Mis Cuentas'),
             Tab(icon: Icon(Icons.category_outlined), text: 'Categorías'),
-            Tab(icon: Icon(Icons.bar_chart), text: 'Presupuestos'),
             Tab(icon: Icon(Icons.subscriptions_outlined), text: 'Suscripciones'),
             Tab(icon: Icon(Icons.savings_outlined), text: 'Metas'),
           ],
@@ -109,7 +108,6 @@ class _SetupPageState extends State<SetupPage> with SingleTickerProviderStateMix
             service: _service, 
             onEdit: (category) => SetupDialogs.showCategoryDialog(context, _service, category)
           ),
-          BudgetsTab(service: _service),
           SubscriptionsListTab(
             service: _service,
             onEdit: (sub) => SetupDialogs.showSubscriptionDialog(context, _service, sub)
@@ -137,14 +135,12 @@ class _SetupPageState extends State<SetupPage> with SingleTickerProviderStateMix
                 } else if (_tabController.index == 3) {
                   SetupDialogs.showCategoryDialog(context, _service, null);
                 } else if (_tabController.index == 4) {
-                  SetupDialogs.showBudgetHelpDialog(context);
-                } else if (_tabController.index == 5) {
                   SetupDialogs.showSubscriptionDialog(context, _service, null);
-                } else if (_tabController.index == 6) {
+                } else if (_tabController.index == 5) {
                   SetupDialogs.showGoalDialog(context, _service, null);
                 }
               },
-              icon: Icon(_tabController.index == 4 ? Icons.help_outline : Icons.add_circle_outline),
+              icon: const Icon(Icons.add_circle_outline),
               label: Text(_getButtonLabel(), style: const TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1)),
               style: FilledButton.styleFrom(
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -162,9 +158,8 @@ class _SetupPageState extends State<SetupPage> with SingleTickerProviderStateMix
       case 1: return 'NUEVO INGRESO FIJO';
       case 2: return 'NUEVA CUENTA';
       case 3: return 'NUEVA CATEGORÍA';
-      case 4: return 'AYUDA PRESUPUESTOS';
-      case 5: return 'NUEVA SUSCRIPCIÓN';
-      case 6: return 'NUEVA META';
+      case 4: return 'NUEVA SUSCRIPCIÓN';
+      case 5: return 'NUEVA META';
       default: return 'AÑADIR';
     }
   }

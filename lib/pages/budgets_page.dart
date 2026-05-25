@@ -47,61 +47,49 @@ class _BudgetsPageState extends State<BudgetsPage> {
                   stream: _service.getCategories(type: 'EXPENSE'),
                   builder: (context, catSnapshot) {
                     if (catSnapshot.hasError) return Center(child: Text('Error Categorías: ${catSnapshot.error}'));
-                    if (!catSnapshot.hasData) return const SizedBox();
+                    if (!catSnapshot.hasData) return const Center(child: CircularProgressIndicator());
                     final categories = catSnapshot.data!;
 
-                    return StreamBuilder<List<Map<String, dynamic>>>(
-                      stream: _service.getBudgets(_viewingDate.month, _viewingDate.year),
-                      builder: (context, budSnapshot) {
-                        if (budSnapshot.hasError) return Center(child: Text('Error Presupuestos: ${budSnapshot.error}'));
-                        final budgets = budSnapshot.data ?? [];
-                        
-                        // Solo mostrar categorías que tengan presupuesto O tengan gastos
-                        final relevantCategories = categories.where((cat) {
-                          final hasBudget = budgets.any((b) => b['categoryName'] == cat['name'] && (b['amount'] ?? 0) > 0);
-                          final hasSpent = transactions.any((t) => t.category == cat['name']);
-                          return hasBudget || hasSpent;
-                        }).toList();
+                    // Filtramos categorías que tengan presupuesto definido O tengan gastos en este mes
+                    final relevantCategories = categories.where((cat) {
+                      final hasBudget = (cat['budgetAmount'] ?? 0.0) > 0;
+                      final hasSpent = transactions.any((t) => t.category == cat['name']);
+                      return hasBudget || hasSpent;
+                    }).toList();
 
-                        if (relevantCategories.isEmpty) {
-                          return Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(Icons.pie_chart_outline, size: 60, color: Colors.grey),
-                                const SizedBox(height: 16),
-                                const Text('No hay presupuestos definidos para este mes.'),
-                                TextButton(
-                                  onPressed: () => Navigator.push(
-                                    context, 
-                                    MaterialPageRoute(builder: (context) => SetupPage(initialIndex: 4))
-                                  ),
-                                  child: const Text('Configurar Presupuestos'),
-                                )
-                              ],
-                            ),
-                          );
-                        }
+                    if (relevantCategories.isEmpty) {
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.pie_chart_outline, size: 60, color: Colors.grey),
+                            const SizedBox(height: 16),
+                            const Text('No hay presupuestos ni gastos para este mes.'),
+                            TextButton(
+                              onPressed: () => Navigator.push(
+                                context, 
+                                MaterialPageRoute(builder: (context) => const SetupPage(initialIndex: 3)) // Índice 3 es Categorías
+                              ),
+                              child: const Text('Configurar Presupuestos en Categorías'),
+                            )
+                          ],
+                        ),
+                      );
+                    }
 
-                        return ListView.builder(
-                          padding: const EdgeInsets.all(16),
-                          itemCount: relevantCategories.length,
-                          itemBuilder: (context, index) {
-                            final cat = relevantCategories[index];
-                            final budget = budgets.firstWhere(
-                              (b) => b['categoryName'] == cat['name'],
-                              orElse: () => {'amount': 0.0, 'currency': 'UYU'},
-                            );
-                            
-                            final String budgetCurrency = budget['currency'] ?? 'UYU';
-                            final budgetAmount = (budget['amount'] as num).toDouble();
-                            final spentAmount = transactions
-                                .where((t) => t.category == cat['name'] && t.currency == budgetCurrency)
-                                .fold(0.0, (sum, t) => sum + t.amount);
+                    return ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: relevantCategories.length,
+                      itemBuilder: (context, index) {
+                        final cat = relevantCategories[index];
+                        final double budgetAmount = (cat['budgetAmount'] ?? 0.0).toDouble();
+                        final String budgetCurrency = cat['budgetCurrency'] ?? 'UYU';
 
-                            return _buildBudgetProgressCard(cat, budgetAmount, spentAmount, budgetCurrency);
-                          },
-                        );
+                        final spentAmount = transactions
+                            .where((t) => t.category == cat['name'] && t.currency == budgetCurrency)
+                            .fold(0.0, (sum, t) => sum + t.amount);
+
+                        return _buildBudgetProgressCard(cat, budgetAmount, spentAmount, budgetCurrency);
                       },
                     );
                   },

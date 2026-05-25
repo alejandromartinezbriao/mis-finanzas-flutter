@@ -1,11 +1,12 @@
-# Log de Desarrollo - Mis Finanzas (v3.0.0)
+# Log de Desarrollo - Mis Finanzas (v3.0.1)
 
 ## Estado Actual (Última actualización: 10/05/2026)
-- **Versión**: 3.0.0 "Inteligencia Financiera Real".
+- **Versión**: 3.0.1 "Sincronización Perfecta".
 - **Interfaz**: Centro de Inteligencia Finanz-IA con personalización por nombre y diseño premium.
 - **Aritmética**: Estandarización total de punto decimal (`.`) y soporte bimonetario nativo con conversión en tiempo real.
 - **Usabilidad**: 
-    - **Centro de Inteligencia (v3.0)**: Centralización de Auditoría Mensual y Planificación Estratégica.
+    - **Huella Digital Determinista (v3.0.1)**: Unificación de la lógica de caché mediante ordenamiento alfabético de datos y JSON estricto. Esto garantiza que el mismo análisis sea reconocido en múltiples dispositivos (Móvil/PC) sin duplicar consultas a la IA.
+    - **Centro de Inteligencia**: Centralización de Auditoría Mensual y Planificación Estratégica.
     - **Conciencia del Mercado**: Integración con API financiera para obtener el tipo de cambio oficial del dólar en Uruguay en tiempo real.
     - **Caché Inteligente**: Sistema de huella digital de datos para asegurar consistencia en los informes de IA y optimizar costos.
     - **Registro Ágil**: Opción de pago en efectivo directo y registro de cuotas retroactivo.

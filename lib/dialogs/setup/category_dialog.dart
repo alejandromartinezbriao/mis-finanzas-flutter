@@ -19,9 +19,11 @@ class CategoryDialog extends StatefulWidget {
 
 class _CategoryDialogState extends State<CategoryDialog> {
   late TextEditingController nameCtrl;
+  late TextEditingController budgetCtrl; // Nuevo
   late String type;
   late int selectedColor;
   late String selectedIcon;
+  late String budgetCurrency; // Nuevo
   bool isEdit = false;
 
   @override
@@ -29,6 +31,14 @@ class _CategoryDialogState extends State<CategoryDialog> {
     super.initState();
     isEdit = widget.category != null;
     nameCtrl = TextEditingController(text: widget.category?['name'] ?? '');
+    
+    // Inicialización de presupuesto
+    final double budgetVal = (widget.category?['budgetAmount'] ?? 0.0).toDouble();
+    budgetCtrl = TextEditingController(
+      text: budgetVal > 0 ? budgetVal.toStringAsFixed(0) : ''
+    );
+    budgetCurrency = widget.category?['budgetCurrency'] ?? 'UYU';
+
     type = widget.category?['type'] ?? 'EXPENSE';
     selectedColor = widget.category?['color'] ?? Colors.blue.value;
     selectedIcon = widget.category?['icon'] ?? 'category';
@@ -37,6 +47,7 @@ class _CategoryDialogState extends State<CategoryDialog> {
   @override
   void dispose() {
     nameCtrl.dispose();
+    budgetCtrl.dispose(); // Nuevo
     super.dispose();
   }
 
@@ -61,7 +72,49 @@ class _CategoryDialogState extends State<CategoryDialog> {
               controller: nameCtrl,
               decoration: const InputDecoration(labelText: 'Nombre de categoría', border: OutlineInputBorder()),
             ),
-            const SizedBox(height: 15),
+            
+            // SECCIÓN DE PRESUPUESTO (Solo para gastos)
+            if (type == 'EXPENSE') ...[
+              const SizedBox(height: 20),
+              const Align(
+                alignment: Alignment.centerLeft, 
+                child: Text('Presupuesto Mensual (Opcional):', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: budgetCtrl,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: false),
+                      decoration: const InputDecoration(
+                        labelText: 'Monto tope',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.speed, size: 20),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    height: 56,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.5)),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: budgetCurrency,
+                        items: ['UYU', 'USD'].map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                        onChanged: (v) => setState(() => budgetCurrency = v!),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+
+            const SizedBox(height: 20),
             const Align(
                 alignment: Alignment.centerLeft, child: Text('Color:', style: TextStyle(fontWeight: FontWeight.bold))),
             const SizedBox(height: 10),
@@ -148,6 +201,8 @@ class _CategoryDialogState extends State<CategoryDialog> {
                 'type': type,
                 'color': selectedColor,
                 'icon': selectedIcon,
+                'budgetAmount': type == 'EXPENSE' ? (double.tryParse(budgetCtrl.text) ?? 0.0) : 0.0,
+                'budgetCurrency': type == 'EXPENSE' ? budgetCurrency : 'UYU',
               };
               if (isEdit) {
                 widget.service.updateCategory(widget.category!['id'], data);

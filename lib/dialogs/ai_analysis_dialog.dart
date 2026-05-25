@@ -1,6 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
-import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import '../services/firebase_service.dart';
 import '../services/gemini_service.dart';
@@ -8,10 +6,10 @@ import '../models/transaction_model.dart';
 import 'package:intl/intl.dart';
 
 class AiAnalysisDialog extends StatefulWidget {
-  final List<TransactionModel> transactions;
+  final List<TransactionModel> transactions; // Mantener por compatibilidad visual si fuera necesario, pero no para el Hash
   final double monthlyBudget;
   final String monthLabel;
-  final FirebaseService service; // Necesario para obtener el perfil
+  final FirebaseService service;
 
   const AiAnalysisDialog({
     super.key,
@@ -31,15 +29,13 @@ class _AiAnalysisDialogState extends State<AiAnalysisDialog> {
   Map<String, dynamic>? _result;
   String? _error;
   
-  // Lógica para mensajes de carga dinámicos
-  String _loadingMessage = 'Iniciando auditoría...';
+  String _loadingMessage = 'Conectando con el servidor central...';
   late Timer _timer;
   final List<String> _messages = [
-    'Saludando a la IA...',
-    'Analizando patrones de consumo...',
-    'Auditando tus categorías...',
-    'Buscando posibles fugas de dinero...',
-    'Preparando tu informe ejecutivo...'
+    'El servidor está recolectando tus datos...',
+    'Calculando firma de estado bimonetaria...',
+    'Consultando a Finanz-IA en la nube...',
+    'Preparando tu reporte ejecutivo...',
   ];
   int _messageIndex = 0;
 
@@ -71,103 +67,46 @@ class _AiAnalysisDialogState extends State<AiAnalysisDialog> {
 
   Future<void> _runAnalysis() async {
     try {
-      // 1. Preparar datos base
-      final profile = await widget.service.getUserProfile().first;
-      final String userName = profile?['displayName'] ?? 'Usuario';
-
-      final balances = await widget.service.getBalances().first;
-      final Map<String, double> saldosResumen = {};
-      final List<String> cuentasActivas = [];
-      for (var b in balances) {
-        if (b['includeInCoverage'] != false) {
-          final String cur = b['currency'] ?? 'UYU';
-          final double amt = (b['amount'] ?? 0.0).toDouble();
-          saldosResumen[cur] = (saldosResumen[cur] ?? 0.0) + amt;
-          cuentasActivas.add("${b['accountName']} ($cur)");
-        }
-      }
-
-      final Map<String, double> pagadoPorMoneda = {'UYU': 0, 'USD': 0};
-      final Map<String, double> pendientePorMoneda = {'UYU': 0, 'USD': 0};
-      final Map<String, double> ingresoPorMoneda = {'UYU': 0, 'USD': 0};
-      final Map<String, Map<String, double>> gastosPorCatYMoneda = {'UYU': {}, 'USD': {}};
-
-      for (var t in widget.transactions) {
-        final String cur = t.currency;
-        final double amt = (t.amount ?? 0.0).toDouble();
-        if (t.type == 'EXPENSE') {
-          gastosPorCatYMoneda[cur]![t.category] = (gastosPorCatYMoneda[cur]![t.category] ?? 0.0) + amt;
-          if (t.isCompleted) pagadoPorMoneda[cur] = (pagadoPorMoneda[cur] ?? 0.0) + amt;
-          else pendientePorMoneda[cur] = (pendientePorMoneda[cur] ?? 0.0) + amt;
-        } else if (t.type == 'INCOME') {
-          ingresoPorMoneda[cur] = (ingresoPorMoneda[cur] ?? 0.0) + amt;
-        }
-      }
-
-      // 4. Obtener ingresos fijos y SUSCRIPCIONES
-      final incomeTemplates = await widget.service.getTemplates(type: 'INCOME').first;
-      final subscriptions = await widget.service.getSubscriptions().first;
-
-      // 5. Crear Huella Digital Súper Sensible y DETERMINISTA
-      // Ordenamos claves y convertimos a JSON para asegurar que Celular y PC generen el mismo Hash
-      final Map<String, dynamic> fingerprintData = {
-        'user': userName,
-        'budget': widget.monthlyBudget.toDouble(),
-        'paid': Map.fromEntries(pagadoPorMoneda.entries.toList()..sort((a, b) => a.key.compareTo(b.key))),
-        'pending': Map.fromEntries(pendientePorMoneda.entries.toList()..sort((a, b) => a.key.compareTo(b.key))),
-        'income': Map.fromEntries(ingresoPorMoneda.entries.toList()..sort((a, b) => a.key.compareTo(b.key))),
-        'expenses': Map.fromEntries(gastosPorCatYMoneda.entries.toList()..sort((a, b) => a.key.compareTo(b.key))),
-        'balances': Map.fromEntries(saldosResumen.entries.toList()..sort((a, b) => a.key.compareTo(b.key))),
-        'active_accounts': cuentasActivas..sort(),
-        'templates': incomeTemplates.toString(),
-        'subs': subscriptions.toString(),
-      };
-      
-      final String rawFingerprint = jsonEncode(fingerprintData);
-      final String dataFingerprint = md5.convert(utf8.encode(rawFingerprint)).toString();
-
-      // 6. Intentar recuperar desde la Caché
-      final String monthId = widget.monthLabel.replaceAll(' ', '_');
-      final cachedReport = await widget.service.getCachedAiReport(monthId, dataFingerprint);
-
-      if (cachedReport != null) {
-        if (mounted) {
-          setState(() {
-            _result = cachedReport;
-            _isLoading = false;
-          });
-        }
+      final uid = widget.service.auth.currentUser?.uid;
+      if (uid == null) {
+        setState(() { _error = "Sesión no válida."; _isLoading = false; });
         return;
       }
 
-      // 7. Si no hay caché, llamar a Finanz-IA
-      if (mounted) setState(() => _loadingMessage = 'Finanz-IA está analizando tus suscripciones...');
+      final profile = await widget.service.getUserProfile().first;
+      final String userName = profile?['displayName'] ?? 'Usuario';
+
+      // Parsear mes y año desde el label (o usar widget.transactions para inferirlo)
+      // Para mayor precisión, usamos el mes/año actual o de la primera transacción
+      final now = DateTime.now();
+      int month = now.month;
+      int year = now.year;
       
+      if (widget.transactions.isNotEmpty) {
+        month = widget.transactions.first.date.month;
+        year = widget.transactions.first.date.year;
+      }
+
+      // LLAMADA SIMPLIFICADA: Todo el trabajo se hace en el servidor
       final res = await _gemini.analizarFinanzas(
-        presupuestoTotal: (widget.monthlyBudget ?? 0.0).toDouble(),
-        gastosPorCategoria: gastosPorCatYMoneda,
-        pagadoTotal: pagadoPorMoneda,
-        pendienteTotal: pendientePorMoneda,
-        ingresoTotal: ingresoPorMoneda,
-        cuentasActivas: cuentasActivas,
-        suscripciones: subscriptions,
+        uid: uid,
+        month: month,
+        year: year,
         userName: userName,
-        saldosActuales: saldosResumen,
       );
 
       if (mounted) {
         setState(() {
           if (res != null) {
             _result = res;
-            widget.service.saveAiReport(monthId, dataFingerprint, res);
           } else {
-            _error = "Finanz-IA no pudo responder en este momento.";
+            _error = "Finanz-IA central no pudo responder.";
           }
           _isLoading = false;
         });
       }
     } catch (e) {
-      if (mounted) setState(() { _error = "Error de conexión: No se pudo procesar el análisis."; _isLoading = false; });
+      if (mounted) setState(() { _error = "Error: $e"; _isLoading = false; });
     }
   }
 
@@ -179,10 +118,7 @@ class _AiAnalysisDialogState extends State<AiAnalysisDialog> {
         children: [
           Container(
             padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.purple.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: Colors.purple.withOpacity(0.1), shape: BoxShape.circle),
             child: const Icon(Icons.auto_awesome, color: Colors.purple, size: 20),
           ),
           const SizedBox(width: 12),
@@ -200,46 +136,20 @@ class _AiAnalysisDialogState extends State<AiAnalysisDialog> {
                   const SizedBox(height: 24),
                   AnimatedSwitcher(
                     duration: const Duration(milliseconds: 500),
-                    child: Text(
-                      _loadingMessage,
-                      key: ValueKey(_loadingMessage),
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(fontStyle: FontStyle.italic, color: Colors.grey),
-                    ),
+                    child: Text(_loadingMessage, key: ValueKey(_loadingMessage), textAlign: TextAlign.center, style: const TextStyle(fontStyle: FontStyle.italic, color: Colors.grey)),
                   ),
                   const SizedBox(height: 40),
                 ],
               )
             : _error != null
-                ? Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 20),
-                    child: Text(_error!, textAlign: TextAlign.center, style: const TextStyle(color: Colors.redAccent)),
-                  )
+                ? Text(_error!, textAlign: TextAlign.center, style: const TextStyle(color: Colors.redAccent))
                 : SingleChildScrollView(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Column(
-                              children: [
-                                Stack(
-                                  alignment: Alignment.center,
-                                  children: [
-                                    SizedBox(height: 80, width: 80, child: CircularProgressIndicator(value: (_result?['score'] ?? 0) / 100, strokeWidth: 8, color: _getScoreColor(_result?['score'] ?? 0), backgroundColor: Colors.grey.withOpacity(0.1))),
-                                    Text('${_result?['score'] ?? 0}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900)),
-                                  ],
-                                ),
-                                const SizedBox(height: 8),
-                                Text(_result?['score_label']?.toUpperCase() ?? '', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: _getScoreColor(_result?['score'] ?? 0), letterSpacing: 1)),
-                              ],
-                            ),
-                          ],
-                        ),
+                        _buildScoreHeader(),
                         const SizedBox(height: 30),
-
                         if (_result?['resumen_ejecutivo'] != null) ...[
                           const Text('ANÁLISIS ESTRATÉGICO', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.purple, letterSpacing: 1)),
                           const SizedBox(height: 8),
@@ -248,60 +158,50 @@ class _AiAnalysisDialogState extends State<AiAnalysisDialog> {
                           const Divider(),
                           const SizedBox(height: 24),
                         ],
-
                         if (_result?['alerta_critica'] != null && _result?['alerta_critica'] != "null")
-                          _buildInsightCard(
-                            title: 'Alerta Crítica',
-                            content: _result!['alerta_critica'],
-                            color: Colors.red,
-                            icon: Icons.warning_amber_rounded,
-                          ),
-                        
+                          _buildInsightCard(title: 'Alerta Crítica', content: _result!['alerta_critica'], color: Colors.red, icon: Icons.warning_amber_rounded),
                         const SizedBox(height: 12),
-                        
-                        _buildInsightCard(
-                          title: 'Foco de Gasto',
-                          content: 'Tu mayor egreso está en la categoría "${_result?['categoria_mayor_gasto'] ?? 'N/A'}".',
-                          color: Colors.blue,
-                          icon: Icons.trending_up,
-                        ),
-                        
+                        _buildInsightCard(title: 'Foco de Gasto', content: 'Tu mayor egreso está en "${_result?['categoria_mayor_gasto'] ?? 'N/A'}".', color: Colors.blue, icon: Icons.trending_up),
                         const SizedBox(height: 12),
-                        
-                        _buildInsightCard(
-                          title: 'Consejo Directo',
-                          content: _result?['consejo_ahorro'] ?? 'Sigue registrando tus movimientos para mejorar mi análisis.',
-                          color: Colors.teal,
-                          icon: Icons.lightbulb_outline,
-                        ),
-
+                        _buildInsightCard(title: 'Consejo Directo', content: _result?['consejo_ahorro'] ?? 'Sigue registrando tus movimientos.', color: Colors.teal, icon: Icons.lightbulb_outline),
                         if (_result?['meta_sugerida'] != null) ...[
                           const SizedBox(height: 12),
-                          _buildInsightCard(
-                            title: 'Meta Recomendada',
-                            content: _result!['meta_sugerida'],
-                            color: Colors.amber,
-                            icon: Icons.flag_outlined,
-                          ),
+                          _buildInsightCard(title: 'Meta Recomendada', content: _result!['meta_sugerida'], color: Colors.amber, icon: Icons.flag_outlined),
                         ],
-                        
-                        const SizedBox(height: 24),
-                        const Center(
-                          child: Text(
-                            'Consultoría inteligente generada con Google Gen AI',
-                            style: TextStyle(fontSize: 9, color: Colors.grey),
-                          ),
-                        ),
+                        const SizedBox(height: 32),
+                        const Center(child: Text('Consultoría centralizada generada con Google Gen AI', style: TextStyle(fontSize: 9, color: Colors.grey))),
                       ],
                     ),
                   ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Entendido', style: TextStyle(fontWeight: FontWeight.bold)),
-        )
-      ],
+      actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Entendido', style: TextStyle(fontWeight: FontWeight.bold)))],
+    );
+  }
+
+  Widget _buildScoreHeader() {
+    final int score = _result?['score'] ?? 0;
+    final Color color = score >= 80 ? Colors.green : (score >= 50 ? Colors.orange : Colors.red);
+    return Center(
+      child: Column(children: [
+        Stack(alignment: Alignment.center, children: [
+          SizedBox(height: 80, width: 80, child: CircularProgressIndicator(value: score / 100, strokeWidth: 8, color: color, backgroundColor: Colors.grey.withOpacity(0.1))),
+          Text('$score', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900)),
+        ]),
+        const SizedBox(height: 8),
+        Text(_result?['score_label']?.toUpperCase() ?? '', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: color, letterSpacing: 1)),
+      ]),
+    );
+  }
+
+  Widget _buildInsightCard({required String title, required String content, required Color color, required IconData icon}) {
+    return Container(
+      width: double.infinity, padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(color: color.withOpacity(0.05), borderRadius: BorderRadius.circular(16), border: Border.all(color: color.withOpacity(0.2))),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [Icon(icon, size: 16, color: color), const SizedBox(width: 8), Text(title.toUpperCase(), style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: color, letterSpacing: 1))]),
+        const SizedBox(height: 10),
+        Text(content, style: const TextStyle(fontSize: 14, height: 1.5, fontWeight: FontWeight.w500)),
+      ]),
     );
   }
 
@@ -309,37 +209,5 @@ class _AiAnalysisDialogState extends State<AiAnalysisDialog> {
     if (score >= 80) return Colors.green;
     if (score >= 50) return Colors.orange;
     return Colors.red;
-  }
-
-  Widget _buildInsightCard({required String title, required String content, required Color color, required IconData icon}) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.2)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, size: 16, color: color),
-              const SizedBox(width: 8),
-              Text(
-                title.toUpperCase(),
-                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: color, letterSpacing: 1),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Text(
-            content,
-            style: const TextStyle(fontSize: 14, height: 1.5, fontWeight: FontWeight.w500),
-          ),
-        ],
-      ),
-    );
   }
 }

@@ -1,11 +1,8 @@
-import 'dart:convert';
-import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import '../services/firebase_service.dart';
 import '../services/gemini_service.dart';
 import '../dialogs/ai_analysis_dialog.dart';
 import '../dialogs/planning_analysis_dialog.dart';
-import '../utils/dialog_utils.dart';
 
 class AiAdvisorSelectorPage extends StatefulWidget {
   const AiAdvisorSelectorPage({super.key});
@@ -90,7 +87,7 @@ class _AiAdvisorSelectorPageState extends State<AiAdvisorSelectorPage> {
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 20),
                         child: Text(
-                          'Soy Finanz-IA, tu consultor estratégico. He preparado un par de herramientas para optimizar tu salud financiera.',
+                          'Soy Finanz-IA, tu consultor estratégico centralizado. He preparado un par de herramientas para optimizar tu salud financiera.',
                           textAlign: TextAlign.center,
                           style: TextStyle(fontSize: 15, color: isDark ? Colors.grey.shade400 : Colors.grey.shade700, height: 1.5),
                         ),
@@ -102,10 +99,10 @@ class _AiAdvisorSelectorPageState extends State<AiAdvisorSelectorPage> {
                       _buildOptionCard(
                         context: context,
                         title: 'Auditoría Mensual',
-                        subtitle: 'Analiza mis gastos reales de este mes y dime cómo voy.',
+                        subtitle: 'Analiza mis gastos reales de este mes directamente desde la nube.',
                         icon: Icons.analytics_rounded,
                         color: Colors.purple,
-                        onTap: () => _startMonthlyAudit(context, service, userName),
+                        onTap: () => _startMonthlyAudit(context, service),
                       ),
 
                       const SizedBox(height: 16),
@@ -113,10 +110,10 @@ class _AiAdvisorSelectorPageState extends State<AiAdvisorSelectorPage> {
                       _buildOptionCard(
                         context: context,
                         title: 'Planificación Estratégica',
-                        subtitle: 'Evalúa si tu plan de gastos es sostenible frente a tus ingresos futuros.',
+                        subtitle: 'Evalúa la sostenibilidad central de tu plan futuro.',
                         icon: Icons.psychology_rounded,
                         color: Colors.indigo,
-                        onTap: () => _startStrategicPlanning(context, service, userName),
+                        onTap: () => _startStrategicPlanning(context, service),
                       ),
 
                       const SizedBox(height: 40),
@@ -185,13 +182,13 @@ class _AiAdvisorSelectorPageState extends State<AiAdvisorSelectorPage> {
         children: [
           SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)),
           SizedBox(width: 12),
-          Text('Consultando mercado oficial...', style: TextStyle(fontSize: 13, fontStyle: FontStyle.italic)),
+          Text('Sincronizando con el mercado oficial...', style: TextStyle(fontSize: 13, fontStyle: FontStyle.italic)),
         ],
       );
     }
     
     if (_cotizacion == null) {
-      return const Text('⚠️ Cotización no disponible', style: TextStyle(fontSize: 12, color: Colors.orange));
+      return const Text('⚠️ Cotización bimonetaria no disponible', style: TextStyle(fontSize: 12, color: Colors.orange));
     }
 
     return Container(
@@ -225,100 +222,23 @@ class _AiAdvisorSelectorPageState extends State<AiAdvisorSelectorPage> {
     );
   }
 
-  Future<void> _startMonthlyAudit(BuildContext context, FirebaseService service, String userName) async {
-    final now = DateTime.now();
-    final String monthLabel = '${_getMonthName(now.month)} ${now.year}';
-    final String monthId = monthLabel.replaceAll(' ', '_');
-
-    // Generar Hash idéntico al diálogo para consistencia de caché
-    final txs = await service.getTransactions(month: now.month, year: now.year).first;
-    final budgets = await service.getBudgets(now.month, now.year).first;
-    final double totalBudget = budgets.fold(0.0, (sum, b) => sum + (b['amount'] ?? 0.0));
-    final balances = await service.getBalances().first;
-    final incomeTemplates = await service.getTemplates(type: 'INCOME').first;
-    
-    final Map<String, double> saldosResumen = {};
-    final List<String> cuentasActivas = [];
-    for (var b in balances) {
-      if (b['includeInCoverage'] != false) {
-        final String cur = b['currency'] ?? 'UYU';
-        saldosResumen[cur] = (saldosResumen[cur] ?? 0.0) + (b['amount'] ?? 0.0).toDouble();
-        cuentasActivas.add("${b['accountName']} ($cur)");
-      }
-    }
-
-    final Map<String, double> pagadoPorMoneda = {'UYU': 0, 'USD': 0};
-    final Map<String, double> pendientePorMoneda = {'UYU': 0, 'USD': 0};
-    final Map<String, double> ingresoPorMoneda = {'UYU': 0, 'USD': 0};
-    final Map<String, Map<String, double>> gastosPorCatYMoneda = {'UYU': {}, 'USD': {}};
-
-    for (var t in txs) {
-      final String cur = t.currency;
-      final double amt = (t.amount ?? 0.0).toDouble();
-      if (t.type == 'EXPENSE') {
-        gastosPorCatYMoneda[cur]![t.category] = (gastosPorCatYMoneda[cur]![t.category] ?? 0.0) + amt;
-        if (t.isCompleted) {
-          pagadoPorMoneda[cur] = (pagadoPorMoneda[cur] ?? 0.0) + amt;
-        } else {
-          pendientePorMoneda[cur] = (pendientePorMoneda[cur] ?? 0.0) + amt;
-        }
-      } else if (t.type == 'INCOME') ingresoPorMoneda[cur] = (ingresoPorMoneda[cur] ?? 0.0) + amt;
-    }
-
-    final String rawFingerprint = "$userName|$totalBudget|$pagadoPorMoneda|$pendientePorMoneda|$ingresoPorMoneda|$gastosPorCatYMoneda|$saldosResumen|$cuentasActivas|$incomeTemplates";
-    final String dataFingerprint = md5.convert(utf8.encode(rawFingerprint)).toString();
-
-    final cached = await service.getCachedAiReport(monthId, dataFingerprint);
-
-    if (cached != null) {
-      final bool update = await DialogUtils.confirmAction(
-        context,
-        title: 'Análisis Existente',
-        message: '¡Hola $userName! Ya tienes un análisis con estos datos. ¿Quieres actualizarlo con la cotización de hoy?',
-        confirmText: 'Actualizar',
-      );
-      if (update != true) {
-        if (context.mounted) showDialog(context: context, builder: (ctx) => AiAnalysisDialog(transactions: txs, monthlyBudget: totalBudget, monthLabel: monthLabel, service: service));
-        return;
-      }
-    }
-
-    if (context.mounted) showDialog(context: context, builder: (ctx) => AiAnalysisDialog(transactions: txs, monthlyBudget: totalBudget > 0 ? totalBudget : 1000.0, monthLabel: monthLabel, service: service));
+  void _startMonthlyAudit(BuildContext context, FirebaseService service) {
+    showDialog(
+      context: context, 
+      builder: (ctx) => AiAnalysisDialog(
+        transactions: const [], // Ya no las necesita el diálogo, solo por firma visual
+        monthlyBudget: 0, 
+        monthLabel: 'Análisis Mensual', 
+        service: service
+      )
+    );
   }
 
-  Future<void> _startStrategicPlanning(BuildContext context, FirebaseService service, String userName) async {
-    final now = DateTime.now();
-    final budgets = await service.getBudgets(now.month, now.year).first;
-    final incomeTemplates = await service.getTemplates(type: 'INCOME').first;
-    final balances = await service.getBalances().first;
-    final Map<String, double> saldosActuales = {};
-    for (var b in balances) {
-      if (b['includeInCoverage'] != false) {
-        final String cur = b['currency'] ?? 'UYU';
-        saldosActuales[cur] = (saldosActuales[cur] ?? 0.0) + (b['amount'] ?? 0.0).toDouble();
-      }
-    }
-
-    final String rawFingerprint = "PLAN|$userName|$budgets|$incomeTemplates|$saldosActuales";
-    final String dataFingerprint = md5.convert(utf8.encode(rawFingerprint)).toString();
-    final String planMonthId = "plan_${now.year}_${now.month}";
-
-    final cached = await service.getCachedAiReport(planMonthId, dataFingerprint);
-
-    if (cached != null) {
-      final bool update = await DialogUtils.confirmAction(
-        context,
-        title: 'Plan Estratégico',
-        message: '¡Hola $userName! Ya tienes un plan auditado con estos datos. ¿Quieres generar uno nuevo?',
-        confirmText: 'Nuevo',
-      );
-      if (update != true) {
-        if (context.mounted) showDialog(context: context, builder: (ctx) => PlanningAnalysisDialog(service: service));
-        return;
-      }
-    }
-
-    if (context.mounted) showDialog(context: context, builder: (ctx) => PlanningAnalysisDialog(service: service));
+  void _startStrategicPlanning(BuildContext context, FirebaseService service) {
+    showDialog(
+      context: context, 
+      builder: (ctx) => PlanningAnalysisDialog(service: service)
+    );
   }
 
   Widget _buildOptionCard({
@@ -361,10 +281,5 @@ class _AiAdvisorSelectorPageState extends State<AiAdvisorSelectorPage> {
         ),
       ),
     );
-  }
-
-  String _getMonthName(int month) {
-    const names = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-    return names[month - 1];
   }
 }

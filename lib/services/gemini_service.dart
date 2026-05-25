@@ -5,67 +5,59 @@ class GeminiService {
   final Dio _dio = Dio();
   final String _base = 'https://us-central1-cuentaspersonales-36328.cloudfunctions.net';
 
+  /// Llama a la Auditoría Mensual Centralizada en el Servidor.
+  /// La App ya no envía datos, el servidor los recolecta directamente.
   Future<Map<String, dynamic>?> analizarFinanzas({
-    required double presupuestoTotal,
-    required Map<String, dynamic> gastosPorCategoria,
-    required Map<String, double> pagadoTotal,
-    required Map<String, double> pendienteTotal,
-    required Map<String, double> ingresoTotal,
-    required List<String> cuentasActivas,
-    List<Map<String, dynamic>>? suscripciones, // Nuevo
-    Map<String, double>? saldosActuales,
-    String? userName,
-    double? tipoCambio,
+    required String uid,
+    required int month,
+    required int year,
+    required String userName,
   }) async {
     try {
       final response = await _dio.post(
         '$_base/analizarGastosMensuales',
         data: {
-          'presupuestoTotal': presupuestoTotal,
-          'gastos': gastosPorCategoria,
-          'pagadoTotal': pagadoTotal,
-          'pendienteTotal': pendienteTotal,
-          'ingresoTotal': ingresoTotal,
-          'cuentasActivas': cuentasActivas,
-          'suscripciones': suscripciones,
-          'saldosActuales': saldosActuales,
+          'uid': uid,
+          'month': month,
+          'year': year,
           'userName': userName,
-          'tipoCambio': tipoCambio,
         },
       );
       return _processResponse(response);
-    } catch (e) { return {'error': 'Error de conexión.'}; }
+    } catch (e) {
+      print('Error en IA Mensual: $e');
+      return {'error': 'Error de comunicación con el asesor central.'};
+    }
   }
 
+  /// Llama a la Planificación Estratégica Centralizada en el Servidor.
   Future<Map<String, dynamic>?> analizarPlanificacion({
-    required List<Map<String, dynamic>> presupuestos,
-    required List<Map<String, dynamic>> ingresosPrevistos,
-    required Map<String, double> saldosActuales,
-    required Map<String, dynamic> gastosActuales, // Nuevo: Base real del mes
-    List<Map<String, dynamic>>? suscripciones,
-    String? userName,
+    required String uid,
+    required String userName,
   }) async {
     try {
       final response = await _dio.post(
         '$_base/analizarSostenibilidadPlan',
         data: {
-          'presupuestos': presupuestos,
-          'ingresosPrevistos': ingresosPrevistos,
-          'saldosActuales': saldosActuales,
-          'gastosActuales': gastosActuales,
-          'suscripciones': suscripciones,
+          'uid': uid,
           'userName': userName,
         },
       );
       return _processResponse(response);
-    } catch (e) { return {'error': 'Error de conexión estratégica.'}; }
+    } catch (e) {
+      print('Error en IA Planificación: $e');
+      return {'error': 'Error de comunicación estratégica.'};
+    }
   }
 
   Future<Map<String, dynamic>?> obtenerCotizacionDolar() async {
     try {
       final response = await _dio.get('$_base/obtenerCotizacionDolar');
       return _processResponse(response);
-    } catch (e) { return null; }
+    } catch (e) {
+      print('Error cotización: $e');
+      return null;
+    }
   }
 
   Map<String, dynamic>? _processResponse(Response response) {

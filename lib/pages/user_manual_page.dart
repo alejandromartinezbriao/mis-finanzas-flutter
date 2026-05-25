@@ -11,7 +11,7 @@ class UserManualPage extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Manual del Usuario v3.0'),
+        title: const Text('Manual del Usuario v3.0.1'),
         elevation: 0,
       ),
       body: Center(
