@@ -36,16 +36,10 @@ class _PlanningAnalysisDialogState extends State<PlanningAnalysisDialog> {
       final actualTxs = await widget.service.getTransactions(month: now.month, year: now.year).first;
 
       // 2. Procesar Datos Reales del Mes (BIMONETARIO)
-      final Map<String, Map<String, double>> gastosActualesBimonetarios = {
-        'UYU': {},
-        'USD': {},
-      };
-      
+      final Map<String, Map<String, double>> gastosActualesBimonetarios = {'UYU': {}, 'USD': {}};
       for (var t in actualTxs) {
         if (t.type == 'EXPENSE') {
-          final String cur = t.currency;
-          gastosActualesBimonetarios[cur]![t.category] = 
-              (gastosActualesBimonetarios[cur]![t.category] ?? 0.0) + t.amount;
+          gastosActualesBimonetarios[t.currency]![t.category] = (gastosActualesBimonetarios[t.currency]![t.category] ?? 0.0) + t.amount;
         }
       }
 
@@ -60,8 +54,18 @@ class _PlanningAnalysisDialogState extends State<PlanningAnalysisDialog> {
       final profile = await widget.service.getUserProfile().first;
       final String userName = profile?['displayName'] ?? 'Usuario';
 
-      // 3. Huella Digital
-      final String rawFingerprint = "PLAN_V3|$userName|$budgets|$incomeTemplates|$saldosActuales|$subscriptions|$gastosActualesBimonetarios";
+      // 3. Huella Digital DETERMINISTA (Celular y PC idénticos)
+      final Map<String, dynamic> fingerprintData = {
+        'type': 'PLAN_V3',
+        'user': userName,
+        'budgets': budgets.toString(),
+        'templates': incomeTemplates.toString(),
+        'balances': Map.fromEntries(saldosActuales.entries.toList()..sort((a, b) => a.key.compareTo(b.key))),
+        'subs': subscriptions.toString(),
+        'actual': gastosActualesBimonetarios.toString(),
+      };
+      
+      final String rawFingerprint = jsonEncode(fingerprintData);
       final String dataFingerprint = md5.convert(utf8.encode(rawFingerprint)).toString();
       final String planMonthId = "plan_${now.year}_${now.month}";
 
@@ -77,7 +81,7 @@ class _PlanningAnalysisDialogState extends State<PlanningAnalysisDialog> {
         presupuestos: budgets,
         ingresosPrevistos: incomeTemplates,
         saldosActuales: saldosActuales,
-        gastosActuales: gastosActualesBimonetarios, // AHORA SÍ VA POR MONEDA
+        gastosActuales: gastosActualesBimonetarios,
         suscripciones: subscriptions,
         userName: userName,
       );
@@ -153,7 +157,7 @@ class _PlanningAnalysisDialogState extends State<PlanningAnalysisDialog> {
                         _buildSectionTitle('PROYECCIÓN A 6 MESES'),
                         Text(_result?['proyeccion_6_meses'] ?? '', style: const TextStyle(fontSize: 13, fontStyle: FontStyle.italic)),
                         const SizedBox(height: 24),
-                        const Center(child: Text('Análisis inteligente generado con Google Gen AI', style: TextStyle(fontSize: 9, color: Colors.grey))),
+                        const Center(child: Text('Consultoría inteligente generada con Google Gen AI', style: TextStyle(fontSize: 9, color: Colors.grey))),
                       ],
                     ),
                   ),

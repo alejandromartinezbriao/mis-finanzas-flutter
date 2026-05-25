@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import '../services/firebase_service.dart';
 import '../services/gemini_service.dart';
 import '../dialogs/ai_analysis_dialog.dart';
@@ -258,8 +257,11 @@ class _AiAdvisorSelectorPageState extends State<AiAdvisorSelectorPage> {
       final double amt = (t.amount ?? 0.0).toDouble();
       if (t.type == 'EXPENSE') {
         gastosPorCatYMoneda[cur]![t.category] = (gastosPorCatYMoneda[cur]![t.category] ?? 0.0) + amt;
-        if (t.isCompleted) pagadoPorMoneda[cur] = (pagadoPorMoneda[cur] ?? 0.0) + amt;
-        else pendientePorMoneda[cur] = (pendientePorMoneda[cur] ?? 0.0) + amt;
+        if (t.isCompleted) {
+          pagadoPorMoneda[cur] = (pagadoPorMoneda[cur] ?? 0.0) + amt;
+        } else {
+          pendientePorMoneda[cur] = (pendientePorMoneda[cur] ?? 0.0) + amt;
+        }
       } else if (t.type == 'INCOME') ingresoPorMoneda[cur] = (ingresoPorMoneda[cur] ?? 0.0) + amt;
     }
 
@@ -269,7 +271,7 @@ class _AiAdvisorSelectorPageState extends State<AiAdvisorSelectorPage> {
     final cached = await service.getCachedAiReport(monthId, dataFingerprint);
 
     if (cached != null) {
-      final bool? update = await DialogUtils.confirmAction(
+      final bool update = await DialogUtils.confirmAction(
         context,
         title: 'Análisis Existente',
         message: '¡Hola $userName! Ya tienes un análisis con estos datos. ¿Quieres actualizarlo con la cotización de hoy?',
@@ -304,7 +306,7 @@ class _AiAdvisorSelectorPageState extends State<AiAdvisorSelectorPage> {
     final cached = await service.getCachedAiReport(planMonthId, dataFingerprint);
 
     if (cached != null) {
-      final bool? update = await DialogUtils.confirmAction(
+      final bool update = await DialogUtils.confirmAction(
         context,
         title: 'Plan Estratégico',
         message: '¡Hola $userName! Ya tienes un plan auditado con estos datos. ¿Quieres generar uno nuevo?',

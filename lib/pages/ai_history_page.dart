@@ -110,8 +110,9 @@ class AiHistoryPage extends StatelessWidget {
 
   Widget _buildPlanningLeading(String viabilidad) {
     Color color = Colors.grey;
-    if (viabilidad.contains('Viable')) color = Colors.green;
-    else if (viabilidad.contains('Arriesgada')) color = Colors.orange;
+    if (viabilidad.contains('Viable')) {
+      color = Colors.green;
+    } else if (viabilidad.contains('Arriesgada')) color = Colors.orange;
     else if (viabilidad.contains('Inviable')) color = Colors.red;
 
     return CircleAvatar(

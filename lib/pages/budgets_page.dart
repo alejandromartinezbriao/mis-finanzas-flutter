@@ -4,7 +4,6 @@ import '../services/firebase_service.dart';
 import '../models/transaction_model.dart';
 import 'package:mis_finanzas/pages/setup_page.dart';
 import '../utils/icon_utils.dart';
-import '../dialogs/planning_analysis_dialog.dart';
 
 class BudgetsPage extends StatefulWidget {
   const BudgetsPage({super.key});
