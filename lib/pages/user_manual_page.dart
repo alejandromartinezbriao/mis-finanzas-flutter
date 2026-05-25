@@ -40,6 +40,7 @@ class UserManualPage extends StatelessWidget {
 
               _buildSectionTitle('2. PANTALLA PRINCIPAL (Gestión Temporal)', titleColor),
               _buildParagraph(
+                '• Actualizar Datos: Desliza hacia abajo sobre la lista de movimientos (Móvil) o pulsa la flecha circular (PC) para sincronizar plantillas. Nota: El gesto debe hacerse específicamente dentro del área de la lista.\n'
                 '• Tarjeta de Cobertura Inteligente: \n'
                 '  - Pasado: Cierre de Mes (Superávit/Déficit real).\n'
                 '  - Presente: Disponibilidad real vs deudas pendientes.\n'

@@ -15,7 +15,7 @@ Centraliza todas las capacidades de análisis mediante Inteligencia Artificial.
 
 ## 2. PANTALLA PRINCIPAL (Gestión Temporal)
 *   **Selector de Mes:** Navega al **pasado** para ver cierres reales, al **presente** para el día a día, o al **futuro** para ver proyecciones.
-*   **Actualizar Datos:** Desliza hacia abajo (**Pull-to-refresh**) o pulsa la flecha circular (en PC) para sincronizar y actualizar automáticamente los gastos e ingresos fijos del mes.
+*   **Actualizar Datos:** Desliza hacia abajo (**Pull-to-refresh**) específicamente sobre el área de la lista de movimientos o pulsa la flecha circular (en PC) para sincronizar y actualizar automáticamente los gastos e ingresos fijos del mes.
 *   **Tarjeta de Cobertura Inteligente:** Compara ingresos vs egresos reales (Pasado), Disponibilidad real (Presente) o Proyección (Futuro).
 *   **Saldos de Cuentas:** Si ves un icono de **ojo tachado**, significa que esa cuenta está excluida del cálculo de cobertura.
 
