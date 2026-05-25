@@ -169,16 +169,6 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
         ),
       ),
       const PopupMenuItem(
-        value: 'generate',
-        child: Row(
-          children: [
-            Icon(Icons.auto_awesome, size: 20, color: Colors.amber),
-            SizedBox(width: 12),
-            Text('Cargar Plantillas'),
-          ],
-        ),
-      ),
-      const PopupMenuItem(
         value: 'maintenance',
         child: Row(
           children: [
@@ -279,21 +269,6 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
     } else if (value == 'clear') {
       if (await DialogUtils.confirmDeletion(context, 'Todos los movimientos de $label')) {
         await service.clearMonth(viewingDate.month, viewingDate.year);
-      }
-    } else if (value == 'generate') {
-      final confirm = await _showConfirmDialog(
-        context,
-        'Cargar Plantillas',
-        '¿Deseas cargar los gastos e ingresos fijos para $label?\n\nNota: No se duplicarán los conceptos que ya existan.',
-        'Cargar',
-      );
-      if (confirm == true) {
-        await service.generateMonthlyTransactions(viewingDate.month, viewingDate.year);
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Plantillas procesadas correctamente')),
-          );
-        }
       }
     }
   }

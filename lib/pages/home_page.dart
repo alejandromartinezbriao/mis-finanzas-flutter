@@ -137,6 +137,7 @@ class _HomePageState extends State<HomePage> {
                         MonthSelector(
                           selectedDate: _viewingDate,
                           onDateChanged: (newDate) => setState(() => _viewingDate = newDate),
+                          onRefresh: _refreshMonthData,
                         ),
                         const SizedBox(height: 20),
                         StreamBuilder<List<TransactionModel>>(
@@ -235,6 +236,7 @@ class _HomePageState extends State<HomePage> {
               MonthSelector(
                 selectedDate: _viewingDate,
                 onDateChanged: (newDate) => setState(() => _viewingDate = newDate),
+                onRefresh: _refreshMonthData,
               ),
               Expanded(child: _buildTransactionList()),
               SafeArea(child: _buildQuickAddButton()),
@@ -272,8 +274,26 @@ class _HomePageState extends State<HomePage> {
         if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
         final transactions = snapshot.data!;
         
+        final now = DateTime.now();
+        final viewingMonth = DateTime(_viewingDate.year, _viewingDate.month);
+        final currentMonth = DateTime(now.year, now.month);
+        
+        final bool isPast = viewingMonth.isBefore(currentMonth);
+        final bool isFuture = viewingMonth.isAfter(currentMonth);
+
         if (transactions.isEmpty) {
-          return _buildEmptyState();
+          return RefreshIndicator(
+            onRefresh: () async {
+              await _service.generateMonthlyTransactions(_viewingDate.month, _viewingDate.year);
+            },
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: SizedBox(
+                height: MediaQuery.of(context).size.height * 0.6,
+                child: _buildEmptyState(),
+              ),
+            ),
+          );
         }
 
         double inUYU = transactions.where((t) => t.type == 'INCOME' && t.currency == 'UYU').fold(0, (sum, t) => sum + t.amount);
@@ -283,13 +303,6 @@ class _HomePageState extends State<HomePage> {
 
         double debtUYU = transactions.where((t) => t.type == 'EXPENSE' && t.currency == 'UYU' && !t.isCompleted && !t.includedInCard).fold(0, (sum, t) => sum + t.amount);
         double debtUSD = transactions.where((t) => t.type == 'EXPENSE' && t.currency == 'USD' && !t.isCompleted && !t.includedInCard).fold(0, (sum, t) => sum + t.amount);
-
-        final now = DateTime.now();
-        final viewingMonth = DateTime(_viewingDate.year, _viewingDate.month);
-        final currentMonth = DateTime(now.year, now.month);
-        
-        final bool isPast = viewingMonth.isBefore(currentMonth);
-        final bool isFuture = viewingMonth.isAfter(currentMonth);
 
         final incomes = transactions.where((t) => t.type == 'INCOME').toList()
           ..sort((a, b) => a.orderIndex != b.orderIndex 
@@ -359,28 +372,32 @@ class _HomePageState extends State<HomePage> {
               const Divider(height: 1),
             ],
             Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: sortedItems.length,
-                itemBuilder: (context, index) {
-                  final item = sortedItems[index];
-                  if (item is String) {
-                    return Padding(
-                      padding: const EdgeInsets.only(top: 16, bottom: 8),
-                      child: Text(item, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary, letterSpacing: 1)),
+              child: RefreshIndicator(
+                onRefresh: _refreshMonthData,
+                child: ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  physics: const AlwaysScrollableScrollPhysics(), // Importante para que el refresh funcione siempre
+                  itemCount: sortedItems.length,
+                  itemBuilder: (context, index) {
+                    final item = sortedItems[index];
+                    if (item is String) {
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 16, bottom: 8),
+                        child: Text(item, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary, letterSpacing: 1)),
+                      );
+                    }
+                    return TransactionItemTile(
+                      transaction: item as TransactionModel,
+                      uyuFormat: _uyuFormat,
+                      usdFormat: _usdFormat,
+                      onTap: () => showDialog(
+                        context: context,
+                        builder: (context) => EditTransactionDialog(transaction: item, service: _service),
+                      ),
+                      onDeleteConfirmed: () => _service.deleteTransaction(item.id),
                     );
-                  }
-                  return TransactionItemTile(
-                    transaction: item as TransactionModel,
-                    uyuFormat: _uyuFormat,
-                    usdFormat: _usdFormat,
-                    onTap: () => showDialog(
-                      context: context,
-                      builder: (context) => EditTransactionDialog(transaction: item, service: _service),
-                    ),
-                    onDeleteConfirmed: () => _service.deleteTransaction(item.id),
-                  );
-                },
+                  },
+                ),
               ),
             ),
           ],
@@ -394,14 +411,13 @@ class _HomePageState extends State<HomePage> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.calendar_today_outlined, size: 60, color: Colors.grey),
+          const Icon(Icons.swipe_vertical_outlined, size: 60, color: Colors.grey),
           const SizedBox(height: 16),
           const Text('No hay movimientos en este periodo.'),
-          const SizedBox(height: 20),
-          FilledButton.icon(
-            onPressed: () => _service.generateMonthlyTransactions(_viewingDate.month, _viewingDate.year),
-            icon: const Icon(Icons.auto_awesome),
-            label: const Text('Cargar Plantillas de este Mes'),
+          const SizedBox(height: 8),
+          const Text(
+            'Desliza hacia abajo para actualizar los datos del mes.',
+            style: TextStyle(color: Colors.grey, fontSize: 13),
           ),
         ],
       ),
@@ -553,6 +569,15 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
     );
+  }
+
+  Future<void> _refreshMonthData() async {
+    await _service.generateMonthlyTransactions(_viewingDate.month, _viewingDate.year);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Datos del mes actualizados')),
+      );
+    }
   }
 
 }

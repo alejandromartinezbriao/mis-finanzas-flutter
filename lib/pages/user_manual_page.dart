@@ -11,7 +11,7 @@ class UserManualPage extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Manual del Usuario v3.0.1'),
+        title: const Text('Manual del Usuario v3.2.0'),
         elevation: 0,
       ),
       body: Center(
@@ -31,10 +31,10 @@ class UserManualPage extends StatelessWidget {
               _buildSectionTitle('1. CENTRO DE INTELIGENCIA', titleColor),
               _buildParagraph(
                 'Accede desde el menú principal para interactuar con Finanz-IA:\n\n'
+                '• Sincronización Total: Tus análisis se guardan en la nube y son idénticos en todos tus dispositivos.\n'
                 '• Cotización del Día: Informa el valor oficial del dólar en Uruguay para tus cálculos.\n'
-                '• Auditoría Mensual: Analiza tu gasto real, detecta si usaste ahorros previos y calcula tu Finanz-Score.\n'
-                '• Planificación Estratégica: Audita tus presupuestos vs tus ingresos fijos proyectados a 6 meses.\n'
-                '• Historial: Consulta informes previos guardados con consistencia total.',
+                '• Auditoría Mensual: Analiza tu gasto real y detecta erosión de ahorros.\n'
+                '• Planificación Estratégica: Audita tus presupuestos vs tus ingresos fijos proyectados a 6 meses.',
                 textColor
               ),
 
@@ -43,7 +43,7 @@ class UserManualPage extends StatelessWidget {
                 '• Tarjeta de Cobertura Inteligente: \n'
                 '  - Pasado: Cierre de Mes (Superávit/Déficit real).\n'
                 '  - Presente: Disponibilidad real vs deudas pendientes.\n'
-                '  - Futuro: Proyecciones basadas en plantillas cargadas.\n'
+                '  - Futuro: Proyecciones basadas en datos actualizados.\n'
                 '• Saldos de Cuentas: Si ves un icono de ojo tachado, la cuenta está excluida del cálculo de cobertura.',
                 textColor
               ),

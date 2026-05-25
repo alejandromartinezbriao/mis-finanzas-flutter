@@ -518,24 +518,39 @@ mixin MaintenanceService on FirebaseBase {
     try {
       final refB = budgetsRef;
       final refC = categoriesRef;
-      if (refB == null || refC == null) return 0;
+      if (refC == null) return 0;
 
-      // 1. Obtener todos los presupuestos viejos (los más recientes)
-      final budgetsSnap = await refB.orderBy('year', descending: true).orderBy('month', descending: true).get();
+      // 1. Obtener los presupuestos. Intentamos primero la ruta del usuario, luego la raíz.
+      QuerySnapshot? budgetsSnap;
+      if (refB != null) budgetsSnap = await refB.get();
+      
+      // Si la carpeta del usuario está vacía, probamos en la raíz (backup de seguridad)
+      if (budgetsSnap == null || budgetsSnap.docs.isEmpty) {
+        budgetsSnap = await db.collection('budgets').get();
+      }
+
+      if (budgetsSnap.docs.isEmpty) {
+        print("MIGRACIÓN: No se encontraron documentos en ninguna colección 'budgets'");
+        return 0;
+      }
+
       final Map<String, Map<String, dynamic>> latestBudgets = {};
       
       for (var doc in budgetsSnap.docs) {
         final data = doc.data() as Map<String, dynamic>;
-        // Usamos una normalización profunda para comparar nombres de categorías
-        final String catName = _deepNorm(data['categoryName'] ?? '');
-        if (catName.isNotEmpty && !latestBudgets.containsKey(catName)) {
-          latestBudgets[catName] = data;
+        // Según tu imagen, el campo es 'categoryName'
+        final String rawName = data['categoryName'] ?? data['categoryname'] ?? data['name'] ?? '';
+        final String catName = _deepNorm(rawName);
+        
+        if (catName.isNotEmpty) {
+          // Priorizamos el presupuesto con el monto más alto encontrado
+          if (!latestBudgets.containsKey(catName) || (data['amount'] ?? 0) > (latestBudgets[catName]!['amount'] ?? 0)) {
+            latestBudgets[catName] = data;
+          }
         }
       }
 
-      if (latestBudgets.isEmpty) return 0;
-
-      // 2. Obtener todas las categorías actuales
+      // 2. Obtener todas las categorías actuales y cruzar datos
       final categoriesSnap = await refC.get();
       WriteBatch batch = db.batch();
       int migrated = 0;
@@ -556,11 +571,10 @@ mixin MaintenanceService on FirebaseBase {
 
       if (migrated > 0) {
         await batch.commit();
-        // IMPORTANTE: NO borrar la colección vieja 'budgets' todavía para tener respaldo físico
       }
       return migrated;
     } catch (e) {
-      print("Error migración presupuestos: $e");
+      print("Error migración crítica: $e");
       return 0;
     }
   }

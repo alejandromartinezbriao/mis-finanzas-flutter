@@ -59,7 +59,7 @@ class _AboutPageState extends State<AboutPage> {
                           ),
                         ),
                         Text(
-                          'Versión 3.0.1',
+                          'Versión 3.2.0',
                           style: TextStyle(
                             fontSize: 16,
                             color: secondaryTextColor,
@@ -80,12 +80,12 @@ class _AboutPageState extends State<AboutPage> {
                   ),
                   const SizedBox(height: 32),
                   _buildSection(
-                    'Capacidades del Sistema v3.0',
-                    '• Centro de Inteligencia Finanz-IA con personalidad personalizada.\n'
+                    'Capacidades del Sistema v3.2',
+                    '• Lógica de IA centralizada para sincronización multi-dispositivo perfecta.\n'
+                    '• Centro de Inteligencia Finanz-IA con trato humano y personalizado.\n'
                     '• Integración en tiempo real con cotización oficial del dólar.\n'
-                    '• Auditoría bimonetaria con detección de erosión de ahorro.\n'
-                    '• Planificación estratégica con proyecciones a 6 meses.\n'
-                    '• Caché inteligente para consistencia absoluta de informes.',
+                    '• Auditoría bimonetaria profunda y planificación estratégica futura.\n'
+                    '• Gestión de presupuestos integrada directamente en categorías.',
                     primaryTextColor,
                     secondaryTextColor,
                   ),

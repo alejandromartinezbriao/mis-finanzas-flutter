@@ -1,4 +1,4 @@
-# Guía de Usuario - Mis Finanzas (v2.1)
+# Guía de Usuario - Mis Finanzas (v3.2)
 
 Esta guía detalla el funcionamiento de la aplicación y las herramientas de gestión avanzada disponibles en el Centro de Inteligencia.
 
@@ -9,12 +9,13 @@ Centraliza todas las capacidades de análisis mediante Inteligencia Artificial.
 *   **Saludo Personalizado:** Finanz-IA te reconoce y te da la bienvenida cada vez que entras.
 *   **Auditoría Mensual:** Analiza tus gastos reales del mes actual, calcula tu Finanz-Score y te da consejos de ahorro inmediatos.
 *   **Planificación Estratégica:** Audita la viabilidad de tus presupuestos frente a tus ingresos fijos proyectados a futuro.
-*   **Historial de Asesoría:** Consulta informes previos guardados con fecha y hora para ver tu evolución financiera.
+*   **Historial de Asesoría:** Consulta informes previos guardados con fecha y hora para ver tu evolución financiera. Sincronizado entre todos tus dispositivos.
 
 ---
 
 ## 2. PANTALLA PRINCIPAL (Gestión Temporal)
 *   **Selector de Mes:** Navega al **pasado** para ver cierres reales, al **presente** para el día a día, o al **futuro** para ver proyecciones.
+*   **Actualizar Datos:** Desliza hacia abajo (**Pull-to-refresh**) o pulsa la flecha circular (en PC) para sincronizar y actualizar automáticamente los gastos e ingresos fijos del mes.
 *   **Tarjeta de Cobertura Inteligente:** Compara ingresos vs egresos reales (Pasado), Disponibilidad real (Presente) o Proyección (Futuro).
 *   **Saldos de Cuentas:** Si ves un icono de **ojo tachado**, significa que esa cuenta está excluida del cálculo de cobertura.
 
@@ -30,7 +31,7 @@ Centraliza todas las capacidades de análisis mediante Inteligencia Artificial.
 ## 4. CONFIGURACIÓN Y AUTOMATIZACIÓN
 *   **Gastos y Tarjetas:** Define tus pagos fijos y tarjetas bimonetarias.
 *   **Suscripciones:** Servicios recurrentes vinculados a tus tarjetas.
-*   **Presupuestos:** Define topes de gasto con confirmación manual de guardado.
+*   **Categorías:** Define tus categorías e iconos. Ahora puedes asignar el **Presupuesto Mensual** directamente dentro de cada categoría de gasto para que la IA lo analice.
 
 ---
 
@@ -39,4 +40,4 @@ Centraliza todas las capacidades de análisis mediante Inteligencia Artificial.
 *   **Sin Comas de Miles:** No separes miles con comas para evitar errores aritméticos.
 
 ---
-*Mis Finanzas v2.1 - Tu salud financiera en control profesional.*
+*Mis Finanzas v3.2 - Tu salud financiera en control profesional y bimonetario.*

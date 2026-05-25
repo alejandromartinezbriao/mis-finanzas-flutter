@@ -50,7 +50,26 @@ class CategoriesListTab extends StatelessWidget {
                       : Icon(IconUtils.getIconData(cat['icon']), color: color),
                 ),
                 title: Text(cat['name'], style: const TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: Text(cat['type'] == 'EXPENSE' ? 'Gasto' : 'Ingreso'),
+                subtitle: Row(
+                  children: [
+                    Text(cat['type'] == 'EXPENSE' ? 'Gasto' : 'Ingreso'),
+                    if (cat['type'] == 'EXPENSE' && (cat['budgetAmount'] ?? 0.0) > 0) ...[
+                      const SizedBox(width: 8),
+                      const Text('•'),
+                      const SizedBox(width: 8),
+                      Icon(Icons.speed, size: 12, color: Colors.teal.shade700),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${cat['budgetCurrency'] ?? 'UYU'} ${cat['budgetAmount']}',
+                        style: TextStyle(
+                          color: Colors.teal.shade700,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
                 trailing: IconButton(
                   icon: const Icon(Icons.delete_outline, color: Colors.red),
                   onPressed: () async {
