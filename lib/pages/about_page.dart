@@ -59,7 +59,7 @@ class _AboutPageState extends State<AboutPage> {
                           ),
                         ),
                         Text(
-                          'Versión 3.2.0',
+                          'Versión 3.3.0',
                           style: TextStyle(
                             fontSize: 16,
                             color: secondaryTextColor,
@@ -80,10 +80,10 @@ class _AboutPageState extends State<AboutPage> {
                   ),
                   const SizedBox(height: 32),
                   _buildSection(
-                    'Capacidades del Sistema v3.2',
-                    '• Lógica de IA centralizada para sincronización multi-dispositivo perfecta.\n'
-                    '• Centro de Inteligencia Finanz-IA con trato humano y personalizado.\n'
-                    '• Integración en tiempo real con cotización oficial del dólar.\n'
+                    'Capacidades del Sistema v3.3',
+                    '• Registro Relámpago mediante Accesos Rápidos (Quick Actions).\n'
+                    '• Identidad visual automática: Iconos de categorías en gastos nuevos.\n'
+                    '• Lógica de IA centralizada para sincronización perfecta.\n'
                     '• Auditoría bimonetaria profunda y planificación estratégica futura.\n'
                     '• Gestión de presupuestos integrada directamente en categorías.',
                     primaryTextColor,

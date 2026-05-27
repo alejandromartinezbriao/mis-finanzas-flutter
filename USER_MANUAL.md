@@ -1,43 +1,35 @@
-# Guía de Usuario - Mis Finanzas (v3.2)
-
-Esta guía detalla el funcionamiento de la aplicación y las herramientas de gestión avanzada disponibles en el Centro de Inteligencia.
+# Guía de Usuario - Mis Finanzas (v3.3)
 
 ---
 
-## 1. CENTRO DE INTELIGENCIA (Menú > Asesor IA)
-Centraliza todas las capacidades de análisis mediante Inteligencia Artificial.
-*   **Saludo Personalizado:** Finanz-IA te reconoce y te da la bienvenida cada vez que entras.
-*   **Auditoría Mensual:** Analiza tus gastos reales del mes actual, calcula tu Finanz-Score y te da consejos de ahorro inmediatos.
-*   **Planificación Estratégica:** Audita la viabilidad de tus presupuestos frente a tus ingresos fijos proyectados a futuro.
-*   **Historial de Asesoría:** Consulta informes previos guardados con fecha y hora para ver tu evolución financiera. Sincronizado entre todos tus dispositivos.
+## 1. REGISTRO RELÁMPAGO (Nuevo v3.3)
+Ahora puedes registrar tus movimientos sin siquiera entrar al menú principal:
+*   **Acceso Rápido:** Mantén presionado el icono de la aplicación en tu pantalla de inicio.
+*   **Opciones:** Selecciona "Nuevo Gasto" o "Compra con Tarjeta".
+*   **Foco Total:** Se abrirá el formulario directamente sobre una pantalla limpia. Tus saldos y deudas no se mostrarán para mayor velocidad y privacidad.
+*   **Auto-Cierre:** Al finalizar el registro, la App se cerrará sola.
 
 ---
 
-## 2. PANTALLA PRINCIPAL (Gestión Temporal)
-*   **Selector de Mes:** Navega al **pasado** para ver cierres reales, al **presente** para el día a día, o al **futuro** para ver proyecciones.
-*   **Actualizar Datos:** Desliza hacia abajo (**Pull-to-refresh**) específicamente sobre el área de la lista de movimientos o pulsa la flecha circular (en PC) para sincronizar y actualizar automáticamente los gastos e ingresos fijos del mes.
-*   **Tarjeta de Cobertura Inteligente:** Compara ingresos vs egresos reales (Pasado), Disponibilidad real (Presente) o Proyección (Futuro).
-*   **Saldos de Cuentas:** Si ves un icono de **ojo tachado**, significa que esa cuenta está excluida del cálculo de cobertura.
+## 2. CENTRO DE INTELIGENCIA (Menú > Asesor IA)
+Centraliza el análisis avanzado mediante IA:
+*   **Auditoría Mensual:** Analiza tus gastos reales y detecta la "Erosión de Ahorros".
+*   **Planificación Estratégica:** Proyecciones a 6 meses basadas en tus presupuestos vigentes.
+*   **Sincronización Perfecta:** Los informes son idénticos y compartidos entre todos tus dispositivos.
 
 ---
 
-## 3. HERRAMIENTAS DE MANTENIMIENTO (Menú > Mantenimiento)
-*   **Normalizar Formatos:** Elimina comas de miles en las descripciones. Paso inicial recomendado.
-*   **Corregir Error 100x:** Arregla montos inflados (ej: 52700 -> 527.00).
-*   **Sincronizar Cuotas:** Compara meses y propone corregir montos discrepantes.
+## 3. PANTALLA PRINCIPAL
+*   **Actualizar Datos:** Desliza hacia abajo sobre la lista de movimientos para sincronizar tus plantillas fijas. En PC, usa la flecha circular junto al mes.
+*   **Tarjeta de Cobertura:** Compara disponibilidad real vs deudas.
+*   **Iconos Automáticos:** Los gastos ahora heredan el color e icono de su categoría desde el momento del registro.
 
 ---
 
-## 4. CONFIGURACIÓN Y AUTOMATIZACIÓN
-*   **Gastos y Tarjetas:** Define tus pagos fijos y tarjetas bimonetarias.
-*   **Suscripciones:** Servicios recurrentes vinculados a tus tarjetas.
-*   **Categorías:** Define tus categorías e iconos. Ahora puedes asignar el **Presupuesto Mensual** directamente dentro de cada categoría de gasto para que la IA lo analice.
+## 4. REGLAS DE ORO
+*   **El Punto manda:** Usa punto (.) para decimales.
+*   **Sin Comas de Miles:** No separes miles con comas.
+*   **Seguridad Bimonetaria:** La IA analiza tus fondos en UYU y USD para sugerir compensaciones.
 
 ---
-
-## 5. REGLAS DE ORO
-*   **El Punto manda:** Usa el punto (.) para decimales. En iPhone, la coma se convierte a punto automáticamente.
-*   **Sin Comas de Miles:** No separes miles con comas para evitar errores aritméticos.
-
----
-*Mis Finanzas v3.2 - Tu salud financiera en control profesional y bimonetario.*
+*Mis Finanzas v3.3 - Tu salud financiera en control profesional.*

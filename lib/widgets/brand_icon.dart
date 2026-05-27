@@ -5,12 +5,16 @@ import '../utils/icon_utils.dart';
 class BrandIcon extends StatelessWidget {
   final String name;
   final String? manualLogo; // Nuevo campo para logo manual
+  final String? fallbackIcon; // Nuevo: Icono de categoría
+  final Color? fallbackColor; // Nuevo: Color de categoría
   final double size;
 
   const BrandIcon({
     super.key,
     required this.name,
     this.manualLogo,
+    this.fallbackIcon,
+    this.fallbackColor,
     this.size = 24.0,
   });
 
@@ -149,6 +153,14 @@ class BrandIcon extends StatelessWidget {
   }
 
   Widget _defaultIcon(BuildContext context, String label) {
+    if (fallbackIcon != null) {
+      return Icon(
+        IconUtils.getIconData(fallbackIcon!),
+        size: size * 0.7,
+        color: fallbackColor ?? Colors.grey,
+      );
+    }
+
     IconData iconData = Icons.account_balance_wallet;
     Color color = Colors.grey;
 

@@ -4,7 +4,6 @@ import '../services/auth_service.dart';
 import '../widgets/setup/template_list_tab.dart';
 import '../widgets/setup/accounts_list_tab.dart';
 import '../widgets/setup/categories_list_tab.dart';
-import '../widgets/setup/budgets_tab.dart';
 import '../widgets/setup/goals_list_tab.dart';
 import '../widgets/setup/subscriptions_list_tab.dart';
 import '../dialogs/setup_dialogs.dart';

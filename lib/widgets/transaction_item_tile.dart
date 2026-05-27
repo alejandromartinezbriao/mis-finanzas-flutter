@@ -10,6 +10,8 @@ class TransactionItemTile extends StatelessWidget {
   final NumberFormat usdFormat;
   final VoidCallback onTap;
   final VoidCallback onDeleteConfirmed;
+  final String? categoryIcon;
+  final Color? categoryColor;
 
   const TransactionItemTile({
     super.key,
@@ -18,6 +20,8 @@ class TransactionItemTile extends StatelessWidget {
     required this.usdFormat,
     required this.onTap,
     required this.onDeleteConfirmed,
+    this.categoryIcon,
+    this.categoryColor,
   });
 
   @override
@@ -40,7 +44,13 @@ class TransactionItemTile extends StatelessWidget {
       onDismissed: (_) => onDeleteConfirmed(),
       child: ListTile(
         dense: true,
-        leading: BrandIcon(name: transaction.title, manualLogo: transaction.brandLogo, size: 32),
+        leading: BrandIcon(
+          name: transaction.title,
+          manualLogo: transaction.brandLogo,
+          fallbackIcon: categoryIcon,
+          fallbackColor: categoryColor,
+          size: 32,
+        ),
         title: Text(
           transaction.title,
           style: TextStyle(

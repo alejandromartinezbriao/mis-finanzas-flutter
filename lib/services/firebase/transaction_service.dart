@@ -361,6 +361,7 @@ mixin TransactionService on FirebaseBase {
     required DateTime startDate,
     String? concept,
     String? category,
+    String? categoryLogo,
     int initialInstallment = 1,
   }) async {
     try {
@@ -420,7 +421,7 @@ mixin TransactionService on FirebaseBase {
           batch.update(existing.reference, {
             'amount': round(currentAmount + currentInstallmentAmount), 
             'description': oldDesc.isEmpty ? detail : "$oldDesc, $detail",
-            'brandLogo': cardLogo,
+            'brandLogo': cardLogo ?? categoryLogo, // Si la tarjeta no tiene logo, probamos el de la categoría
             'orderIndex': cardOrder ?? 999,
           });
         } else {
@@ -434,7 +435,7 @@ mixin TransactionService on FirebaseBase {
             'currency': currency,
             'type': 'EXPENSE',
             'isCompleted': false,
-            'brandLogo': cardLogo,
+            'brandLogo': cardLogo ?? categoryLogo, // Preferimos el logo de la tarjeta, sino el de la categoría
             'orderIndex': cardOrder ?? 999,
             'templateId': templateId,
           });
@@ -478,22 +479,36 @@ mixin TransactionService on FirebaseBase {
           String desc = data['description'] ?? '';
           List<String> items = desc.split(', ').where((s) => s.isNotEmpty).toList();
           bool itemsChanged = false;
+          double removedSum = 0;
           final newItems = items.where((item) {
             final itemParts = item.split(' - ');
-            if (itemParts.isEmpty) return true;
+            if (itemParts.length < 2) return true;
+            
             final itemIdentifier = itemParts[0];
-            bool shouldRemove = (itemIdentifier == fullIdentifier) || (conceptBase.isNotEmpty && itemIdentifier.startsWith("$conceptBase ("));
-            if (shouldRemove) itemsChanged = true;
-            return !shouldRemove;
+            final double itemValue = parseAmount(itemParts[1]);
+            
+            bool shouldRemove = (itemIdentifier == fullIdentifier) || 
+                               (conceptBase.isNotEmpty && itemIdentifier.startsWith("$conceptBase ("));
+            
+            if (shouldRemove) {
+              itemsChanged = true;
+              removedSum += itemValue;
+              return false;
+            }
+            return true;
           }).toList();
 
           if (itemsChanged) {
-            double newTotal = 0;
-            for (var rItem in newItems) {
-              final rParts = rItem.split(' - ');
-              if (rParts.length >= 2) newTotal += parseAmount(rParts[1]);
-            }
-            batch.update(cardDoc.reference, {'description': newItems.join(', '), 'amount': round(newTotal)});
+            double currentTotal = (data['amount'] ?? 0.0).toDouble();
+            double newTotal = currentTotal - removedSum;
+            
+            // Protección: Si por algún motivo el total queda insignificante, lo limpiamos a 0
+            if (newTotal < 0.01) newTotal = 0;
+
+            batch.update(cardDoc.reference, {
+              'description': newItems.join(', '), 
+              'amount': round(newTotal)
+            });
             changedAny = true;
           }
         }

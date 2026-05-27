@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../services/firebase_service.dart';
 import '../services/gemini_service.dart';
 import '../models/transaction_model.dart';
-import 'package:intl/intl.dart';
 
 class AiAnalysisDialog extends StatefulWidget {
   final List<TransactionModel> transactions; // Mantener por compatibilidad visual si fuera necesario, pero no para el Hash

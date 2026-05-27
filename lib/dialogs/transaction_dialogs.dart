@@ -52,38 +52,39 @@ class _SimpleTransactionDialogState extends State<SimpleTransactionDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Nuevo Movimiento'),
-      content: SingleChildScrollView(
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SegmentedButton<String>(
-                style: SegmentedButton.styleFrom(
-                  selectedBackgroundColor: type == 'EXPENSE' ? Colors.deepOrange.shade800 : Colors.green,
-                  selectedForegroundColor: Colors.white,
-                ),
-                segments: const [
-                  ButtonSegment(value: 'EXPENSE', label: Text('Gasto'), icon: Icon(Icons.remove_circle)),
-                  ButtonSegment(value: 'INCOME', label: Text('Ingreso'), icon: Icon(Icons.add_circle))
-                ],
-                selected: {type},
-                onSelectionChanged: (val) => setState(() {
-                  type = val.first;
-                  selectedCategoryId = null;
-                  selectedAccountId = null;
-                }),
-              ),
-              const SizedBox(height: 20),
+    return StreamBuilder<List<Map<String, dynamic>>>(
+      stream: widget.service.getCategories(),
+      builder: (context, catSnapshot) {
+        final allCategories = catSnapshot.data ?? [];
 
-              if (type == 'EXPENSE')
-                StreamBuilder<List<Map<String, dynamic>>>(
-                  stream: widget.service.getCategories(type: 'EXPENSE'),
-                  builder: (context, snapshot) {
-                    final categories = snapshot.data ?? [];
-                    return DropdownButtonFormField<String>(
+        return AlertDialog(
+          title: const Text('Nuevo Movimiento'),
+          content: SingleChildScrollView(
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SegmentedButton<String>(
+                    style: SegmentedButton.styleFrom(
+                      selectedBackgroundColor: type == 'EXPENSE' ? Colors.deepOrange.shade800 : Colors.green,
+                      selectedForegroundColor: Colors.white,
+                    ),
+                    segments: const [
+                      ButtonSegment(value: 'EXPENSE', label: Text('Gasto'), icon: Icon(Icons.remove_circle)),
+                      ButtonSegment(value: 'INCOME', label: Text('Ingreso'), icon: Icon(Icons.add_circle))
+                    ],
+                    selected: {type},
+                    onSelectionChanged: (val) => setState(() {
+                      type = val.first;
+                      selectedCategoryId = null;
+                      selectedAccountId = null;
+                    }),
+                  ),
+                  const SizedBox(height: 20),
+
+                  if (type == 'EXPENSE')
+                    DropdownButtonFormField<String>(
                       initialValue: selectedCategoryId,
                       hint: const Text('Seleccionar Categoría'),
                       decoration: const InputDecoration(labelText: 'Categoría', border: OutlineInputBorder()),
@@ -92,7 +93,7 @@ class _SimpleTransactionDialogState extends State<SimpleTransactionDialog> {
                           value: null,
                           child: Text('Sin categoría (Otros)', style: TextStyle(color: Colors.grey)),
                         ),
-                        ...categories.map((c) => DropdownMenuItem(
+                        ...allCategories.where((c) => c['type'] == 'EXPENSE').map((c) => DropdownMenuItem(
                           value: c['id'] as String,
                           child: Row(
                             children: [
@@ -104,238 +105,244 @@ class _SimpleTransactionDialogState extends State<SimpleTransactionDialog> {
                         )),
                       ],
                       onChanged: (v) => setState(() => selectedCategoryId = v),
-                    );
-                  }
-                )
-              else
-                StreamBuilder<List<Map<String, dynamic>>>(
-                  stream: widget.service.getBalances(),
-                  builder: (context, snapshot) {
-                    final allAccounts = snapshot.data ?? [];
-                    // Filtrar cuentas por la moneda seleccionada para el ingreso
-                    final accounts = allAccounts.where((a) => a['currency'] == currency).toList();
+                    )
+                  else
+                    StreamBuilder<List<Map<String, dynamic>>>(
+                      stream: widget.service.getBalances(),
+                      builder: (context, snapshot) {
+                        final allAccounts = snapshot.data ?? [];
+                        // Filtrar cuentas por la moneda seleccionada para el ingreso
+                        final accounts = allAccounts.where((a) => a['currency'] == currency).toList();
 
-                    return DropdownButtonFormField<String>(
-                      initialValue: selectedAccountId,
-                      hint: Text(accounts.isEmpty ? 'No hay cuentas en $currency' : '¿A dónde va el dinero?'),
-                      decoration: InputDecoration(
-                        labelText: 'Cuenta Destino ($currency)', 
-                        border: const OutlineInputBorder(),
-                        helperText: accounts.isEmpty ? 'Crea una cuenta en $currency en Configuración' : null,
-                        helperStyle: const TextStyle(color: Colors.orange),
-                      ),
-                      items: [
-                        const DropdownMenuItem<String>(
-                          value: 'CASH_PAYMENT',
-                          child: Row(
-                            children: [
-                              Icon(Icons.money_off_csred_outlined, color: Colors.blueGrey, size: 20),
-                              SizedBox(width: 10),
-                              Text('Solo registro / Efectivo', style: TextStyle(color: Colors.blueGrey)),
-                            ],
+                        return DropdownButtonFormField<String>(
+                          initialValue: selectedAccountId,
+                          hint: Text(accounts.isEmpty ? 'No hay cuentas en $currency' : '¿A dónde va el dinero?'),
+                          decoration: InputDecoration(
+                            labelText: 'Cuenta Destino ($currency)', 
+                            border: const OutlineInputBorder(),
+                            helperText: accounts.isEmpty ? 'Crea una cuenta en $currency en Configuración' : null,
+                            helperStyle: const TextStyle(color: Colors.orange),
                           ),
-                        ),
-                        ...accounts.map((a) => DropdownMenuItem(
-                          value: a['id'] as String,
-                          child: Row(
-                            children: [
-                              if (a['brandLogo'] != null)
-                                Padding(
-                                  padding: const EdgeInsets.only(right: 10),
-                                  child: Image.asset('assets/logos/${a['brandLogo']}', width: 18),
-                                ),
-                              Text(a['accountName']),
-                            ],
-                          ),
-                        )),
-                      ],
-                      onChanged: (v) => setState(() => selectedAccountId = v),
-                    );
-                  }
-                ),
-
-              const SizedBox(height: 10),
-              if (type == 'EXPENSE') ...[
-                StreamBuilder<List<Map<String, dynamic>>>(
-                  stream: widget.service.getBalances(),
-                  builder: (context, snapshot) {
-                    final allAccounts = snapshot.data ?? [];
-                    final accounts = allAccounts.where((a) => a['currency'] == currency).toList();
-
-                    return DropdownButtonFormField<String>(
-                      initialValue: selectedAccountId,
-                      hint: Text(accounts.isEmpty ? '¿Pagado ahora?' : '¿Con qué pagaste? (Opcional)'),
-                      decoration: InputDecoration(
-                        labelText: 'Cuenta de Pago ($currency)',
-                        border: const OutlineInputBorder(),
-                        helperText: 'Si seleccionas una, se marcará como pagado.',
-                      ),
-                      items: [
-                        const DropdownMenuItem<String>(
-                          value: null,
-                          child: Row(
-                            children: [
-                              Icon(Icons.pending_actions, color: Colors.orange, size: 20),
-                              SizedBox(width: 10),
-                              Text('Dejar como Pendiente', style: TextStyle(color: Colors.orange)),
-                            ],
-                          ),
-                        ),
-                        const DropdownMenuItem<String>(
-                          value: 'CASH_PAYMENT',
-                          child: Row(
-                            children: [
-                              Icon(Icons.money_off_csred_outlined, color: Colors.blueGrey, size: 20),
-                              SizedBox(width: 10),
-                              Text('Pago en Efectivo (Sin cuenta)', style: TextStyle(color: Colors.blueGrey)),
-                            ],
-                          ),
-                        ),
-                        ...accounts.map((a) => DropdownMenuItem(
-                          value: a['id'] as String,
-                          child: Row(
-                            children: [
-                              if (a['brandLogo'] != null)
-                                Padding(
-                                  padding: const EdgeInsets.only(right: 10),
-                                  child: Image.asset('assets/logos/${a['brandLogo']}', width: 18),
-                                ),
-                              Text(accTruncate(a['accountName'])),
-                            ],
-                          ),
-                        )),
-                      ],
-                      onChanged: (v) => setState(() => selectedAccountId = v),
-                    );
-                  }
-                ),
-                const SizedBox(height: 10),
-              ],
-              TextFormField(
-                controller: titleController,
-                decoration: const InputDecoration(labelText: 'Concepto (Ej: Alquiler, Sueldo)', border: OutlineInputBorder()),
-                validator: (v) => (v == null || v.isEmpty) ? 'Ingresa un concepto' : null,
-              ),
-              const SizedBox(height: 10),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: amountController,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      inputFormatters: [ThousandsSeparatorInputFormatter()],
-                      decoration: const InputDecoration(
-                        labelText: 'Monto', 
-                        border: OutlineInputBorder(),
-                        helperText: 'Usa punto (.) para decimales.',
-                      ),
-                      validator: (v) {
-                        if (v == null || v.isEmpty) return 'Ingresa un monto';
-                        return null;
-                      },
+                          items: [
+                            const DropdownMenuItem<String>(
+                              value: 'CASH_PAYMENT',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.money_off_csred_outlined, color: Colors.blueGrey, size: 20),
+                                  SizedBox(width: 10),
+                                  Text('Solo registro / Efectivo', style: TextStyle(color: Colors.blueGrey)),
+                                ],
+                              ),
+                            ),
+                            ...accounts.map((a) => DropdownMenuItem(
+                              value: a['id'] as String,
+                              child: Row(
+                                children: [
+                                  if (a['brandLogo'] != null)
+                                    Padding(
+                                      padding: const EdgeInsets.only(right: 10),
+                                      child: Image.asset('assets/logos/${a['brandLogo']}', width: 18),
+                                    ),
+                                  Text(a['accountName']),
+                                ],
+                              ),
+                            )),
+                          ],
+                          onChanged: (v) => setState(() => selectedAccountId = v),
+                        );
+                      }
                     ),
+
+                  const SizedBox(height: 10),
+                  if (type == 'EXPENSE') ...[
+                    StreamBuilder<List<Map<String, dynamic>>>(
+                      stream: widget.service.getBalances(),
+                      builder: (context, snapshot) {
+                        final allAccounts = snapshot.data ?? [];
+                        final accounts = allAccounts.where((a) => a['currency'] == currency).toList();
+
+                        return DropdownButtonFormField<String>(
+                          initialValue: selectedAccountId,
+                          hint: Text(accounts.isEmpty ? '¿Pagado ahora?' : '¿Con qué pagaste? (Opcional)'),
+                          decoration: InputDecoration(
+                            labelText: 'Cuenta de Pago ($currency)',
+                            border: const OutlineInputBorder(),
+                            helperText: 'Si seleccionas una, se marcará como pagado.',
+                          ),
+                          items: [
+                            const DropdownMenuItem<String>(
+                              value: null,
+                              child: Row(
+                                children: [
+                                  Icon(Icons.pending_actions, color: Colors.orange, size: 20),
+                                  SizedBox(width: 10),
+                                  Text('Dejar como Pendiente', style: TextStyle(color: Colors.orange)),
+                                ],
+                              ),
+                            ),
+                            const DropdownMenuItem<String>(
+                              value: 'CASH_PAYMENT',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.money_off_csred_outlined, color: Colors.blueGrey, size: 20),
+                                  SizedBox(width: 10),
+                                  Text('Pago en Efectivo (Sin cuenta)', style: TextStyle(color: Colors.blueGrey)),
+                                ],
+                              ),
+                            ),
+                            ...accounts.map((a) => DropdownMenuItem(
+                              value: a['id'] as String,
+                              child: Row(
+                                children: [
+                                  if (a['brandLogo'] != null)
+                                    Padding(
+                                      padding: const EdgeInsets.only(right: 10),
+                                      child: Image.asset('assets/logos/${a['brandLogo']}', width: 18),
+                                    ),
+                                  Text(accTruncate(a['accountName'])),
+                                ],
+                              ),
+                            )),
+                          ],
+                          onChanged: (v) => setState(() => selectedAccountId = v),
+                        );
+                      }
+                    ),
+                    const SizedBox(height: 10),
+                  ],
+                  TextFormField(
+                    controller: titleController,
+                    decoration: const InputDecoration(labelText: 'Concepto (Ej: Alquiler, Sueldo)', border: OutlineInputBorder()),
+                    validator: (v) => (v == null || v.isEmpty) ? 'Ingresa un concepto' : null,
                   ),
-                  const SizedBox(width: 10),
-                  Container(
-                    height: 56,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Theme.of(context).colorScheme.outline),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        value: currency,
-                        onChanged: (v) => setState(() {
-                          currency = v!;
-                          selectedAccountId = null; // Resetear cuenta al cambiar moneda
-                        }),
-                        items: ['UYU', 'USD'].map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                  const SizedBox(height: 10),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: amountController,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          inputFormatters: [ThousandsSeparatorInputFormatter()],
+                          decoration: const InputDecoration(
+                            labelText: 'Monto', 
+                            border: OutlineInputBorder(),
+                            helperText: 'Usa punto (.) para decimales.',
+                          ),
+                          validator: (v) {
+                            if (v == null || v.isEmpty) return 'Ingresa un monto';
+                            return null;
+                          },
+                        ),
                       ),
+                      const SizedBox(width: 10),
+                      Container(
+                        height: 56,
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Theme.of(context).colorScheme.outline),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: currency,
+                            onChanged: (v) => setState(() {
+                              currency = v!;
+                              selectedAccountId = null; // Resetear cuenta al cambiar moneda
+                            }),
+                            items: ['UYU', 'USD'].map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (type == 'EXPENSE')
+                    SwitchListTile(
+                      title: const Text('¿Incluido en tarjeta?', style: TextStyle(fontSize: 13)),
+                      subtitle: const Text('Evita duplicar deuda.', style: TextStyle(fontSize: 11)),
+                      value: includedInCard,
+                      onChanged: (v) => setState(() => includedInCard = v),
+                      contentPadding: EdgeInsets.zero,
                     ),
+                  const SizedBox(height: 10),
+                  ListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.calendar_today),
+                    title: Text('Mes: ${DateFormat('MMMM yyyy', 'es_ES').format(selectedDate)}'),
+                    onTap: () async {
+                      final DateTime? picked = await showDatePicker(
+                        context: context,
+                        initialDate: selectedDate,
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime(2100)
+                      );
+                      if (picked != null) setState(() => selectedDate = picked);
+                    },
                   ),
                 ],
               ),
-              if (type == 'EXPENSE')
-                SwitchListTile(
-                  title: const Text('¿Incluido en tarjeta?', style: TextStyle(fontSize: 13)),
-                  subtitle: const Text('Evita duplicar deuda.', style: TextStyle(fontSize: 11)),
-                  value: includedInCard,
-                  onChanged: (v) => setState(() => includedInCard = v),
-                  contentPadding: EdgeInsets.zero,
-                ),
-              const SizedBox(height: 10),
-              ListTile(
-                dense: true,
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.calendar_today),
-                title: Text('Mes: ${DateFormat('MMMM yyyy', 'es_ES').format(selectedDate)}'),
-                onTap: () async {
-                  final DateTime? picked = await showDatePicker(
-                    context: context,
-                    initialDate: selectedDate,
-                    firstDate: DateTime(2020),
-                    lastDate: DateTime(2100)
-                  );
-                  if (picked != null) setState(() => selectedDate = picked);
-                },
-              ),
-            ],
+            ),
           ),
-        ),
-      ),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
-        FilledButton(
-          onPressed: () async {
-            if (_formKey.currentState!.validate()) {
-              final double amount = double.tryParse(amountController.text) ?? 0.0;
-              final String concept = titleController.text;
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
+            FilledButton(
+              onPressed: () async {
+                if (_formKey.currentState!.validate()) {
+                  final double amount = double.tryParse(amountController.text) ?? 0.0;
+                  final String concept = titleController.text;
 
-              final confirm = await DialogUtils.confirmAction(
-                context,
-                title: 'Confirmar Registro',
-                message: '¿Deseas registrar "$concept" por un monto de $currency $amount?',
-                confirmText: 'Registrar',
-              );
+                  final confirm = await DialogUtils.confirmAction(
+                    context,
+                    title: 'Confirmar Registro',
+                    message: '¿Deseas registrar "$concept" por un monto de $currency $amount?',
+                    confirmText: 'Registrar',
+                  );
 
-              if (confirm != true) return;
+                  if (confirm != true) return;
 
-              String categoryName = 'Otros';
-              if (type == 'INCOME') {
-                categoryName = 'Ingreso';
-              }
+                  String categoryName = 'Otros';
+                  String? categoryLogo;
+                  if (type == 'INCOME') {
+                    categoryName = 'Ingreso';
+                  } else if (selectedCategoryId != null) {
+                    final cat = allCategories.firstWhere((c) => c['id'] == selectedCategoryId);
+                    categoryName = cat['name'];
+                    categoryLogo = cat['icon'];
+                  }
 
-              final transaction = TransactionModel(
-                id: '',
-                title: titleController.text,
-                amount: double.tryParse(amountController.text) ?? 0.0,
-                date: selectedDate,
-                category: categoryName,
-                currency: currency,
-                type: type,
-                isCompleted: selectedAccountId != null, // Auto-completar si hay cuenta
-                includedInCard: includedInCard,
-              );
+                  final transaction = TransactionModel(
+                    id: '',
+                    title: titleController.text,
+                    amount: double.tryParse(amountController.text) ?? 0.0,
+                    date: selectedDate,
+                    category: categoryName,
+                    currency: currency,
+                    type: type,
+                    isCompleted: selectedAccountId != null, // Auto-completar si hay cuenta
+                    includedInCard: includedInCard,
+                    brandLogo: categoryLogo, // Guardamos el logo de la categoría directamente
+                  );
 
-              if (selectedAccountId != null && selectedAccountId != 'CASH_PAYMENT') {
-                // Si seleccionó cuenta real (sea Ingreso o Gasto), usamos la lógica atómica
-                await widget.service.addTransactionWithBalanceUpdate(
-                  transaction: transaction,
-                  accountId: selectedAccountId,
-                );
-              } else {
-                // Si no hay cuenta (Efectivo o Gasto pendiente)
-                await widget.service.addTransaction(transaction);
-              }
-              
-              if (mounted) Navigator.pop(context);
-            }
-          },
-          child: const Text('Añadir'),
-        ),
-      ],
+                  if (selectedAccountId != null && selectedAccountId != 'CASH_PAYMENT') {
+                    // Si seleccionó cuenta real (sea Ingreso o Gasto), usamos la lógica atómica
+                    await widget.service.addTransactionWithBalanceUpdate(
+                      transaction: transaction,
+                      accountId: selectedAccountId,
+                    );
+                  } else {
+                    // Si no hay cuenta (Efectivo o Gasto pendiente)
+                    await widget.service.addTransaction(transaction);
+                  }
+                  
+                  if (mounted) Navigator.pop(context);
+                }
+              },
+              child: const Text('Añadir'),
+            ),
+          ],
+        );
+      }
     );
   }
 }
@@ -606,12 +613,7 @@ class _CreditCardTransactionDialogState extends State<CreditCardTransactionDialo
                               title: Text('Mes de inicio: ${DateFormat('MMM yyyy', 'es_ES').format(selectedDate)}', style: const TextStyle(fontSize: 13)),
                               trailing: const Icon(Icons.edit, size: 16),
                               onTap: () async {
-                                final DateTime? picked = await showDatePicker(
-                                  context: context,
-                                  initialDate: selectedDate,
-                                  firstDate: DateTime(2020),
-                                  lastDate: DateTime(2100)
-                                );
+                                final DateTime? picked = await DialogUtils.showMonthYearPicker(context, selectedDate);
                                 if (picked != null) setState(() => selectedDate = picked);
                               }
                             ),
@@ -641,10 +643,12 @@ class _CreditCardTransactionDialogState extends State<CreditCardTransactionDialo
 
                         if (confirm != true) return;
 
-                        final categoryName = allCategories.firstWhere(
+                        final cat = allCategories.firstWhere(
                           (c) => c['id'] == selectedCategoryId,
-                          orElse: () => {'name': 'Tarjeta'}
-                        )['name'];
+                          orElse: () => {'name': 'Tarjeta', 'icon': null}
+                        );
+                        final String categoryName = cat['name'];
+                        final String? categoryLogo = cat['icon'];
 
                         widget.service.addCreditCardExpense(
                           cardName: selectedCard!,
@@ -655,6 +659,7 @@ class _CreditCardTransactionDialogState extends State<CreditCardTransactionDialo
                           startDate: selectedDate,
                           concept: conceptController.text.isNotEmpty ? conceptController.text : null,
                           category: categoryName,
+                          categoryLogo: categoryLogo, // Nuevo parámetro
                         );
                         if (context.mounted) Navigator.pop(context);
                         if (context.mounted) {

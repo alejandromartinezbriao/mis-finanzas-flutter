@@ -1,30 +1,28 @@
-# Log de Desarrollo - Mis Finanzas (v3.2.0)
+# Log de Desarrollo - Mis Finanzas (v3.3.0)
 
 ## Estado Actual (Última actualización: 10/05/2026)
-- **Versión**: 3.2.0 "Arquitectura Centralizada".
-- **Interfaz**: Centro de Inteligencia Finanz-IA con personalización por nombre y diseño premium.
-- **Aritmética**: Estandarización total de punto decimal (`.`) y soporte bimonetario nativo con conversión en tiempo real.
+- **Versión**: 3.3.1 "Identidad Multiplataforma".
+- **Interfaz**: Soporte para Accesos Rápidos (Quick Actions) con iconos adaptativos y modo de carga enfocado.
+- **Aritmética**: Respeto total a ajustes manuales en tarjetas de crédito durante la eliminación de ítems.
 - **Usabilidad**: 
-    - **Lógica Centralizada (v3.2.0)**: Migración de toda la recolección de datos y generación de firmas (Hash) al servidor (Firebase Functions). Garantiza sincronización perfecta y determinista entre PC, Android e iOS.
-    - **Actualización Gestual (Pull-to-refresh)**: Sincronización de datos del mes mediante deslizamiento de pantalla, eliminando botones manuales innecesarios.
-    - **Presupuestos Integrados**: Gestión unificada de topes de gasto dentro de la configuración de categorías.
-    - **Centro de Inteligencia**: Centralización de Auditoría Mensual y Planificación Estratégica.
-- **Infraestructura**: Soporte PWA completo, Firebase Node.js 22, Google Gen AI (Gemini 2.5 Flash).
+    - **Registro Relámpago (v3.3.1)**: Menú de acceso rápido (mantener presionado el icono). Utiliza iconos "estilo Billetera de Google" (capas XML con fondo circular) para garantizar visibilidad en capas de personalización como MIUI/Xiaomi.
+    - **Modo Foco**: Al abrir vía Quick Action, la App se cierra automáticamente tras el registro o cancelación (`SystemNavigator.pop()`).
 
-## Decisiones Arquitectónicas Tomadas (v3.2)
-1. **Backend como Fuente de Verdad**: El servidor es ahora el único responsable de interpretar los datos y generar el historial de IA, eliminando discrepancias entre dispositivos.
-2. **Modularización del Servidor**: División del código en `data_processor.js`, `ai_analyzer.js` e `index.js` para facilitar el mantenimiento y escalabilidad.
-3. **UX de Refresco Nativo**: Adopción de patrones de interacción modernos para la sincronización de plantillas mensuales.
+## 🍎 Guía de Preparación para iOS (Quick Actions)
+Para asegurar que los iconos personalizados funcionen en iPhone cuando se realice la compilación en macOS:
+1. **Nombres de Recursos**: El código Flutter ya busca los identificadores `shortcut_simple` y `shortcut_card`.
+2. **Xcode Assets**: Abrir `Runner.xcworkspace` -> `Assets.xcassets`.
+3. **Creación**: Crear dos nuevos "Image Set" nombrados exactamente `shortcut_simple` y `shortcut_card`.
+4. **Formato**: Arrastrar los iconos de Mica (PNG con transparencia). *Nota: iOS suele aplicar un efecto de máscara; se recomienda usar imágenes contrastadas.*
+5. **Consistencia**: No es necesario tocar `main.dart`, ya que el puente de comunicación es idéntico al de Android.
+
+## Decisiones Arquitectónicas Tomadas (v3.3)
+1. **Modo Foco**: Al abrir la App vía Quick Action, se omite la carga del Dashboard completo para priorizar la velocidad de registro y la privacidad de los saldos totales.
+2. **Cierre Atómico**: La App invoca `SystemNavigator.pop()` tras un registro rápido para integrarse perfectamente con el flujo de uso del smartphone.
 
 ## Hoja de Ruta (Roadmap) - Versión 3.x
 - [ ] **Modo Familiar**: Sistema de "Hogares" para compartir gastos con visibilidad selectiva.
-- [x] **Consolidación de Identidad**: IA con personalidad cercana y trato personalizado.
-
-## Hito: Lanzamiento Versión 3.2 (10/05/2026)
-Salto mayor de arquitectura para garantizar la consistencia global del ecosistema de IA.
-- **Sincronización Total**: PC y Celular comparten exactamente los mismos informes instantáneamente.
-- **Finanz-IA**: Auditoría bimonetaria profunda con detección de erosión de ahorros y compensación inteligente de divisas.
-- **Dólar en Vivo**: Consulta automática de cotización oficial del Banco República vía API financiera.
+- [ ] **Análisis de Inversiones**: IA asesorando sobre dónde colocar el superávit detectado.
 
 ---
-*Mis Finanzas v3.2 - Ingeniería de datos centralizada para una salud financiera global.*
+*Mis Finanzas v3.3 - Velocidad y precisión en el control de tu capital.*
