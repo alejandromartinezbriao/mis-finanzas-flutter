@@ -303,12 +303,14 @@ class _SimpleTransactionDialogState extends State<SimpleTransactionDialog> {
 
                   String categoryName = 'Otros';
                   String? categoryLogo;
+                  int? categoryColor;
                   if (type == 'INCOME') {
                     categoryName = 'Ingreso';
                   } else if (selectedCategoryId != null) {
                     final cat = allCategories.firstWhere((c) => c['id'] == selectedCategoryId);
                     categoryName = cat['name'];
                     categoryLogo = cat['icon'];
+                    categoryColor = cat['color'];
                   }
 
                   final transaction = TransactionModel(
@@ -321,7 +323,8 @@ class _SimpleTransactionDialogState extends State<SimpleTransactionDialog> {
                     type: type,
                     isCompleted: selectedAccountId != null, // Auto-completar si hay cuenta
                     includedInCard: includedInCard,
-                    brandLogo: categoryLogo, // Guardamos el logo de la categoría directamente
+                    brandLogo: categoryLogo, 
+                    categoryColor: categoryColor, // Guardamos también el color
                   );
 
                   if (selectedAccountId != null && selectedAccountId != 'CASH_PAYMENT') {
@@ -335,7 +338,7 @@ class _SimpleTransactionDialogState extends State<SimpleTransactionDialog> {
                     await widget.service.addTransaction(transaction);
                   }
                   
-                  if (mounted) Navigator.pop(context);
+                  if (mounted) Navigator.pop(context, true); // Devuelve TRUE al guardar con éxito
                 }
               },
               child: const Text('Añadir'),
@@ -645,10 +648,11 @@ class _CreditCardTransactionDialogState extends State<CreditCardTransactionDialo
 
                         final cat = allCategories.firstWhere(
                           (c) => c['id'] == selectedCategoryId,
-                          orElse: () => {'name': 'Tarjeta', 'icon': null}
+                          orElse: () => {'name': 'Tarjeta', 'icon': null, 'color': null}
                         );
                         final String categoryName = cat['name'];
                         final String? categoryLogo = cat['icon'];
+                        final int? categoryColor = cat['color'];
 
                         widget.service.addCreditCardExpense(
                           cardName: selectedCard!,
@@ -659,12 +663,10 @@ class _CreditCardTransactionDialogState extends State<CreditCardTransactionDialo
                           startDate: selectedDate,
                           concept: conceptController.text.isNotEmpty ? conceptController.text : null,
                           category: categoryName,
-                          categoryLogo: categoryLogo, // Nuevo parámetro
+                          categoryLogo: categoryLogo,
+                          categoryColor: categoryColor, // Nuevo parámetro
                         );
-                        if (context.mounted) Navigator.pop(context);
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Procesando gasto de tarjeta...')));
-                        }
+                        if (context.mounted) Navigator.pop(context, true); // Devuelve TRUE al guardar con éxito
                       }
                     },
                     child: const Text('Registrar Compra'),

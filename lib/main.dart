@@ -73,12 +73,12 @@ class _MyAppState extends State<MyApp> {
   void _setupQuickActions() {
     quickActions.setShortcutItems(<ShortcutItem>[
       const ShortcutItem(
-        type: 'action_new_expense_v3',
-        localizedTitle: 'Gasto Simple',
+        type: 'action_new_movement_v5',
+        localizedTitle: 'Ingreso / Gasto',
         icon: 'shortcut_simple',
       ),
       const ShortcutItem(
-        type: 'action_new_card_v3',
+        type: 'action_new_card_v5',
         localizedTitle: 'Gasto con Tarjeta',
         icon: 'shortcut_card',
       ),

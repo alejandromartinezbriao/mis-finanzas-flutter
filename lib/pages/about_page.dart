@@ -59,7 +59,7 @@ class _AboutPageState extends State<AboutPage> {
                           ),
                         ),
                         Text(
-                          'Versión 3.3.0',
+                          'Versión 3.4.2',
                           style: TextStyle(
                             fontSize: 16,
                             color: secondaryTextColor,
@@ -80,11 +80,11 @@ class _AboutPageState extends State<AboutPage> {
                   ),
                   const SizedBox(height: 32),
                   _buildSection(
-                    'Capacidades del Sistema v3.3',
-                    '• Registro Relámpago mediante Accesos Rápidos (Quick Actions).\n'
-                    '• Identidad visual automática: Iconos de categorías en gastos nuevos.\n'
-                    '• Lógica de IA centralizada para sincronización perfecta.\n'
-                    '• Auditoría bimonetaria profunda y planificación estratégica futura.\n'
+                    'Capacidades del Sistema v3.4',
+                    '• Herencia de identidad visual (icono/color) en nuevos registros.\n'
+                    '• Registro Relámpago (Quick Actions) con iconos circulares premium.\n'
+                    '• Respeto a ajustes manuales en tarjetas de crédito.\n'
+                    '• Centro de Inteligencia Finanz-IA con sincronización perfecta.\n'
                     '• Gestión de presupuestos integrada directamente en categorías.',
                     primaryTextColor,
                     secondaryTextColor,

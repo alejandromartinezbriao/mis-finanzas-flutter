@@ -1,14 +1,17 @@
-# Mis Finanzas - Tu Salud Financiera en Control (v3.3)
+# Mis Finanzas - Tu Salud Financiera en Control (v3.4)
 
-¡Bienvenido a **Mis Finanzas v3.3**! Esta versión marca un antes y un después al integrar un ecosistema de Inteligencia Artificial que actúa como tu asesor personal.
+¡Bienvenido a **Mis Finanzas v3.4**! Esta versión consolida la identidad visual de la aplicación y agiliza el registro diario.
 
-## 📱 ¿Qué hay de nuevo en la Versión 3.3 "Acceso Total"?
+## 📱 ¿Qué hay de nuevo en la Versión 3.4 "Identidad"?
 
-### 1. El Centro de Inteligencia
-Un nuevo corazón para la App donde Finanz-IA te saluda y te ofrece herramientas de análisis avanzado. Ya no solo ves números, recibes una consultoría financiera real.
+### 1. Herencia Visual Automática
+Cada nuevo gasto nace ahora con el color e icono de su categoría. Esto garantiza una lista de movimientos colorida y organizada sin esfuerzo manual.
 
-### 2. Registro Relámpago (v3.3)
-Nuevos Accesos Rápidos (Quick Actions) para Android e iOS. Registra gastos simples o compras con tarjeta en segundos manteniendo presionado el icono de la App, con iconos exclusivos diseñados para una identificación inmediata.
+### 2. Registro Relámpago Perfeccionado
+Nuevos iconos circulares de alta definición y etiquetas precisas ("Ingreso / Gasto") para las acciones rápidas del icono. Eficiencia total con cierre automático.
+
+### 3. Respeto al Ajuste Manual
+Las tarjetas de crédito ahora respetan tus cálculos. Si editas un total a mano, el sistema lo mantiene como base incluso si decides borrar algún ítem de la lista de consumos.
 
 ### 3. Conciencia de Mercado
 Gracias a la integración con APIs financieras, la App ahora conoce el valor oficial del dólar hoy. Finanz-IA usa este dato para decirte exactamente cuántos pesos necesitas para cubrir tus deudas en dólares, eliminando la incertidumbre.

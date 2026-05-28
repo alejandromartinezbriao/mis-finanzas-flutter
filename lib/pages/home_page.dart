@@ -52,17 +52,52 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _handleFastAction(String action) async {
     Widget dialog;
-    if (action == 'action_new_expense_v3') {
+    if (action == 'action_new_movement_v5') {
       dialog = SimpleTransactionDialog(service: _service, initialDate: _viewingDate);
-    } else if (action == 'action_new_card_v3') {
+    } else if (action == 'action_new_card_v5') {
       dialog = CreditCardTransactionDialog(service: _service, initialDate: _viewingDate);
     } else { return; }
 
-    await showDialog(context: context, builder: (context) => dialog);
+    final bool? success = await showDialog<bool>(context: context, builder: (context) => dialog);
     
-    // Una vez cerrado el diálogo (por guardar o cancelar), cerramos la App por completo
+    // REPARACIÓN CRÍTICA: Si guardó con éxito, mostramos aviso antes de salir
+    if (mounted && success == true) {
+      await showDialog(
+        context: context,
+        barrierDismissible: false, // Forzar clic en botón
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.green),
+              SizedBox(width: 10),
+              Text('¡Registro Exitoso!'),
+            ],
+          ),
+          content: const Text('El movimiento ha quedado guardado correctamente en tu historial.'),
+          actions: [
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Entendido'),
+            ),
+          ],
+        ),
+      );
+    }
+
     if (mounted) {
+      // PRIMERO mandamos la App al fondo/cerramos para que el usuario deje de verla
       SystemNavigator.pop();
+      
+      // SEGUNDO (en segundo plano) reseteamos el modo para que al volver esté el Dashboard.
+      // Usamos un delay mayor para asegurar que la App ya no sea visible al hacer el cambio.
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) {
+          setState(() {
+            _isFastActionActive = false;
+          });
+        }
+      });
     }
   }
 
@@ -265,7 +300,15 @@ class _HomePageState extends State<HomePage> {
                         }
                         final tx = item as TransactionModel;
                         final catData = categories[tx.category];
-                        return TransactionItemTile(transaction: tx, uyuFormat: _uyuFormat, usdFormat: _usdFormat, categoryIcon: catData?['icon'], categoryColor: catData != null ? Color(catData['color']) : null, onTap: () => showDialog(context: context, builder: (context) => EditTransactionDialog(transaction: tx, service: _service)), onDeleteConfirmed: () => _service.deleteTransaction(tx.id));
+                        return TransactionItemTile(
+                          transaction: tx, 
+                          uyuFormat: _uyuFormat, 
+                          usdFormat: _usdFormat, 
+                          categoryIcon: tx.brandLogo ?? catData?['icon'], 
+                          categoryColor: tx.categoryColor != null ? Color(tx.categoryColor!) : (catData != null ? Color(catData['color']) : null), 
+                          onTap: () => showDialog(context: context, builder: (context) => EditTransactionDialog(transaction: tx, service: _service)), 
+                          onDeleteConfirmed: () => _service.deleteTransaction(tx.id)
+                        );
                       },
                     ),
                   ),

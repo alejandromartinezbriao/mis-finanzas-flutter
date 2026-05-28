@@ -362,6 +362,7 @@ mixin TransactionService on FirebaseBase {
     String? concept,
     String? category,
     String? categoryLogo,
+    int? categoryColor,
     int initialInstallment = 1,
   }) async {
     try {
@@ -373,12 +374,14 @@ mixin TransactionService on FirebaseBase {
       final cardT = templates.docs.where((doc) => norm((doc.data() as Map<String, dynamic>)['title'] ?? '') == norm(cardName)).firstOrNull;
       
       String? cardLogo;
+      int? cardColor; // Nuevo
       int? cardOrder;
       int? dueDay;
       String? templateId;
       if (cardT != null) {
         final d = cardT.data() as Map<String, dynamic>;
         cardLogo = d['brandLogo'];
+        cardColor = d['categoryColor']; // Si el template tiene color
         cardOrder = d['orderIndex'];
         dueDay = d['dueDay'];
         templateId = cardT.id;
@@ -421,7 +424,8 @@ mixin TransactionService on FirebaseBase {
           batch.update(existing.reference, {
             'amount': round(currentAmount + currentInstallmentAmount), 
             'description': oldDesc.isEmpty ? detail : "$oldDesc, $detail",
-            'brandLogo': cardLogo ?? categoryLogo, // Si la tarjeta no tiene logo, probamos el de la categoría
+            'brandLogo': cardLogo ?? categoryLogo,
+            'categoryColor': cardColor ?? categoryColor, // Nuevo
             'orderIndex': cardOrder ?? 999,
           });
         } else {
@@ -435,7 +439,8 @@ mixin TransactionService on FirebaseBase {
             'currency': currency,
             'type': 'EXPENSE',
             'isCompleted': false,
-            'brandLogo': cardLogo ?? categoryLogo, // Preferimos el logo de la tarjeta, sino el de la categoría
+            'brandLogo': cardLogo ?? categoryLogo,
+            'categoryColor': cardColor ?? categoryColor, // Nuevo
             'orderIndex': cardOrder ?? 999,
             'templateId': templateId,
           });

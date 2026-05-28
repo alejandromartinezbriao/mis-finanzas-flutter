@@ -13,6 +13,7 @@ class TransactionModel {
   final bool isCompleted;
   final String type;
   final String? brandLogo;
+  final int? categoryColor; // Nuevo: Color de la categoría persistido
   final bool includedInCard;
   final String? paidFromAccountId;
   final String? templateId; // Nuevo campo agregado
@@ -31,6 +32,7 @@ class TransactionModel {
     this.isCompleted = false,
     this.type = 'EXPENSE',
     this.brandLogo,
+    this.categoryColor, // Nuevo
     this.includedInCard = false,
     this.paidFromAccountId,
     this.templateId, // Nuevo campo agregado
@@ -51,6 +53,7 @@ class TransactionModel {
       isCompleted: data['isPaid'] ?? data['isCompleted'] ?? false,
       type: data['type'] ?? 'EXPENSE',
       brandLogo: data['brandLogo'],
+      categoryColor: data['categoryColor'], // Nuevo
       includedInCard: data['includedInCard'] ?? false,
       paidFromAccountId: data['paidFromAccountId'],
       templateId: data['templateId'], // Nuevo campo agregado
@@ -72,6 +75,7 @@ class TransactionModel {
       'isPaid': isCompleted,
       'type': type,
       'brandLogo': brandLogo,
+      'categoryColor': categoryColor, // Nuevo
       'includedInCard': includedInCard,
       'paidFromAccountId': paidFromAccountId,
       'templateId': templateId, // Nuevo campo agregado
@@ -91,6 +95,7 @@ class TransactionModel {
     bool? isCompleted,
     String? type,
     String? brandLogo,
+    int? categoryColor, // Nuevo
     bool? includedInCard,
     String? paidFromAccountId,
     String? templateId, // Nuevo campo agregado
@@ -109,6 +114,7 @@ class TransactionModel {
       isCompleted: isCompleted ?? this.isCompleted,
       type: type ?? this.type,
       brandLogo: brandLogo ?? this.brandLogo,
+      categoryColor: categoryColor ?? this.categoryColor, // Nuevo
       includedInCard: includedInCard ?? this.includedInCard,
       paidFromAccountId: paidFromAccountId ?? this.paidFromAccountId,
       templateId: templateId ?? this.templateId, // Nuevo campo agregado

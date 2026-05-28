@@ -104,7 +104,7 @@ class BrandIcon extends StatelessWidget {
       content = Icon(
         IconUtils.getIconData(manualLogo),
         size: size * 0.7,
-        color: Theme.of(context).colorScheme.primary,
+        color: fallbackColor ?? Theme.of(context).colorScheme.primary, // CORREGIDO: Usa el color de la categoría
       );
     } else {
       content = _defaultIcon(context, label);
