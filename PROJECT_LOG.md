@@ -1,33 +1,49 @@
-# Log de Desarrollo - Mis Finanzas (v3.4.2)
+# Log de Desarrollo - Mis Finanzas (v3.5.0)
 
-## Estado Actual (Última actualización: 10/05/2026)
-- **Versión**: 3.4.2 "Transición Fluida".
-- **Interfaz**: Accesos Rápidos con iconografía circular premium, aviso de éxito y cierre optimizado.
-- **Aritmética**: Respeto total a ajustes manuales en tarjetas de crédito durante la eliminación de ítems.
-- **Usabilidad**: 
-    - **Cierre Silencioso (v3.4.2)**: Optimización de la salida en Quick Actions para evitar parpadeos visuales del dashboard principal. La App se cierra manteniendo el modo foco y se resetea internamente en segundo plano.
-    - **Aviso de Confirmación (v3.4.1)**: Diálogo explícito de "¡Registro Exitoso!" al usar acciones rápidas, garantizando al usuario que los datos se guardaron antes de cerrar la App.
-    - **Registro Relámpago (v3.4.0)**: Menú de acceso rápido (mantener presionado el icono). Utiliza diseños circulares exclusivos de Mica que ocupan todo el espacio del lanzador. Etiqueta unificada "Ingreso / Gasto".
-    - **Herencia Visual (v3.4.0)**: Al registrar un movimiento, este hereda instantáneamente el **icono y el color** de su categoría, eliminando la necesidad de ediciones posteriores.
-    - **Modo Foco**: Al abrir vía Quick Action, la App se cierra automáticamente tras el registro o cancelación (`SystemNavigator.pop()`).
-    - **Soberanía Contable (v3.4.0)**: Al borrar un consumo de una tarjeta, el sistema resta el monto exacto del total actual en lugar de recalcular todo, respetando así los ajustes manuales (impuestos o céntimos) realizados por el usuario.
+## HITO: Versión 3.5.0 "Arquitectura Híbrida Indestructible" (27/05/2026)
+Esta versión marca el cambio estructural más profundo del proyecto hasta la fecha, transformando la aplicación en una solución **Offline-First** y estableciendo las bases técnicas y comerciales para la monetización futura.
 
-## 🍎 Guía de Preparación para iOS (Quick Actions)
-Para asegurar que los iconos personalizados funcionen en iPhone cuando se realice la compilación en macOS:
-1. **Nombres de Recursos**: El código Flutter ya busca los identificadores `shortcut_simple` y `shortcut_card`.
-2. **Xcode Assets**: Abrir `Runner.xcworkspace` -> `Assets.xcassets`.
-3. **Creación**: Crear dos nuevos "Image Set" nombrados exactamente `shortcut_simple` y `shortcut_card`.
-4. **Formato**: Arrastrar los iconos de Mica (PNG con transparencia).
-5. **Consistencia**: No es necesario tocar `main.dart`.
+### 1. Estrategia de Datos Híbrida (La "Regla Ale")
+Se ha implementado una arquitectura de repositorio dual diseñada para segmentar el valor del producto y garantizar la continuidad operativa:
+- **Configuración Universal (Nube + Local):** Las Categorías (con diseños de Mica), Cuentas, Metas, Suscripciones y Plantillas se sincronizan **siempre** en Firebase para todos los usuarios. Esto asegura que la identidad y estructura financiera del usuario lo sigan a cualquier dispositivo desde el inicio.
+- **Movimientos Segmentados (Local por defecto):** Los Gastos e Ingresos se guardan prioritariamente en el almacenamiento local del teléfono (`SQLite`). La sincronización con Firebase se activa **únicamente** si el perfil del usuario tiene el campo `isPremium: true`.
+- **Sincronización Agresiva Inicial:** Al abrir la v3.5.0 por primera vez, la App realiza un barrido total de Firebase para "clonar" toda la configuración existente hacia el teléfono, garantizando que el usuario tenga su App lista para usar sin internet en menos de un minuto.
 
-## Decisiones Arquitectónicas Tomadas (v3.1 - v3.4)
-1. **Lógica Centralizada (Server-Side)**: El servidor (Firebase Functions) es la única fuente de verdad para la IA y firmas de datos, garantizando sincronización perfecta entre dispositivos.
-2. **Modularización del Backend**: Código dividido en `data_processor.js`, `ai_analyzer.js` e `index.js`.
-3. **UX de Refresco Nativo**: Sincronización de plantillas mediante pull-to-refresh en móvil y botón dedicado en PC.
+### 2. Motor de Base de Datos Local
+- **Tecnología:** `sqflite` (SQLite nativo) para Android e iOS.
+- **Servicio:** `LocalDbService` implementado como Singleton con soporte para operaciones CRUD (Create, Read, Update, Delete) atómicas.
+- **Tablas:** Estructura espejo de Firestore para `transactions`, `categories`, `balances`, `goals`, `subscriptions` y `templates`.
+- **Compatibilidad Web:** Blindaje técnico mediante `kIsWeb` para asegurar que la versión de navegador siga operando directamente contra Firebase sin intentar acceder al motor SQLite inexistente en navegadores.
 
-## Hoja de Ruta (Roadmap) - Versión 3.x
-- [ ] **Modo Familiar**: Sistema de "Hogares" para compartir gastos con visibilidad selectiva.
-- [ ] **Análisis de Inversiones**: IA asesorando sobre dónde colocar el superávit detectado.
+### 3. Experiencia del Usuario (Mimo al Tester)
+- **Aviso de Blindaje Personalizado:** Al completar la primera sincronización híbrida, la App presenta un diálogo elegante que saluda al usuario por su nombre (ej: "¡Hola, Alejandro!").
+- **Comunicación de Valor:** El aviso informa al usuario que sus datos ya están "blindados" en modo local (offline) y le recuerda su estatus Premium con respaldo en la nube y acceso desde PC.
 
 ---
-*Mis Finanzas v3.4 - La unión perfecta entre diseño industrial y lógica financiera.*
+
+## HITO: Versión 3.4.x "Identidad y Refinamiento UX"
+Consolidación de la imagen de marca de Mica y optimización del registro diario.
+
+### 4. Registro Relámpago (Quick Actions)
+- **Funcionalidad:** Menú contextual nativo al mantener presionado el icono de la App.
+- **Etiqueta Unificada:** Cambio de "Gasto Simple" a "Ingreso / Gasto" para mayor precisión funcional.
+- **Modo Foco:** Interfaz de carga minimalista que prioriza la velocidad y la privacidad de los saldos totales durante el registro rápido.
+- **Cierre Silencioso:** Optimización de salida (`SystemNavigator.pop()`) con un reset de estado diferido (500ms) para evitar parpadeos visuales del dashboard principal.
+
+### 5. Identidad Visual Premium (Mica)
+- **Iconografía Circular:** Implementación de nuevos diseños circulares que aprovechan el 100% del área del icono.
+- **Arquitectura XML Android:** Uso de `layer-list` en `shortcut_simple.xml` y `shortcut_card.xml` para garantizar la visibilidad en dispositivos con capas de personalización estrictas (Xiaomi/MIUI).
+- **Herencia Visual:** Persistencia automática del **icono y color** de categoría en cada nuevo registro, eliminando la necesidad de ediciones manuales posteriores.
+
+### 6. Soberanía Contable en Tarjetas
+- **Lógica de Sustracción Pura:** Al eliminar consumos, el sistema resta el monto exacto del total actual. Se respeta cualquier ajuste manual previo realizado por el usuario, evitando recalculados totales que sobrescriban ediciones personalizadas.
+
+---
+
+## HITO: Versión 3.2.x - 3.3.x "Cerebro Centralizado"
+### 7. IA Server-Side (Cloud Functions)
+- **Centralización:** El cálculo de firmas (Hash) y recolección de datos se realiza en Firebase Functions (Node.js).
+- **Eficiencia:** Sincronización perfecta de informes entre móvil y PC, optimizando costes y garantizando coherencia en el asesoramiento de Finanz-IA.
+
+---
+*Mis Finanzas v3.5 - Potencia local, inteligencia en la nube y trato personal.*

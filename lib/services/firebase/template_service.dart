@@ -1,8 +1,29 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import '../local_db_service.dart';
 import 'firebase_base.dart';
 import '../../models/transaction_model.dart';
 
 mixin TemplateService on FirebaseBase {
+  final LocalDbService _local = LocalDbService();
+
+  // --- AYUDANTE HÍBRIDO ---
+  Future<void> _saveTemplateLocally(Map<String, dynamic> t) async {
+    if (kIsWeb) return;
+    await _local.insert('templates', {
+      'id': t['id'],
+      'title': t['title'],
+      'type': t['type'],
+      'category': t['category'],
+      'currency': t['currency'],
+      'defaultAmount': t['defaultAmount'],
+      'dueDay': t['dueDay'],
+      'brandLogo': t['brandLogo'],
+      'isCreditCard': t['isCreditCard'] == true ? 1 : 0,
+      'orderIndex': t['orderIndex'] ?? 999,
+    });
+  }
+
   // --- BUSCADOR DE GEMELAS PARA TARJETAS ---
 
   Future<List<Map<String, dynamic>>> findPotentialCardTwins({
@@ -75,18 +96,20 @@ mixin TemplateService on FirebaseBase {
       final originalCurrency = data['currency'] ?? 'UYU';
       final newTitle = '$baseName ($originalCurrency)';
 
-      batch.update(ref.doc(originalId), {
+      final updatedData = {
         ...data,
         'title': newTitle,
         'isBimonetaryPart': true,
         'baseName': baseName,
-      });
+      };
+      batch.update(ref.doc(originalId), updatedData);
 
       final otherCurrency = originalCurrency == 'UYU' ? 'USD' : 'UYU';
       final newGemelaTitle = '$baseName ($otherCurrency)';
       
-      if (existingGemelaId != null) {
-        batch.update(ref.doc(existingGemelaId), {
+      String? gemId = existingGemelaId;
+      if (gemId != null) {
+        batch.update(ref.doc(gemId), {
           'title': newGemelaTitle,
           'currency': otherCurrency,
           'isBimonetaryPart': true,
@@ -96,7 +119,9 @@ mixin TemplateService on FirebaseBase {
           'type': 'EXPENSE',
         });
       } else {
-        batch.set(ref.doc(), {
+        final newRef = ref.doc();
+        gemId = newRef.id;
+        batch.set(newRef, {
           ...data,
           'title': newGemelaTitle,
           'currency': otherCurrency,
@@ -120,8 +145,14 @@ mixin TemplateService on FirebaseBase {
       }
 
       await batch.commit();
+
+      if (!kIsWeb) {
+        await _saveTemplateLocally({...updatedData, 'id': originalId});
+        final gemDoc = await ref.doc(gemId).get();
+        await _saveTemplateLocally({...gemDoc.data() as Map<String, dynamic>, 'id': gemId});
+      }
     } catch (e) {
-      print("Error upgradeTemplateToBimonetary: $e");
+      print("Error upgradeTemplateToBimonetary Híbrido: $e");
       rethrow;
     }
   }
@@ -139,6 +170,9 @@ mixin TemplateService on FirebaseBase {
       final list = snap.docs.map((doc) {
         final data = doc.data() as Map<String, dynamic>;
         data['id'] = doc.id;
+        
+        if (!kIsWeb) _saveTemplateLocally(data);
+        
         return data;
       }).toList();
       
@@ -169,33 +203,46 @@ mixin TemplateService on FirebaseBase {
         final batch = db.batch();
         final name = t['title'];
 
-        batch.set(ref.doc(), {
+        final docUYU = ref.doc();
+        final dataUYU = {
           ...t,
           'title': '$name (UYU)',
           'currency': 'UYU',
           'orderIndex': nextIndex,
           'isBimonetaryPart': true,
           'baseName': name,
-        });
+        };
+        batch.set(docUYU, dataUYU);
 
-        batch.set(ref.doc(), {
+        final docUSD = ref.doc();
+        final dataUSD = {
           ...t,
           'title': '$name (USD)',
           'currency': 'USD',
           'orderIndex': nextIndex + 1,
           'isBimonetaryPart': true,
           'baseName': name,
-        });
+        };
+        batch.set(docUSD, dataUSD);
 
         await batch.commit();
+
+        if (!kIsWeb) {
+          await _saveTemplateLocally({...dataUYU, 'id': docUYU.id});
+          await _saveTemplateLocally({...dataUSD, 'id': docUSD.id});
+        }
       } else {
-        await ref.add({
+        final docRef = await ref.add({
           ...t,
           'orderIndex': nextIndex,
         });
+        if (!kIsWeb) {
+          final doc = await docRef.get();
+          await _saveTemplateLocally({...doc.data() as Map<String, dynamic>, 'id': docRef.id});
+        }
       }
     } catch (e) {
-      print("Error addTemplate: $e");
+      print("Error addTemplate Híbrido: $e");
     }
   }
 
@@ -207,7 +254,9 @@ mixin TemplateService on FirebaseBase {
       if (ref == null || expenseRef == null) return;
 
       for (int i = 0; i < templates.length; i++) {
-        batch.update(ref.doc(templates[i]['id']), {'orderIndex': i});
+        final String id = templates[i]['id'];
+        batch.update(ref.doc(id), {'orderIndex': i});
+        if (!kIsWeb) await _local.update('templates', {'orderIndex': i}, id);
       }
 
       final now = DateTime.now();
@@ -232,7 +281,7 @@ mixin TemplateService on FirebaseBase {
 
       await batch.commit();
     } catch (e) {
-      print("Error updateTemplatesOrder: $e");
+      print("Error updateTemplatesOrder Híbrido: $e");
     }
   }
 
@@ -244,18 +293,15 @@ mixin TemplateService on FirebaseBase {
 
       final batch = db.batch();
       
-      // Si es parte de un par bimonetario, debemos sincronizar los campos compartidos con su gemela
       if (data['isBimonetaryPart'] == true) {
         final String baseName = data['baseName'] ?? data['title'];
         final String currentCurrency = data['currency'] ?? 'UYU';
-        
-        // El título real en Firestore debe conservar el sufijo
         final String finalTitle = "$baseName ($currentCurrency)";
         final Map<String, dynamic> updatedData = {...data, 'title': finalTitle, 'baseName': baseName};
         
         batch.update(ref.doc(id), updatedData);
+        if (!kIsWeb) await _saveTemplateLocally({...updatedData, 'id': id});
 
-        // Buscar la gemela para sincronizar campos compartidos (vencimiento, logo, nombre base)
         final otherCurrency = currentCurrency == 'UYU' ? 'USD' : 'UYU';
         final twinsSnap = await ref
             .where('baseName', isEqualTo: baseName)
@@ -264,17 +310,18 @@ mixin TemplateService on FirebaseBase {
             .get();
 
         for (var twinDoc in twinsSnap.docs) {
-          batch.update(twinDoc.reference, {
+          final twinData = {
             'baseName': baseName,
             'title': "$baseName ($otherCurrency)",
             'dueDay': data['dueDay'],
             'brandLogo': data['brandLogo'],
             'category': data['category'],
             'isCreditCard': data['isCreditCard'],
-          });
+          };
+          batch.update(twinDoc.reference, twinData);
+          if (!kIsWeb) await _local.update('templates', twinData, twinDoc.id);
         }
         
-        // Actualizar el logo en transacciones existentes de ambas partes
         final relatedExpenses = await expenseRef
             .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(DateTime(DateTime.now().year, DateTime.now().month - 1, 1)))
             .get();
@@ -287,8 +334,8 @@ mixin TemplateService on FirebaseBase {
           }
         }
       } else {
-        // Flujo normal para plantillas no bimonetarias
         batch.update(ref.doc(id), data);
+        if (!kIsWeb) await _local.update('templates', data, id);
         
         final String title = data['title'] ?? '';
         if (title.isNotEmpty) {
@@ -307,17 +354,16 @@ mixin TemplateService on FirebaseBase {
 
       await batch.commit();
     } catch (e) {
-      print("Error updateTemplate: $e");
+      print("Error updateTemplate Híbrido: $e");
     }
   }
 
   Future<void> deleteTemplate(String id) async {
     try {
-      final ref = templatesRef;
-      if (ref == null) return;
-      await ref.doc(id).delete();
+      if (templatesRef != null) await templatesRef!.doc(id).delete();
+      if (!kIsWeb) await _local.delete('templates', id);
     } catch (e) {
-      print("Error deleteTemplate: $e");
+      print("Error deleteTemplate Híbrido: $e");
     }
   }
 
@@ -326,7 +372,7 @@ mixin TemplateService on FirebaseBase {
       final ref = templatesRef;
       if (ref == null) return;
       
-      await ref.add({
+      final data = {
         'title': t.title,
         'currency': t.currency,
         'dueDay': t.dueDate?.day ?? t.date.day,
@@ -335,9 +381,13 @@ mixin TemplateService on FirebaseBase {
         'isCreditCard': false,
         'defaultAmount': t.amount,
         'brandLogo': t.brandLogo,
-      });
+      };
+
+      final docRef = await ref.add(data);
+      if (!kIsWeb) await _saveTemplateLocally({...data, 'id': docRef.id});
+      
     } catch (e) {
-      print("Error createTemplateFromTransaction: $e");
+      print("Error createTemplateFromTransaction Híbrido: $e");
     }
   }
 }

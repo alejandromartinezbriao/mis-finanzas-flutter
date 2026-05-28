@@ -40,7 +40,7 @@ mixin UserService on FirebaseBase {
     }
   }
 
-  /// Ejecuta migraciones estructurales de forma automática y silenciosa
+  /// Ejecuta migraciones estructurales y sincronización inicial de base de datos local
   Future<void> checkAndPerformMigrations() async {
     try {
       final uid = auth.currentUser?.uid;
@@ -51,17 +51,34 @@ mixin UserService on FirebaseBase {
 
       final userData = userDoc.data()!;
       
-      // MIGRACIÓN v3.1: Presupuestos a Categorías
+      // 1. MIGRACIÓN v3.1: Presupuestos a Categorías (Existente)
       if (userData['migratedToV31'] != true) {
-        // Marcamos como completada PRIMERO para evitar bucles si falla algo parcial
         await db.collection('users').doc(uid).update({'migratedToV31': true});
+        await (this as dynamic).migrateBudgetsToCategories();
+      }
+
+      // 2. NUEVA MIGRACIÓN v3.5: Clonación agresiva a Base de Datos Local
+      if (userData['migratedToLocalV35'] != true) {
+        print("Iniciando Sincronización Inicial v3.5 (Agresiva)...");
         
-        print("Iniciando migración automática v3.1 para el usuario...");
-        final migratedCount = await (this as dynamic).migrateBudgetsToCategories();
-        print("Migración v3.1 finalizada. Se mudaron $migratedCount presupuestos.");
+        // Sincronizar Categorías
+        final cats = await (this as dynamic).getCategories().first;
+        
+        // Sincronizar Cuentas
+        final accs = await (this as dynamic).getBalances().first;
+        
+        // Sincronizar Metas
+        final goals = await (this as dynamic).getGoals().first;
+
+        // Sincronizar Plantillas
+        final templates = await (this as dynamic).getTemplates().first;
+
+        // Marcamos como completado para que no se repita este proceso pesado
+        await db.collection('users').doc(uid).update({'migratedToLocalV35': true});
+        print("Sincronización v3.5 finalizada con éxito.");
       }
     } catch (e) {
-      print("Error en checkAndPerformMigrations: $e");
+      print("Error en checkAndPerformMigrations Híbrido: $e");
     }
   }
 

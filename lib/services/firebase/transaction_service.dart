@@ -1,17 +1,41 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'firebase_base.dart';
 import '../../models/transaction_model.dart';
+import '../local_db_service.dart';
 
 mixin TransactionService on FirebaseBase {
+  final LocalDbService _local = LocalDbService();
+
+  // --- AYUDANTE HÍBRIDO ---
+
+  Future<void> _saveTransactionLocally(TransactionModel t, {String? docId}) async {
+    if (kIsWeb) return;
+    await _local.insert('transactions', {
+      ...t.toMap(),
+      'id': docId ?? t.id,
+      'date': t.date.toIso8601String(),
+      'isCompleted': t.isCompleted ? 1 : 0,
+      'includedInCard': t.includedInCard ? 1 : 0,
+      'categoryColor': t.categoryColor,
+    });
+  }
+
   // --- TRANSACCIONES ---
 
   Future<void> addTransaction(TransactionModel t) async {
     try {
-      final ref = transactionsRef;
-      if (ref == null) return;
-      await ref.add(t.toMap());
+      // 1. Siempre local
+      await _saveTransactionLocally(t);
+
+      // 2. Solo nube si es premium o web
+      if (kIsWeb || await isPremium) {
+        final ref = transactionsRef;
+        if (ref == null) return;
+        await ref.add(t.toMap());
+      }
     } catch (e) {
-      print("Error addTransaction: $e");
+      print("Error addTransaction Híbrido: $e");
     }
   }
 
@@ -20,56 +44,73 @@ mixin TransactionService on FirebaseBase {
     String? accountId,
   }) async {
     try {
-      final batch = db.batch();
-      final transRef = transactionsRef!.doc();
-      
-      batch.set(transRef, {
-        ...transaction.toMap(),
-        'paidFromAccountId': accountId,
-      });
+      final String docId = transactionsRef?.doc().id ?? DateTime.now().millisecondsSinceEpoch.toString();
 
-      if (accountId != null) {
-        final accountRef = balancesRef!.doc(accountId);
-        final accountDoc = await accountRef.get();
+      // 1. Siempre local
+      await _saveTransactionLocally(transaction, docId: docId);
+
+      // 2. Solo nube si es premium o web
+      if (kIsWeb || await isPremium) {
+        final batch = db.batch();
+        final transRef = transactionsRef!.doc(docId);
         
-        if (accountDoc.exists) {
-          final accData = accountDoc.data() as Map<String, dynamic>;
-          double currentBalance = (accData['amount'] ?? 0.0).toDouble();
-          double newBalance = transaction.type == 'INCOME' 
-              ? currentBalance + transaction.amount 
-              : currentBalance - transaction.amount;
-          
-          batch.update(accountRef, {
-            'amount': round(newBalance),
-            'updatedAt': Timestamp.now(),
-          });
-        }
-      }
+        batch.set(transRef, {
+          ...transaction.toMap(),
+          'paidFromAccountId': accountId,
+        });
 
-      await batch.commit();
+        if (accountId != null) {
+          final accountRef = balancesRef!.doc(accountId);
+          final accountDoc = await accountRef.get();
+          
+          if (accountDoc.exists) {
+            final accData = accountDoc.data() as Map<String, dynamic>;
+            double currentBalance = (accData['amount'] ?? 0.0).toDouble();
+            double newBalance = transaction.type == 'INCOME' 
+                ? currentBalance + transaction.amount 
+                : currentBalance - transaction.amount;
+            
+            batch.update(accountRef, {
+              'amount': round(newBalance),
+              'updatedAt': Timestamp.now(),
+            });
+          }
+        }
+        await batch.commit();
+      }
     } catch (e) {
-      print("Error addTransactionWithBalanceUpdate: $e");
+      print("Error addTransactionWithBalanceUpdate Híbrido: $e");
       rethrow;
     }
   }
 
   Future<void> updateTransaction(TransactionModel t) async {
     try {
-      final ref = transactionsRef;
-      if (ref == null) return;
-      await ref.doc(t.id).update(t.toMap());
+      if (!kIsWeb) {
+        await _local.update('transactions', {
+          ...t.toMap(),
+          'date': t.date.toIso8601String(),
+          'isCompleted': t.isCompleted ? 1 : 0,
+          'includedInCard': t.includedInCard ? 1 : 0,
+        }, t.id);
+      }
+
+      if (kIsWeb || await isPremium) {
+        if (transactionsRef != null) await transactionsRef!.doc(t.id).update(t.toMap());
+      }
     } catch (e) {
-      print("Error updateTransaction: $e");
+      print("Error updateTransaction Híbrido: $e");
     }
   }
 
   Future<void> deleteTransaction(String id) async {
     try {
-      final ref = transactionsRef;
-      if (ref == null) return;
-      await ref.doc(id).delete();
+      if (!kIsWeb) await _local.delete('transactions', id);
+      if (kIsWeb || await isPremium) {
+        if (transactionsRef != null) await transactionsRef!.doc(id).delete();
+      }
     } catch (e) {
-      print("Error deleteTransaction: $e");
+      print("Error deleteTransaction Híbrido: $e");
     }
   }
 
@@ -85,7 +126,11 @@ mixin TransactionService on FirebaseBase {
     }
 
     return query.snapshots().map((snapshot) {
-      return snapshot.docs.map((doc) => TransactionModel.fromMap(doc.data() as Map<String, dynamic>, doc.id)).toList();
+      final txs = snapshot.docs.map((doc) => TransactionModel.fromMap(doc.data() as Map<String, dynamic>, doc.id)).toList();
+      if (!kIsWeb) {
+        for (var tx in txs) { _saveTransactionLocally(tx); }
+      }
+      return txs;
     });
   }
 
@@ -119,16 +164,14 @@ mixin TransactionService on FirebaseBase {
 
       for (var doc in snapshot.docs) {
         final data = doc.data() as Map<String, dynamic>;
-        
         bool isFromTemplate = data['generatedBy'] == 'template';
         String desc = (data['description'] ?? '').toString().toLowerCase();
         bool isInstallment = desc.contains('cuota') || desc.contains('/');
         bool isCard = data['category'] == 'Tarjeta';
 
-        // Solo borramos si es de plantilla Y NO es una tarjeta (para no perder cuotas)
-        // O si es un gasto genérico sin categoría ni cuotas.
         if ((isFromTemplate && !isCard) || (!isInstallment && data['category'] != 'Otros' && !isCard)) {
           batch.delete(doc.reference);
+          if (!kIsWeb) await _local.delete('transactions', doc.id);
           deletedCount++;
         }
       }
@@ -138,8 +181,6 @@ mixin TransactionService on FirebaseBase {
       print("Error clearMonth: $e");
     }
   }
-
-  // --- LÓGICA DE NEGOCIO ---
 
   Future<void> completeTransactionWithBalanceUpdate({
     required TransactionModel transaction,
@@ -151,11 +192,13 @@ mixin TransactionService on FirebaseBase {
       final transRef = transactionsRef!.doc(transaction.id);
       final accountRef = balancesRef!.doc(accountId);
 
-      batch.update(transRef, {
+      final updateData = {
         'isCompleted': !isUndoing, 
         'isPaid': !isUndoing,
         'paidFromAccountId': isUndoing ? null : accountId,
-      });
+      };
+
+      batch.update(transRef, updateData);
 
       final accountDoc = await accountRef.get();
       if (!accountDoc.exists) return;
@@ -174,6 +217,14 @@ mixin TransactionService on FirebaseBase {
       });
 
       await batch.commit();
+      
+      if (!kIsWeb) {
+        await _local.update('transactions', {
+          'isCompleted': isUndoing ? 0 : 1,
+          'paidFromAccountId': isUndoing ? null : accountId,
+        }, transaction.id);
+        await _local.update('balances', {'amount': round(newBalance)}, accountId);
+      }
     } catch (e) {
       print("Error completeTransactionWithBalanceUpdate: $e");
       rethrow;
@@ -211,12 +262,7 @@ mixin TransactionService on FirebaseBase {
 
       for (var docT in templatesDocs.docs) {
         final dataT = docT.data() as Map<String, dynamic>;
-        
-        // --- FILTRO ANTIFANTASMAS ---
-        // Solo procesamos plantillas que tengan Tipo y Título.
-        if (dataT['type'] == null || dataT['title'] == null || dataT['title'].toString().isEmpty) {
-          continue; 
-        }
+        if (dataT['type'] == null || dataT['title'] == null || dataT['title'].toString().isEmpty) continue; 
 
         final String templateId = docT.id;
         final String titleT = dataT['title'];
@@ -226,17 +272,13 @@ mixin TransactionService on FirebaseBase {
         
         if (processedKeysInThisRun.contains(uniqueKey)) continue;
 
-        // Nombre base sin sufijos de moneda para comparaciones inteligentes
         final String cleanTitleT = titleT.replaceAll(RegExp(r' \((UYU|USD)\)$', caseSensitive: false), '').trim();
         
         final existingBase = existingInMonth.where((e) {
           bool matchId = e['templateId'] == templateId;
-          
           final String eTitle = (e['title'] ?? '').toString();
           final String cleanETitle = eTitle.replaceAll(RegExp(r' \((UYU|USD)\)$', caseSensitive: false), '').trim();
-          
-          bool matchName = norm(cleanETitle) == norm(cleanTitleT) && e['currency'] == currencyT;
-          return matchId || matchName;
+          return matchId || (norm(cleanETitle) == norm(cleanTitleT) && e['currency'] == currencyT);
         }).firstOrNull;
 
         final cardSubs = subsDocs.docs.where((s) => (s.data() as Map<String, dynamic>)['linkId'] == templateId);
@@ -246,14 +288,13 @@ mixin TransactionService on FirebaseBase {
         for (var docS in cardSubs) {
           final dataS = docS.data() as Map<String, dynamic>;
           if (dataS['currency'] != currencyT) continue;
-          
           final double subAmount = (dataS['amount'] ?? 0.0).toDouble();
           totalSubsForThisCard += subAmount;
           subDetails.add("${dataS['name'] ?? 'Sub'} (${formatAmount(subAmount, currencyT)})");
 
-          final existingSub = existingInMonth.where((e) => e['subscriptionId'] == docS.id).firstOrNull;
-          if (existingSub == null) {
-            batch.set(refE.doc(), {
+          if (existingInMonth.where((e) => e['subscriptionId'] == docS.id).isEmpty) {
+            final newId = refE.doc().id;
+            final dataMap = {
               'subscriptionId': docS.id,
               'templateId': templateId,
               'title': dataS['name'] ?? 'Sub',
@@ -267,16 +308,17 @@ mixin TransactionService on FirebaseBase {
               'generatedBy': 'template',
               'brandLogo': dataT['brandLogo'],
               'orderIndex': oIndex,
-            });
+            };
+            batch.set(refE.doc(newId), dataMap);
+            if (!kIsWeb) await _local.insert('transactions', {...dataMap, 'id': newId, 'date': (dataMap['date'] as Timestamp).toDate().toIso8601String(), 'isCompleted': 0, 'includedInCard': 1});
             addedAny = true;
           }
         }
 
         if (existingBase == null) {
-          final newRef = refE.doc();
+          final newId = refE.doc().id;
           double initialAmount = (dataT['defaultAmount'] ?? 0.0).toDouble();
-          
-          batch.set(newRef, {
+          final dataMap = {
             'templateId': templateId,
             'title': titleT,
             'amount': round(initialAmount + totalSubsForThisCard),
@@ -290,17 +332,17 @@ mixin TransactionService on FirebaseBase {
             'brandLogo': dataT['brandLogo'],
             'generatedBy': 'template',
             'orderIndex': oIndex,
-          });
+          };
+          batch.set(refE.doc(newId), dataMap);
+          if (!kIsWeb) await _local.insert('transactions', {...dataMap, 'id': newId, 'date': (dataMap['date'] as Timestamp).toDate().toIso8601String(), 'isCompleted': 0, 'includedInCard': 0});
           addedAny = true;
         } else {
-          // Si ya existe la tarjeta (ej: por cuotas), le sumamos las suscripciones si no estaban
           final dataE = existingBase;
           double currentAmount = (dataE['amount'] ?? 0.0).toDouble();
           String currentDesc = dataE['description'] ?? '';
           
-          // Solo actualizamos si hay suscripciones nuevas para esta tarjeta
           if (totalSubsForThisCard > 0 && !currentDesc.contains('Suscripciones:')) {
-            batch.update(dataE['ref'], {
+            final updateData = {
               'templateId': templateId,
               'title': titleT,
               'amount': round(currentAmount + totalSubsForThisCard),
@@ -309,14 +351,18 @@ mixin TransactionService on FirebaseBase {
                   : "$currentDesc, Suscripciones: ${subDetails.join(', ')}",
               'orderIndex': oIndex,
               'brandLogo': dataT['brandLogo'],
-            });
+            };
+            batch.update(dataE['ref'], updateData);
+            if (!kIsWeb) await _local.update('transactions', updateData, dataE['id']);
           } else {
-            batch.update(dataE['ref'], {
+            final updateData = {
               'templateId': templateId,
               'title': titleT,
               'orderIndex': oIndex,
               'brandLogo': dataT['brandLogo'],
-            });
+            };
+            batch.update(dataE['ref'], updateData);
+            if (!kIsWeb) await _local.update('transactions', updateData, dataE['id']);
           }
           addedAny = true;
         }
@@ -327,10 +373,9 @@ mixin TransactionService on FirebaseBase {
         if (dataS['linkType'] != 'ACCOUNT' && dataS['linkId'] != null) continue;
         final String name = dataS['name'] ?? 'Suscripción';
         final String currencyS = dataS['currency'] ?? 'UYU';
-        final String uniqueKey = "${norm(name)}_$currencyS";
-        final existingDirect = existingInMonth.where((e) => e['subscriptionId'] == docS.id).firstOrNull;
-        if (existingDirect == null) {
-          batch.set(refE.doc(), {
+        if (existingInMonth.where((e) => e['subscriptionId'] == docS.id).isEmpty) {
+          final newId = refE.doc().id;
+          final dataMap = {
             'subscriptionId': docS.id,
             'title': name,
             'amount': round((dataS['amount'] ?? 0.0).toDouble()),
@@ -341,9 +386,10 @@ mixin TransactionService on FirebaseBase {
             'type': 'EXPENSE',
             'generatedBy': 'template',
             'orderIndex': 998,
-          });
+          };
+          batch.set(refE.doc(newId), dataMap);
+          if (!kIsWeb) await _local.insert('transactions', {...dataMap, 'id': newId, 'date': (dataMap['date'] as Timestamp).toDate().toIso8601String(), 'isCompleted': 0, 'includedInCard': 0});
           addedAny = true;
-          processedKeysInThisRun.add(uniqueKey);
         }
       }
 
@@ -374,14 +420,14 @@ mixin TransactionService on FirebaseBase {
       final cardT = templates.docs.where((doc) => norm((doc.data() as Map<String, dynamic>)['title'] ?? '') == norm(cardName)).firstOrNull;
       
       String? cardLogo;
-      int? cardColor; // Nuevo
+      int? cardColor;
       int? cardOrder;
       int? dueDay;
       String? templateId;
       if (cardT != null) {
         final d = cardT.data() as Map<String, dynamic>;
         cardLogo = d['brandLogo'];
-        cardColor = d['categoryColor']; // Si el template tiene color
+        cardColor = d['categoryColor'];
         cardOrder = d['orderIndex'];
         dueDay = d['dueDay'];
         templateId = cardT.id;
@@ -391,20 +437,17 @@ mixin TransactionService on FirebaseBase {
       double amountPerMonth = round(totalAmount / installments);
       double totalAllocated = 0;
 
-      // Calculamos cuánto ya se habría "pagado" si no empezamos en la cuota 1
       if (initialInstallment > 1) {
         totalAllocated = round(amountPerMonth * (initialInstallment - 1));
       }
 
       for (int i = initialInstallment; i <= installments; i++) {
-        // En la última cuota, ajustamos por el residuo del redondeo
         double currentInstallmentAmount = amountPerMonth;
         if (i == installments) {
           currentInstallmentAmount = round(totalAmount - totalAllocated);
         }
         totalAllocated += currentInstallmentAmount;
 
-        // La fecha de inicio corresponde a la cuota seleccionada
         int monthOffset = i - initialInstallment;
         DateTime targetDate = DateTime(startDate.year, startDate.month + monthOffset, 1, 12, 0, 0);
         
@@ -421,15 +464,18 @@ mixin TransactionService on FirebaseBase {
           final d = existing.data() as Map<String, dynamic>;
           double currentAmount = (d['amount'] ?? 0.0).toDouble();
           String oldDesc = d['description'] ?? '';
-          batch.update(existing.reference, {
+          final updateData = {
             'amount': round(currentAmount + currentInstallmentAmount), 
             'description': oldDesc.isEmpty ? detail : "$oldDesc, $detail",
             'brandLogo': cardLogo ?? categoryLogo,
-            'categoryColor': cardColor ?? categoryColor, // Nuevo
+            'categoryColor': cardColor ?? categoryColor,
             'orderIndex': cardOrder ?? 999,
-          });
+          };
+          batch.update(existing.reference, updateData);
+          if (!kIsWeb) await _local.update('transactions', updateData, existing.id);
         } else {
-          batch.set(ref.doc(), {
+          final newId = ref.doc().id;
+          final dataMap = {
             'title': cardName,
             'description': detail,
             'amount': round(currentInstallmentAmount),
@@ -440,10 +486,12 @@ mixin TransactionService on FirebaseBase {
             'type': 'EXPENSE',
             'isCompleted': false,
             'brandLogo': cardLogo ?? categoryLogo,
-            'categoryColor': cardColor ?? categoryColor, // Nuevo
+            'categoryColor': cardColor ?? categoryColor,
             'orderIndex': cardOrder ?? 999,
             'templateId': templateId,
-          });
+          };
+          batch.set(ref.doc(newId), dataMap);
+          if (!kIsWeb) await _local.insert('transactions', {...dataMap, 'id': newId, 'date': targetDate.toIso8601String(), 'isCompleted': 0, 'includedInCard': 0});
         }
       }
       await batch.commit();
@@ -488,13 +536,9 @@ mixin TransactionService on FirebaseBase {
           final newItems = items.where((item) {
             final itemParts = item.split(' - ');
             if (itemParts.length < 2) return true;
-            
             final itemIdentifier = itemParts[0];
             final double itemValue = parseAmount(itemParts[1]);
-            
-            bool shouldRemove = (itemIdentifier == fullIdentifier) || 
-                               (conceptBase.isNotEmpty && itemIdentifier.startsWith("$conceptBase ("));
-            
+            bool shouldRemove = (itemIdentifier == fullIdentifier) || (conceptBase.isNotEmpty && itemIdentifier.startsWith("$conceptBase ("));
             if (shouldRemove) {
               itemsChanged = true;
               removedSum += itemValue;
@@ -506,14 +550,14 @@ mixin TransactionService on FirebaseBase {
           if (itemsChanged) {
             double currentTotal = (data['amount'] ?? 0.0).toDouble();
             double newTotal = currentTotal - removedSum;
-            
-            // Protección: Si por algún motivo el total queda insignificante, lo limpiamos a 0
             if (newTotal < 0.01) newTotal = 0;
 
-            batch.update(cardDoc.reference, {
+            final updateData = {
               'description': newItems.join(', '), 
               'amount': round(newTotal)
-            });
+            };
+            batch.update(cardDoc.reference, updateData);
+            if (!kIsWeb) await _local.update('transactions', updateData, cardDoc.id);
             changedAny = true;
           }
         }
@@ -524,19 +568,14 @@ mixin TransactionService on FirebaseBase {
     }
   }
 
-
   Future<void> unifyTransactions(List<TransactionModel> transactions, String baseName) async {
     try {
       if (transactions.length < 2) return;
       final ref = transactionsRef;
       if (ref == null) return;
-
       final batch = db.batch();
-      
-      // La primera será la "sobreviviente"
       final survivor = transactions.first;
       final String finalTitle = "$baseName (${survivor.currency})";
-      
       double totalAmount = 0;
       List<String> descriptions = [];
       String? bestBrandLogo = survivor.brandLogo;
@@ -545,29 +584,26 @@ mixin TransactionService on FirebaseBase {
 
       for (var t in transactions) {
         totalAmount += t.amount;
-        if (t.description != null && t.description!.isNotEmpty) {
-          descriptions.add(t.description!);
-        }
+        if (t.description != null && t.description!.isNotEmpty) descriptions.add(t.description!);
         if (bestBrandLogo == null && t.brandLogo != null) bestBrandLogo = t.brandLogo;
         if (bestTemplateId == null && t.templateId != null) bestTemplateId = t.templateId;
         if (t.orderIndex < bestOrderIndex) bestOrderIndex = t.orderIndex;
-
-        // Marcamos para borrar todas menos la primera
         if (t.id != survivor.id) {
           batch.delete(ref.doc(t.id));
+          if (!kIsWeb) await _local.delete('transactions', t.id);
         }
       }
 
-      // Actualizamos la sobreviviente
-      batch.update(ref.doc(survivor.id), {
+      final updateData = {
         'title': finalTitle,
         'amount': round(totalAmount),
         'description': descriptions.isNotEmpty ? descriptions.join(', ') : null,
         'brandLogo': bestBrandLogo,
         'templateId': bestTemplateId,
         'orderIndex': bestOrderIndex,
-      });
-
+      };
+      batch.update(ref.doc(survivor.id), updateData);
+      if (!kIsWeb) await _local.update('transactions', updateData, survivor.id);
       await batch.commit();
     } catch (e) {
       print("Error unifyTransactions: $e");

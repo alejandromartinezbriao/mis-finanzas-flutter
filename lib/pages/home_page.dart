@@ -38,9 +38,27 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _initializeUser() async {
     await _service.createUserProfileIfNotExist();
+    
+    // Capturamos si necesita migración local ANTES de ejecutarla
+    final uid = _service.auth.currentUser?.uid;
+    bool needsWelcomev35 = false;
+    if (uid != null) {
+      final doc = await _service.db.collection('users').doc(uid).get();
+      if (doc.exists && doc.data()?['migratedToLocalV35'] != true) {
+        needsWelcomev35 = true;
+      }
+    }
+
     await _service.checkAndPerformMigrations();
     
     final profile = await _service.getUserProfile().first;
+    final String userName = profile?['displayName'] ?? 'Tester VIP';
+    
+    // Si acaba de migrar, mostramos el "mimo" para los testers
+    if (needsWelcomev35 && mounted) {
+      _showV35WelcomeDialog(userName);
+    }
+
     if (profile != null && (profile['displayName'] == null || profile['displayName'].toString().isEmpty)) {
       if (mounted) _showNameRequestDialog();
     }
@@ -48,6 +66,52 @@ class _HomePageState extends State<HomePage> {
     if (widget.initialAction != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _handleFastAction(widget.initialAction!));
     }
+  }
+
+  void _showV35WelcomeDialog(String userName) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Row(
+          children: [
+            const Icon(Icons.auto_awesome, color: Colors.amber),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                '¡Hola, $userName!',
+                style: const TextStyle(fontWeight: FontWeight.w900),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Hemos blindado tu aplicación.\n\nA partir de ahora, todos tus datos están disponibles en modo local: puedes consultar y registrar tus finanzas sin conexión a internet.',
+              style: TextStyle(fontSize: 15, height: 1.5),
+            ),
+            SizedBox(height: 16),
+            Divider(),
+            SizedBox(height: 16),
+            Text(
+              'Al ser un usuario Premium, tus datos siguen respaldados en tiempo real en la nube, permitiéndote acceso total desde tu PC y otros dispositivos.',
+              style: TextStyle(fontSize: 13, color: Colors.blueGrey, fontStyle: FontStyle.italic),
+            ),
+          ],
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx),
+            style: FilledButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+            child: const Text('¡Excelente!'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _handleFastAction(String action) async {

@@ -47,6 +47,13 @@ abstract class FirebaseBase {
     return db.collection('users').doc(uid).collection('subscriptions');
   }
 
+  Future<bool> get isPremium async {
+    final uid = auth.currentUser?.uid;
+    if (uid == null) return false;
+    final doc = await db.collection('users').doc(uid).get();
+    return doc.data()?['isPremium'] ?? false;
+  }
+
   String norm(String text) => text.trim().toLowerCase();
 
   double round(double val) => double.parse(val.toStringAsFixed(2));

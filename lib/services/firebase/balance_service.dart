@@ -1,7 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import '../local_db_service.dart';
 import 'firebase_base.dart';
 
 mixin BalanceService on FirebaseBase {
+  final LocalDbService _local = LocalDbService();
+
   // --- BALANCES REALES (ARQUEO) ---
 
   Stream<List<Map<String, dynamic>>> getBalances() {
@@ -11,10 +15,15 @@ mixin BalanceService on FirebaseBase {
       final list = snap.docs.map((doc) {
         final data = doc.data() as Map<String, dynamic>;
         data['id'] = doc.id;
+        
+        // Sync local cache
+        if (!kIsWeb) {
+          _local.insert('balances', data);
+        }
+        
         return data;
       }).toList();
       
-      // Ordenar en memoria por orderIndex para evitar requerir índices compuestos en Firestore
       list.sort((a, b) {
         int aIdx = a['orderIndex'] ?? 999;
         int bIdx = b['orderIndex'] ?? 999;
@@ -30,22 +39,31 @@ mixin BalanceService on FirebaseBase {
     try {
       final ref = balancesRef;
       if (ref == null) return;
-      await ref.doc(id).update({
+      
+      final data = {
         'amount': round(amount),
         'updatedAt': Timestamp.now(),
-      });
+      };
+
+      await ref.doc(id).update(data);
+      
+      if (!kIsWeb) {
+        await _local.update('balances', {
+          'amount': data['amount'],
+          'updatedAt': (data['updatedAt'] as Timestamp).toDate().toIso8601String(),
+        }, id);
+      }
     } catch (e) {
-      print("Error updateBalance: $e");
+      print("Error updateBalance Híbrido: $e");
     }
   }
 
   Future<void> updateBalanceAccountDetails(String id, Map<String, dynamic> data) async {
     try {
-      final ref = balancesRef;
-      if (ref == null) return;
-      await ref.doc(id).update(data);
+      if (balancesRef != null) await balancesRef!.doc(id).update(data);
+      if (!kIsWeb) await _local.update('balances', data, id);
     } catch (e) {
-      print("Error updateBalanceAccountDetails: $e");
+      print("Error updateBalanceAccountDetails Híbrido: $e");
     }
   }
 
@@ -54,7 +72,6 @@ mixin BalanceService on FirebaseBase {
       final ref = balancesRef;
       if (ref == null) return;
 
-      // Obtener el último índice (En memoria para evitar problemas de índices en Web)
       final all = await ref.get();
       int nextIndex = 0;
       for (var doc in all.docs) {
@@ -65,8 +82,8 @@ mixin BalanceService on FirebaseBase {
       if (isBimonetary) {
         final batch = db.batch();
         
-        // Registro UYU
-        batch.set(ref.doc(), {
+        final docUYU = ref.doc();
+        final dataUYU = {
           'accountName': '$name (UYU)',
           'amount': 0.0,
           'currency': 'UYU',
@@ -77,10 +94,11 @@ mixin BalanceService on FirebaseBase {
           'isBimonetaryPart': true,
           'baseName': name,
           'includeInCoverage': includeInCoverage,
-        });
+        };
+        batch.set(docUYU, dataUYU);
 
-        // Registro USD
-        batch.set(ref.doc(), {
+        final docUSD = ref.doc();
+        final dataUSD = {
           'accountName': '$name (USD)',
           'amount': 0.0,
           'currency': 'USD',
@@ -91,11 +109,17 @@ mixin BalanceService on FirebaseBase {
           'isBimonetaryPart': true,
           'baseName': name,
           'includeInCoverage': includeInCoverage,
-        });
+        };
+        batch.set(docUSD, dataUSD);
 
         await batch.commit();
+
+        if (!kIsWeb) {
+          await _local.insert('balances', {...dataUYU, 'id': docUYU.id, 'updatedAt': dataUYU['updatedAt'].toString()});
+          await _local.insert('balances', {...dataUSD, 'id': docUSD.id, 'updatedAt': dataUSD['updatedAt'].toString()});
+        }
       } else {
-        await ref.add({
+        final docRef = await ref.add({
           'accountName': name,
           'amount': 0.0,
           'currency': currency,
@@ -105,19 +129,23 @@ mixin BalanceService on FirebaseBase {
           'orderIndex': nextIndex,
           'includeInCoverage': includeInCoverage,
         });
+
+        if (!kIsWeb) {
+          final doc = await docRef.get();
+          await _local.insert('balances', {...doc.data() as Map<String, dynamic>, 'id': docRef.id});
+        }
       }
     } catch (e) {
-      print("Error addBalanceAccount: $e");
+      print("Error addBalanceAccount Híbrido: $e");
     }
   }
 
   Future<void> deleteBalanceAccount(String id) async {
     try {
-      final ref = balancesRef;
-      if (ref == null) return;
-      await ref.doc(id).delete();
+      if (balancesRef != null) await balancesRef!.doc(id).delete();
+      if (!kIsWeb) await _local.delete('balances', id);
     } catch (e) {
-      print("Error deleteBalanceAccount: $e");
+      print("Error deleteBalanceAccount Híbrido: $e");
     }
   }
 
@@ -136,31 +164,25 @@ mixin BalanceService on FirebaseBase {
       if (ref == null) return;
 
       final batch = db.batch();
-      
-      // Limpiar el nombre base de sufijos redundantes (pesos, dólares, etc)
-      final cleanBaseName = baseName
-          .replaceAll(RegExp(r'\s+(pesos|dólares|uyu|usd|dolares)$', caseSensitive: false), '')
-          .trim();
+      final cleanBaseName = baseName.replaceAll(RegExp(r'\s+(pesos|dólares|uyu|usd|dolares)$', caseSensitive: false), '').trim();
 
-      // 1. Actualizar la cuenta original
-      // Forzamos que la cuenta original se asigne a su moneda correcta dentro del par
-      batch.update(ref.doc(originalId), {
+      final dataOrig = {
         'accountName': '$cleanBaseName ($originalCurrency)',
         'currency': originalCurrency,
         'isBimonetaryPart': true,
         'baseName': cleanBaseName,
         'accountType': type,
         'brandLogo': logo,
-        'amount': currentAmount, // PRESERVAR SALDO ORIGINAL
+        'amount': currentAmount,
         'includeInCoverage': includeInCoverage,
-      });
+      };
+      batch.update(ref.doc(originalId), dataOrig);
 
-      // 2. Manejar la cuenta gemela
       final otherCurrency = originalCurrency == 'UYU' ? 'USD' : 'UYU';
+      String? gemelaId = existingGemelaId;
 
-      if (existingGemelaId != null) {
-        // VINCULAR EXISTENTE
-        batch.update(ref.doc(existingGemelaId), {
+      if (gemelaId != null) {
+        final dataGemela = {
           'accountName': '$cleanBaseName ($otherCurrency)',
           'currency': otherCurrency,
           'isBimonetaryPart': true,
@@ -168,11 +190,12 @@ mixin BalanceService on FirebaseBase {
           'accountType': type,
           'brandLogo': logo,
           'includeInCoverage': includeInCoverage,
-          // No tocamos su amount porque ya tiene el suyo propio
-        });
+        };
+        batch.update(ref.doc(gemelaId), dataGemela);
       } else {
-        // CREAR NUEVA
-        batch.set(ref.doc(), {
+        final newDoc = ref.doc();
+        gemelaId = newDoc.id;
+        batch.set(newDoc, {
           'accountName': '$cleanBaseName ($otherCurrency)',
           'amount': 0.0,
           'currency': otherCurrency,
@@ -187,8 +210,14 @@ mixin BalanceService on FirebaseBase {
       }
 
       await batch.commit();
+
+      if (!kIsWeb) {
+        await _local.update('balances', dataOrig, originalId);
+        final gemDoc = await ref.doc(gemelaId).get();
+        await _local.insert('balances', {...gemDoc.data() as Map<String, dynamic>, 'id': gemelaId});
+      }
     } catch (e) {
-      print("Error upgradeAccountToBimonetary: $e");
+      print("Error upgradeAccountToBimonetary Híbrido: $e");
       rethrow;
     }
   }
@@ -202,11 +231,13 @@ mixin BalanceService on FirebaseBase {
       for (int i = 0; i < balances.length; i++) {
         final String balanceId = balances[i]['id'];
         batch.update(ref.doc(balanceId), {'orderIndex': i});
+        if (!kIsWeb) {
+          await _local.update('balances', {'orderIndex': i}, balanceId);
+        }
       }
-
       await batch.commit();
     } catch (e) {
-      print("Error updateBalancesOrder: $e");
+      print("Error updateBalancesOrder Híbrido: $e");
     }
   }
 }
