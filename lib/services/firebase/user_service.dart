@@ -57,9 +57,10 @@ mixin UserService on FirebaseBase {
         await (this as dynamic).migrateBudgetsToCategories();
       }
 
-      // 2. NUEVA MIGRACIÓN v3.5: Clonación agresiva a Base de Datos Local
+      // 2. MIGRACIÓN v3.5+: Clonación agresiva a Base de Datos Local
+      // Usamos el flag 'migratedToLocalV35' para cualquier versión 3.5.x o superior
       if (userData['migratedToLocalV35'] != true) {
-        print("Iniciando Sincronización Inicial v3.5 (Agresiva)...");
+        print("Iniciando Sincronización Inicial v3.5+ (Agresiva)...");
         
         // Sincronizar Categorías
         final cats = await (this as dynamic).getCategories().first;

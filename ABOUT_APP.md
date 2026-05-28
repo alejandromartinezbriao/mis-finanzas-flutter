@@ -1,10 +1,13 @@
-# Mis Finanzas - Tu Salud Financiera en Control (v3.5)
+# Mis Finanzas - Tu Salud Financiera en Control (v3.5.1)
 
-¡Bienvenido a **Mis Finanzas v3.5**! Esta versión representa un hito en la ingeniería de la aplicación, combinando la potencia de la nube con la fiabilidad del almacenamiento local.
+¡Bienvenido a **Mis Finanzas v3.5.1**! Esta versión representa un hito en la ingeniería de la aplicación, combinando la potencia de la nube con la fiabilidad del almacenamiento local y una seguridad mejorada.
 
-## 📱 ¿Qué hay de nuevo en la Versión 3.5 "Indestructible"?
+## 📱 ¿Qué hay de nuevo en la Versión 3.5.1?
 
-### 1. Arquitectura Offline-First (Poder Local)
+### 1. Recuperación de Contraseña
+Hemos añadido la opción de restablecer tu contraseña mediante correo electrónico. Si olvidas tus credenciales, ahora puedes recuperar el acceso a tu cuenta de forma autónoma y segura.
+
+### 2. Arquitectura Offline-First (Poder Local)
 Hemos integrado un motor de base de datos profesional (`SQLite`) dentro de tu teléfono. Esto significa que la App es ahora "indestructible": funciona perfectamente en lugares sin señal, permitiéndote registrar y consultar datos al instante sin depender de internet.
 
 ### 2. Sincronización Inteligente

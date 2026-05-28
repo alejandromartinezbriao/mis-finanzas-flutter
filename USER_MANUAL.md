@@ -1,8 +1,14 @@
-# Guía de Usuario - Mis Finanzas (v3.5)
+# Guía de Usuario - Mis Finanzas (v3.5.1)
 
 ---
 
-## 1. MODO INDESTRUCTIBLE (Nuevo v3.5)
+## 1. SEGURIDAD Y ACCESO
+*   **Recuperar Contraseña:** Si olvidas tu clave, pulsa "¿Olvidaste tu contraseña?" en la pantalla de inicio. Recibirás un correo electrónico con un enlace seguro para crear una nueva clave.
+*   **Biometría:** Si tu teléfono lo permite, puedes activar el acceso por huella o rostro desde la pantalla de inicio para mayor comodidad.
+
+---
+
+## 2. MODO INDESTRUCTIBLE
 Tu aplicación ahora cuenta con una arquitectura híbrida de última generación:
 *   **Funcionamiento Offline:** Puedes consultar tus saldos, registrar gastos o crear categorías sin conexión a internet. La App guardará todo en la memoria de tu teléfono de forma instantánea.
 *   **Blindaje de Datos:** Tus datos están protegidos localmente. La primera vez que abras esta versión, verás un mensaje de bienvenida personalizado mientras la App prepara tu copia de seguridad local.

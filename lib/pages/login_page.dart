@@ -107,6 +107,57 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  void _showForgotPasswordDialog() {
+    final resetEmailController = TextEditingController(text: _emailController.text);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Recuperar Contraseña'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Te enviaremos un correo electrónico con un enlace para restablecer tu contraseña.'),
+            const SizedBox(height: 20),
+            TextField(
+              controller: resetEmailController,
+              decoration: const InputDecoration(
+                labelText: 'Email de recuperación',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.email_outlined),
+              ),
+              keyboardType: TextInputType.emailAddress,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+          FilledButton(
+            onPressed: () async {
+              if (resetEmailController.text.trim().isEmpty) return;
+              try {
+                await _auth.resetPassword(resetEmailController.text.trim());
+                if (mounted) {
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Email enviado. Revisa tu bandeja de entrada (y la de correo no deseado/spam).'),
+                      duration: Duration(seconds: 5),
+                    ),
+                  );
+                }
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Error: $e')),
+                );
+              }
+            },
+            child: const Text('Enviar Email'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -120,7 +171,7 @@ class _LoginPageState extends State<LoginPage> {
               Image.asset('assets/icono.png', width: 150, height: 150),
               const SizedBox(height: 10),
               Text(
-                'Cuentas Personales',
+                'Mis Finanzas',
                 style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary),
               ),
               const SizedBox(height: 40),
@@ -187,6 +238,11 @@ class _LoginPageState extends State<LoginPage> {
                 onPressed: () => setState(() => _isLogin = !_isLogin),
                 child: Text(_isLogin ? '¿No tienes cuenta? Regístrate' : '¿Ya tienes cuenta? Inicia sesión'),
               ),
+              if (_isLogin)
+                TextButton(
+                  onPressed: _showForgotPasswordDialog,
+                  child: const Text('¿Olvidaste tu contraseña?', style: TextStyle(fontSize: 13, color: Colors.blueGrey)),
+                ),
             ],
           ),
         ),

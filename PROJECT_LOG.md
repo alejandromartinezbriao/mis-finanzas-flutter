@@ -1,4 +1,8 @@
-# Log de Desarrollo - Mis Finanzas (v3.5.0)
+# Log de Desarrollo - Mis Finanzas (v3.5.1)
+
+## HITO: Versión 3.5.1 "Seguridad y Accesibilidad" (27/05/2026)
+- **Recuperación de Cuenta**: Implementación de la función "¿Olvidaste tu contraseña?" en la pantalla de inicio de sesión. Utiliza el motor nativo de Firebase Auth para enviar correos electrónicos de restablecimiento de contraseña.
+- **Consistencia Visual**: Corrección del nombre de la aplicación en la pantalla de bienvenida ("Mis Finanzas").
 
 ## HITO: Versión 3.5.0 "Arquitectura Híbrida Indestructible" (27/05/2026)
 Esta versión marca el cambio estructural más profundo del proyecto hasta la fecha, transformando la aplicación en una solución **Offline-First** y estableciendo las bases técnicas y comerciales para la monetización futura.

@@ -31,6 +31,16 @@ class AuthService {
     await _auth.signOut();
   }
 
+  // Recuperar contraseña enviando email
+  Future<void> resetPassword(String email) async {
+    try {
+      await _auth.sendPasswordResetEmail(email: email);
+    } catch (e) {
+      print('Error al enviar email de recuperación: $e');
+      rethrow;
+    }
+  }
+
   // Obtener el ID del usuario actual
   String? get currentUserUid => _auth.currentUser?.uid;
 }

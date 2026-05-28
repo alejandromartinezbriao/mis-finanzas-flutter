@@ -64,9 +64,22 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
-    // MODIFICACIÓN DE ACCIONES: Solo iniciamos los accesos rápidos en celulares Android/iOS
+    // 1. Detección Nativa (Android/iOS)
     if (!kIsWeb) {
       _setupQuickActions();
+    } else {
+      // 2. Detección Web (PWA para iPhone/Safari)
+      _setupWebQuickActions();
+    }
+  }
+
+  void _setupWebQuickActions() {
+    // Escuchamos los parámetros de la URL al inicio
+    final Uri uri = Uri.base;
+    if (uri.queryParameters.containsKey('action')) {
+      setState(() {
+        shortcutType = uri.queryParameters['action'];
+      });
     }
   }
 

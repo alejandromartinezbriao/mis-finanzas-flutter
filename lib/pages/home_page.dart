@@ -39,7 +39,7 @@ class _HomePageState extends State<HomePage> {
   Future<void> _initializeUser() async {
     await _service.createUserProfileIfNotExist();
     
-    // Capturamos si necesita migración local ANTES de ejecutarla
+    // Capturamos si necesita migración local ANTES de ejecutarla (v3.5.x+)
     final uid = _service.auth.currentUser?.uid;
     bool needsWelcomev35 = false;
     if (uid != null) {

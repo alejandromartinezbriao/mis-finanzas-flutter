@@ -8,6 +8,22 @@
     "description": "Gestión inteligente de gastos y cobertura de deudas.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
+    "shortcuts": [
+        {
+            "name": "Ingreso / Gasto",
+            "short_name": "Nuevo",
+            "description": "Registrar un nuevo movimiento",
+            "url": "/#/home?action=action_new_movement_v5",
+            "icons": [{ "src": "icons/Icon-192.png", "sizes": "192x192" }]
+        },
+        {
+            "name": "Gasto con Tarjeta",
+            "short_name": "Tarjeta",
+            "description": "Registrar compra financiada",
+            "url": "/#/home?action=action_new_card_v5",
+            "icons": [{ "src": "icons/Icon-192.png", "sizes": "192x192" }]
+        }
+    ],
     "icons": [
         {
             "src": "icons/Icon-192.png",

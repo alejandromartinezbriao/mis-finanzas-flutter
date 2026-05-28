@@ -59,7 +59,7 @@ class _AboutPageState extends State<AboutPage> {
                           ),
                         ),
                         Text(
-                          'Versión 3.4.2',
+                          'Versión 3.5.1',
                           style: TextStyle(
                             fontSize: 16,
                             color: secondaryTextColor,
@@ -80,11 +80,11 @@ class _AboutPageState extends State<AboutPage> {
                   ),
                   const SizedBox(height: 32),
                   _buildSection(
-                    'Capacidades del Sistema v3.4',
-                    '• Herencia de identidad visual (icono/color) en nuevos registros.\n'
+                    'Capacidades del Sistema v3.5',
+                    '• Arquitectura Offline-First con base de datos SQLite.\n'
+                    '• Sincronización híbrida (Nube para Premium, Local para Free).\n'
                     '• Registro Relámpago (Quick Actions) con iconos circulares premium.\n'
-                    '• Respeto a ajustes manuales en tarjetas de crédito.\n'
-                    '• Centro de Inteligencia Finanz-IA con sincronización perfecta.\n'
+                    '• Identidad visual inteligente con herencia automática de color.\n'
                     '• Gestión de presupuestos integrada directamente en categorías.',
                     primaryTextColor,
                     secondaryTextColor,
