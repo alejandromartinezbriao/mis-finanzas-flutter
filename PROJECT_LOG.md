@@ -1,10 +1,11 @@
-# Log de Desarrollo - Mis Finanzas (v3.5.1)
+# Log de Desarrollo - Mis Finanzas (v3.5.3)
 
-## HITO: Versión 3.5.1 "Seguridad y Accesibilidad" (27/05/2026)
-- **Recuperación de Cuenta**: Implementación de la función "¿Olvidaste tu contraseña?" en la pantalla de inicio de sesión. Utiliza el motor nativo de Firebase Auth para enviar correos electrónicos de restablecimiento de contraseña.
-- **Consistencia Visual**: Corrección del nombre de la aplicación en la pantalla de bienvenida ("Mis Finanzas").
+## HITO: Versión 3.5.3 "Experiencia de Instancia Única" (27/05/2026)
+- **Eliminación de Multi-Tareas (Android)**: Transición a `launchMode="singleInstance"` en el `AndroidManifest.xml`. Esta medida drástica soluciona el problema de duplicación de ventanas en el conmutador de aplicaciones (especialmente visible en Xiaomi/MIUI) al alternar entre el icono normal y las Quick Actions.
+- **Limpieza de Afinidades**: Se eliminó el atributo `taskAffinity` para forzar a todas las intenciones de apertura a converger en la misma tarea del sistema operativo.
+- **Refinamiento Offline-First**: Optimización del motor de guardado local para ignorar latencias de Firebase en condiciones de baja señal, asegurando cierres de ventana instantáneos.
 
-## HITO: Versión 3.5.0 "Arquitectura Híbrida Indestructible" (27/05/2026)
+## HITO: Versión 3.5.2 "Estabilidad y Fluidez" (27/05/2026)
 Esta versión marca el cambio estructural más profundo del proyecto hasta la fecha, transformando la aplicación en una solución **Offline-First** y estableciendo las bases técnicas y comerciales para la monetización futura.
 
 ### 1. Estrategia de Datos Híbrida (La "Regla Ale")

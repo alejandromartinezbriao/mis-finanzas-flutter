@@ -1,4 +1,4 @@
-# Mis Finanzas - Tu Salud Financiera en Control (v3.5.1)
+# Mis Finanzas - Tu Salud Financiera en Control (v3.5.3)
 
 ¡Bienvenido a **Mis Finanzas v3.5.1**! Esta versión representa un hito en la ingeniería de la aplicación, combinando la potencia de la nube con la fiabilidad del almacenamiento local y una seguridad mejorada.
 

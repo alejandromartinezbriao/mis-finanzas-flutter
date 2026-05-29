@@ -46,7 +46,8 @@ mixin UserService on FirebaseBase {
       final uid = auth.currentUser?.uid;
       if (uid == null) return;
 
-      final userDoc = await db.collection('users').doc(uid).get();
+      // CORRECCIÓN: Usamos caché para que no se bloquee en modo avión
+      final userDoc = await db.collection('users').doc(uid).get(GetOptions(source: Source.serverAndCache));
       if (!userDoc.exists) return;
 
       final userData = userDoc.data()!;

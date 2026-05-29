@@ -59,7 +59,7 @@ class _AboutPageState extends State<AboutPage> {
                           ),
                         ),
                         Text(
-                          'Versión 3.5.1',
+                          'Versión 3.5.3',
                           style: TextStyle(
                             fontSize: 16,
                             color: secondaryTextColor,

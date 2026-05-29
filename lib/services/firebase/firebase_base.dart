@@ -47,11 +47,23 @@ abstract class FirebaseBase {
     return db.collection('users').doc(uid).collection('subscriptions');
   }
 
+  // Cache local para el estatus premium para evitar esperas en modo avión
+  static bool? _cachedIsPremium;
+
   Future<bool> get isPremium async {
+    if (_cachedIsPremium != null) return _cachedIsPremium!;
+    
     final uid = auth.currentUser?.uid;
     if (uid == null) return false;
-    final doc = await db.collection('users').doc(uid).get();
-    return doc.data()?['isPremium'] ?? false;
+    
+    try {
+      // Intentamos obtenerlo con un timeout para no bloquear el modo avión
+      final doc = await db.collection('users').doc(uid).get(GetOptions(source: Source.serverAndCache));
+      _cachedIsPremium = doc.data()?['isPremium'] ?? false;
+      return _cachedIsPremium!;
+    } catch (e) {
+      return _cachedIsPremium ?? false;
+    }
   }
 
   String norm(String text) => text.trim().toLowerCase();

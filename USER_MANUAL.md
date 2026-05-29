@@ -1,4 +1,4 @@
-# Guía de Usuario - Mis Finanzas (v3.5.1)
+# Guía de Usuario - Mis Finanzas (v3.5.3)
 
 ---
 

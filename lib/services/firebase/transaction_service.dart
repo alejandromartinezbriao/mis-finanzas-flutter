@@ -7,33 +7,51 @@ import '../local_db_service.dart';
 mixin TransactionService on FirebaseBase {
   final LocalDbService _local = LocalDbService();
 
-  // --- AYUDANTE HÍBRIDO ---
+  // --- AYUDANTE HÍBRIDO (TRADUCTOR SQLITE) ---
 
   Future<void> _saveTransactionLocally(TransactionModel t, {String? docId}) async {
     if (kIsWeb) return;
-    await _local.insert('transactions', {
-      ...t.toMap(),
-      'id': docId ?? t.id,
-      'date': t.date.toIso8601String(),
-      'isCompleted': t.isCompleted ? 1 : 0,
-      'includedInCard': t.includedInCard ? 1 : 0,
-      'categoryColor': t.categoryColor,
-    });
+    try {
+      final String idToUse = docId ?? (t.id.isEmpty ? DateTime.now().millisecondsSinceEpoch.toString() : t.id);
+      
+      final Map<String, dynamic> localData = {
+        'id': idToUse,
+        'title': t.title,
+        'description': t.description,
+        'amount': t.amount,
+        'currency': t.currency,
+        'date': t.date.toIso8601String(),
+        'category': t.category,
+        'type': t.type,
+        'isCompleted': t.isCompleted ? 1 : 0,
+        'brandLogo': t.brandLogo,
+        'categoryColor': t.categoryColor,
+        'includedInCard': t.includedInCard ? 1 : 0,
+        'templateId': t.templateId,
+        'paidFromAccountId': t.paidFromAccountId,
+      };
+
+      await _local.insert('transactions', localData);
+    } catch (e) {
+      print("Error silenciado en _saveTransactionLocally: $e");
+    }
   }
 
   // --- TRANSACCIONES ---
 
   Future<void> addTransaction(TransactionModel t) async {
     try {
-      // 1. Siempre local
-      await _saveTransactionLocally(t);
+      final String docId = transactionsRef?.doc().id ?? DateTime.now().millisecondsSinceEpoch.toString();
+      
+      // 1. LOCAL PRIMERO (Instantáneo)
+      await _saveTransactionLocally(t, docId: docId);
 
-      // 2. Solo nube si es premium o web
-      if (kIsWeb || await isPremium) {
-        final ref = transactionsRef;
-        if (ref == null) return;
-        await ref.add(t.toMap());
-      }
+      // 2. NUBE EN SEGUNDO PLANO (Sin 'await' para no bloquear la UI)
+      isPremium.then((premium) {
+        if (kIsWeb || premium) {
+          transactionsRef?.doc(docId).set(t.toMap());
+        }
+      });
     } catch (e) {
       print("Error addTransaction Híbrido: $e");
     }
@@ -46,11 +64,12 @@ mixin TransactionService on FirebaseBase {
     try {
       final String docId = transactionsRef?.doc().id ?? DateTime.now().millisecondsSinceEpoch.toString();
 
-      // 1. Siempre local
+      // 1. Local primero
       await _saveTransactionLocally(transaction, docId: docId);
 
-      // 2. Solo nube si es premium o web
-      if (kIsWeb || await isPremium) {
+      // 2. Ejecutar balance y nube (aquí sí esperamos porque el balance es crítico)
+      final bool premium = await isPremium;
+      if (kIsWeb || premium) {
         final batch = db.batch();
         final transRef = transactionsRef!.doc(docId);
         
@@ -61,7 +80,7 @@ mixin TransactionService on FirebaseBase {
 
         if (accountId != null) {
           final accountRef = balancesRef!.doc(accountId);
-          final accountDoc = await accountRef.get();
+          final accountDoc = await accountRef.get(GetOptions(source: Source.serverAndCache));
           
           if (accountDoc.exists) {
             final accData = accountDoc.data() as Map<String, dynamic>;
@@ -74,6 +93,9 @@ mixin TransactionService on FirebaseBase {
               'amount': round(newBalance),
               'updatedAt': Timestamp.now(),
             });
+            
+            // Actualizar balance local también
+            if (!kIsWeb) await _local.update('balances', {'amount': round(newBalance)}, accountId);
           }
         }
         await batch.commit();
@@ -88,16 +110,18 @@ mixin TransactionService on FirebaseBase {
     try {
       if (!kIsWeb) {
         await _local.update('transactions', {
-          ...t.toMap(),
-          'date': t.date.toIso8601String(),
+          'title': t.title,
+          'amount': t.amount,
+          'category': t.category,
           'isCompleted': t.isCompleted ? 1 : 0,
-          'includedInCard': t.includedInCard ? 1 : 0,
         }, t.id);
       }
 
-      if (kIsWeb || await isPremium) {
-        if (transactionsRef != null) await transactionsRef!.doc(t.id).update(t.toMap());
-      }
+      isPremium.then((premium) {
+        if ((kIsWeb || premium) && transactionsRef != null) {
+          transactionsRef!.doc(t.id).update(t.toMap());
+        }
+      });
     } catch (e) {
       print("Error updateTransaction Híbrido: $e");
     }
@@ -106,9 +130,11 @@ mixin TransactionService on FirebaseBase {
   Future<void> deleteTransaction(String id) async {
     try {
       if (!kIsWeb) await _local.delete('transactions', id);
-      if (kIsWeb || await isPremium) {
-        if (transactionsRef != null) await transactionsRef!.doc(id).delete();
-      }
+      isPremium.then((premium) {
+        if ((kIsWeb || premium) && transactionsRef != null) {
+          transactionsRef!.doc(id).delete();
+        }
+      });
     } catch (e) {
       print("Error deleteTransaction Híbrido: $e");
     }
@@ -200,7 +226,7 @@ mixin TransactionService on FirebaseBase {
 
       batch.update(transRef, updateData);
 
-      final accountDoc = await accountRef.get();
+      final accountDoc = await accountRef.get(GetOptions(source: Source.serverAndCache));
       if (!accountDoc.exists) return;
       
       final accData = accountDoc.data() as Map<String, dynamic>;

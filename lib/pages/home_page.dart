@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // Para cerrar la app
 import 'package:intl/intl.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // NECESARIO PARA GetOptions y Source
 import '../models/transaction_model.dart';
 import '../services/firebase_service.dart';
 import '../widgets/debt_coverage_card.dart';
@@ -37,34 +38,38 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _initializeUser() async {
-    await _service.createUserProfileIfNotExist();
-    
-    // Capturamos si necesita migración local ANTES de ejecutarla (v3.5.x+)
-    final uid = _service.auth.currentUser?.uid;
-    bool needsWelcomev35 = false;
-    if (uid != null) {
-      final doc = await _service.db.collection('users').doc(uid).get();
-      if (doc.exists && doc.data()?['migratedToLocalV35'] != true) {
-        needsWelcomev35 = true;
-      }
-    }
-
-    await _service.checkAndPerformMigrations();
-    
-    final profile = await _service.getUserProfile().first;
-    final String userName = profile?['displayName'] ?? 'Tester VIP';
-    
-    // Si acaba de migrar, mostramos el "mimo" para los testers
-    if (needsWelcomev35 && mounted) {
-      _showV35WelcomeDialog(userName);
-    }
-
-    if (profile != null && (profile['displayName'] == null || profile['displayName'].toString().isEmpty)) {
-      if (mounted) _showNameRequestDialog();
-    }
-
+    // 1. Lanzamos la acción rápida inmediatamente si existe, sin esperar al perfil
     if (widget.initialAction != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _handleFastAction(widget.initialAction!));
+    }
+
+    try {
+      await _service.createUserProfileIfNotExist();
+      
+      final uid = _service.auth.currentUser?.uid;
+      bool needsWelcomev35 = false;
+      if (uid != null) {
+        // CORRECCIÓN CRÍTICA: Forzamos lectura de cache si no hay red inmediata
+        final doc = await _service.db.collection('users').doc(uid).get(GetOptions(source: Source.serverAndCache));
+        if (doc.exists && doc.data()?['migratedToLocalV35'] != true) {
+          needsWelcomev35 = true;
+        }
+      }
+
+      await _service.checkAndPerformMigrations();
+      
+      final profile = await _service.getUserProfile().first;
+      final String userName = profile?['displayName'] ?? 'Tester VIP';
+      
+      if (needsWelcomev35 && mounted) {
+        _showV35WelcomeDialog(userName);
+      }
+
+      if (profile != null && (profile['displayName'] == null || profile['displayName'].toString().isEmpty)) {
+        if (mounted) _showNameRequestDialog();
+      }
+    } catch (e) {
+      print("Error silencioso en inicialización offline: $e");
     }
   }
 
@@ -114,13 +119,18 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Future<void> _handleFastAction(String action) async {
+  Future<void> _handleFastAction(String action, {bool fromQuickAction = true}) async {
+    setState(() { _isFastActionActive = true; });
+
     Widget dialog;
     if (action == 'action_new_movement_v5') {
       dialog = SimpleTransactionDialog(service: _service, initialDate: _viewingDate);
     } else if (action == 'action_new_card_v5') {
       dialog = CreditCardTransactionDialog(service: _service, initialDate: _viewingDate);
-    } else { return; }
+    } else { 
+      setState(() { _isFastActionActive = false; });
+      return; 
+    }
 
     final bool? success = await showDialog<bool>(context: context, builder: (context) => dialog);
     
@@ -150,18 +160,24 @@ class _HomePageState extends State<HomePage> {
     }
 
     if (mounted) {
-      // PRIMERO mandamos la App al fondo/cerramos para que el usuario deje de verla
-      SystemNavigator.pop();
-      
-      // SEGUNDO (en segundo plano) reseteamos el modo para que al volver esté el Dashboard.
-      // Usamos un delay mayor para asegurar que la App ya no sea visible al hacer el cambio.
-      Future.delayed(const Duration(milliseconds: 500), () {
-        if (mounted) {
-          setState(() {
-            _isFastActionActive = false;
-          });
-        }
-      });
+      if (fromQuickAction) {
+        // PRIMERO mandamos la App al fondo/cerramos para que el usuario deje de verla
+        SystemNavigator.pop();
+        
+        // SEGUNDO (en segundo plano) reseteamos el modo para que al volver esté el Dashboard.
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (mounted) {
+            setState(() {
+              _isFastActionActive = false;
+            });
+          }
+        });
+      } else {
+        // Simplemente volvemos al dashboard
+        setState(() {
+          _isFastActionActive = false;
+        });
+      }
     }
   }
 
@@ -446,9 +462,25 @@ class _HomePageState extends State<HomePage> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            ListTile(leading: const Icon(Icons.add_circle, color: Colors.teal), title: const Text('Ingreso o Gasto Simple'), subtitle: const Text('Movimiento puntual en este mes'), onTap: () { Navigator.pop(context); showDialog(context: context, builder: (context) => SimpleTransactionDialog(service: _service, initialDate: _viewingDate)); }),
+            ListTile(
+              leading: const Icon(Icons.add_circle, color: Colors.teal), 
+              title: const Text('Ingreso o Gasto Simple'), 
+              subtitle: const Text('Movimiento puntual en este mes'), 
+              onTap: () { 
+                Navigator.pop(context); 
+                _handleFastAction('action_new_movement_v5', fromQuickAction: false);
+              }
+            ),
             const Divider(),
-            ListTile(leading: const Icon(Icons.credit_card, color: Colors.blue), title: const Text('Compra con Tarjeta'), subtitle: const Text('Suma al total de la tarjeta y permite cuotas'), onTap: () { Navigator.pop(context); showDialog(context: context, builder: (context) => CreditCardTransactionDialog(service: _service, initialDate: _viewingDate)); }),
+            ListTile(
+              leading: const Icon(Icons.credit_card, color: Colors.blue), 
+              title: const Text('Compra con Tarjeta'), 
+              subtitle: const Text('Suma al total de la tarjeta y permite cuotas'), 
+              onTap: () { 
+                Navigator.pop(context); 
+                _handleFastAction('action_new_card_v5', fromQuickAction: false);
+              }
+            ),
           ],
         ),
       ),
