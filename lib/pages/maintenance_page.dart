@@ -17,7 +17,7 @@ class MaintenancePage extends StatefulWidget {
 class _MaintenancePageState extends State<MaintenancePage> {
   final FirebaseService _service = FirebaseService();
   bool _isNormalizeLoading = false;
-  bool _isMigrationLoading = false; // Nuevo
+  bool _isNuclearLoading = false;
 
   void _showReport(String title, String content) {
     showDialog(
@@ -42,28 +42,39 @@ class _MaintenancePageState extends State<MaintenancePage> {
     setState(() => _isNormalizeLoading = true);
     try {
       final fixed = await _service.normalizeAllDescriptions();
-      if (mounted) {
-        _showReport('Normalización Finalizada', 'Se limpiaron las comas de $fixed transacciones en total.');
-      }
-    } catch (e) {
-      _showError(e);
-    } finally {
-      if (mounted) setState(() => _isNormalizeLoading = false);
-    }
+      if (mounted) _showReport('Normalización Finalizada', 'Se limpiaron las comas de $fixed transacciones.');
+    } catch (e) { _showError(e); } 
+    finally { if (mounted) setState(() => _isNormalizeLoading = false); }
   }
 
-  Future<void> _runBudgetMigration() async {
-    setState(() => _isMigrationLoading = true);
+  Future<void> _runNuclearSync() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.orange.shade50,
+        title: const Text('⚡ ACTIVAR RELOJ SUIZO'),
+        content: const Text('Esta acción borrará el caché del teléfono y descargará todos tus datos desde Firebase (gastos, tarjetas, ingresos y cuentas).\n\nEs el paso final para ver tu información en esta nueva versión.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.orange.shade900),
+            onPressed: () => Navigator.pop(ctx, true), 
+            child: const Text('Comenzar Espejo'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    setState(() => _isNuclearLoading = true);
     try {
-      final migrated = await _service.migrateBudgetsToCategories();
+      await _service.mirrorFirebaseToLocal();
       if (mounted) {
-        _showReport('Migración Finalizada', 'Se han rescatado los presupuestos de $migrated categorías exitosamente.');
+        _showReport('Sincronización Exitosa', 'El teléfono es ahora un espejo de la nube. Tus datos aparecerán en el Dashboard ahora mismo.');
       }
-    } catch (e) {
-      _showError(e);
-    } finally {
-      if (mounted) setState(() => _isMigrationLoading = false);
-    }
+    } catch (e) { _showError(e); } 
+    finally { if (mounted) setState(() => _isNuclearLoading = false); }
   }
 
   @override
@@ -73,90 +84,93 @@ class _MaintenancePageState extends State<MaintenancePage> {
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 600),
-          child: ListView(
-            padding: const EdgeInsets.all(24),
-            children: [
-              // NUEVO: MIGRACIÓN DE PRESUPUESTOS
-              _buildMaintenanceCard(
-                title: 'Migrar Presupuestos (v3.1)',
-                subtitle: 'Rescata tus presupuestos definidos anteriormente y los integra en las nuevas categorías.',
-                icon: Icons.auto_mode,
-                iconColor: Colors.purple.shade700,
-                onTap: _isMigrationLoading ? null : _runBudgetMigration,
-                isLoading: _isMigrationLoading,
-              ),
-              const SizedBox(height: 16),
+          child: FutureBuilder<bool>(
+            future: _service.isMirrorSyncDone(),
+            builder: (context, snapshot) {
+              final bool isDone = snapshot.data ?? false;
 
-              // 1. FUNDACIÓN: Limpieza de texto
-              _buildMaintenanceCard(
-                title: 'Normalizar Formatos (Quitar Comas)',
-                subtitle: 'Purifica la base de datos eliminando comas de miles. Es el primer paso recomendado.',
-                icon: Icons.cleaning_services,
-                iconColor: Colors.blueGrey,
-                onTap: _isNormalizeLoading ? null : _runNormalization,
-                isLoading: _isNormalizeLoading,
-              ),
-              const SizedBox(height: 16),
-              
-              // 2. CORRECCIÓN: Errores críticos de monto
-              _buildMaintenanceCard(
-                title: 'Corregir Error 100x (Decimales)',
-                subtitle: 'Detecta y arregla montos inflados (96163 -> 961.63) por errores de coma previa.',
-                icon: Icons.exposure_minus_2,
-                iconColor: Colors.orange.shade800,
-                onTap: () => showDialog(context: context, builder: (c) => DecimalRepairDialog(service: _service)),
-              ),
-              const SizedBox(height: 16),
+              return ListView(
+                padding: const EdgeInsets.all(24),
+                children: [
+                  // BOTÓN NUCLEAR
+                  _buildMaintenanceCard(
+                    title: '⚡ ACTIVAR RELOJ SUIZO (Fase Final)',
+                    subtitle: 'IMPORTANTE: Ejecuta esto para ver tus datos actuales de la web en el teléfono.',
+                    icon: Icons.bolt,
+                    iconColor: Colors.orange.shade900,
+                    onTap: _isNuclearLoading ? null : _runNuclearSync,
+                    isLoading: _isNuclearLoading,
+                  ),
+                  
+                  const SizedBox(height: 16),
+                  const Divider(),
+                  const SizedBox(height: 16),
 
-              // 3. COHERENCIA: Series históricas
-              _buildMaintenanceCard(
-                title: 'Sincronizar Montos de Cuotas',
-                subtitle: 'Corrige diferencias en las cuotas comparando los mismos consumos en otros meses.',
-                icon: Icons.sync_problem,
-                iconColor: Colors.purple,
-                onTap: () => showDialog(context: context, builder: (c) => SyncInstallmentsDialog(service: _service)),
-              ),
-              const SizedBox(height: 16),
+                  _buildMaintenanceCard(
+                    title: 'Normalizar Formatos (Quitar Comas)',
+                    subtitle: 'Purifica la base de datos eliminando comas de miles.',
+                    icon: Icons.cleaning_services,
+                    iconColor: Colors.blueGrey,
+                    onTap: _isNormalizeLoading ? null : _runNormalization,
+                    isLoading: _isNormalizeLoading,
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  _buildMaintenanceCard(
+                    title: 'Corregir Error 100x (Decimales)',
+                    subtitle: 'Detecta y arregla montos inflados.',
+                    icon: Icons.exposure_minus_2,
+                    iconColor: Colors.orange.shade800,
+                    onTap: () => showDialog(context: context, builder: (c) => DecimalRepairDialog(service: _service)),
+                  ),
+                  const SizedBox(height: 16),
 
-              // 4. VINCULACIÓN: Gastos sueltos a sus dueños
-              _buildMaintenanceCard(
-                title: 'Mantenimiento Automático (Reconexión)',
-                subtitle: 'Identifica gastos que no están vinculados a sus plantillas originales y los reconecta.',
-                icon: Icons.settings_suggest,
-                iconColor: Colors.teal,
-                onTap: () => showDialog(context: context, builder: (c) => TemplateReconnectDialog(service: _service)),
-              ),
-              const SizedBox(height: 16),
+                  _buildMaintenanceCard(
+                    title: 'Sincronizar Montos de Cuotas',
+                    subtitle: 'Corrige diferencias en las cuotas.',
+                    icon: Icons.sync_problem,
+                    iconColor: Colors.purple,
+                    onTap: () => showDialog(context: context, builder: (c) => SyncInstallmentsDialog(service: _service)),
+                  ),
+                  const SizedBox(height: 16),
 
-              // 5. REPARACIÓN: Limpieza de duplicados internos
-              _buildMaintenanceCard(
-                title: 'Reparación de Emergencia',
-                subtitle: 'Elimina ítems duplicados accidentalmente dentro de una misma tarjeta.',
-                icon: Icons.health_and_safety_outlined,
-                iconColor: Colors.red.shade700,
-                onTap: () => showDialog(context: context, builder: (c) => DeepRepairDialog(service: _service)),
-              ),
-              const SizedBox(height: 16),
+                  _buildMaintenanceCard(
+                    title: 'Mantenimiento Automático (Reconexión)',
+                    subtitle: 'Vincula gastos a plantillas.',
+                    icon: Icons.settings_suggest,
+                    iconColor: Colors.teal,
+                    onTap: () => showDialog(context: context, builder: (c) => TemplateReconnectDialog(service: _service)),
+                  ),
+                  const SizedBox(height: 16),
 
-              // 6. RESTAURACIÓN: Datos perdidos
-              _buildMaintenanceCard(
-                title: 'Recuperar Cuotas Perdidas',
-                subtitle: 'Restaura cuotas que faltan en meses pasados basándose en el historial futuro.',
-                icon: Icons.history_edu,
-                iconColor: Colors.blue,
-                onTap: () => showDialog(context: context, builder: (c) => RecoverInstallmentsDialog(service: _service)),
-              ),
-              const SizedBox(height: 16),
+                  _buildMaintenanceCard(
+                    title: 'Reparación de Emergencia',
+                    subtitle: 'Elimina ítems duplicados en tarjetas.',
+                    icon: Icons.health_and_safety_outlined,
+                    iconColor: Colors.red.shade700,
+                    onTap: () => showDialog(context: context, builder: (c) => DeepRepairDialog(service: _service)),
+                  ),
+                  const SizedBox(height: 16),
 
-              // 7. UNIFICACIÓN: Consistencia global
-              _buildMaintenanceCard(
-                title: 'Unificación Global',
-                subtitle: 'Permite unificar variaciones de nombres de tarjetas o comercios en toda la historia.',
-                icon: Icons.language,
-                iconColor: Colors.indigo,
-                onTap: () => showDialog(context: context, builder: (c) => GlobalUnifyDialog(service: _service)),
-              ),
-            ],
+                  _buildMaintenanceCard(
+                    title: 'Recuperar Cuotas Perdidas',
+                    subtitle: 'Restaura cuotas que faltan.',
+                    icon: Icons.history_edu,
+                    iconColor: Colors.blue,
+                    onTap: () => showDialog(context: context, builder: (c) => RecoverInstallmentsDialog(service: _service)),
+                  ),
+                  const SizedBox(height: 16),
+
+                  _buildMaintenanceCard(
+                    title: 'Unificación Global',
+                    subtitle: 'Unifica variaciones de nombres.',
+                    icon: Icons.language,
+                    iconColor: Colors.indigo,
+                    onTap: () => showDialog(context: context, builder: (c) => GlobalUnifyDialog(service: _service)),
+                  ),
+                ],
+              );
+            }
           ),
         ),
       ),
@@ -173,10 +187,7 @@ class _MaintenancePageState extends State<MaintenancePage> {
   }) {
     return Card(
       elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant)),
       child: ListTile(
         contentPadding: const EdgeInsets.all(16),
         leading: Container(
@@ -187,10 +198,7 @@ class _MaintenancePageState extends State<MaintenancePage> {
             : Icon(icon, color: iconColor),
         ),
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Padding(
-          padding: const EdgeInsets.only(top: 8),
-          child: Text(subtitle, style: const TextStyle(fontSize: 13)),
-        ),
+        subtitle: Padding(padding: const EdgeInsets.only(top: 8), child: Text(subtitle, style: const TextStyle(fontSize: 13))),
         trailing: const Icon(Icons.chevron_right),
         onTap: onTap,
       ),

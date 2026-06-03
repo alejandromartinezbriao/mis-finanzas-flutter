@@ -1,7 +1,106 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import '../local_db_service.dart';
 import 'firebase_base.dart';
+import '../../models/transaction_model.dart';
+import '../../models/category_model.dart';
+import '../../models/balance_model.dart';
+import '../../models/recurring_model.dart';
 
 mixin UserService on FirebaseBase {
+  final LocalDbService _local = LocalDbService();
+
+  // --- EL ESPEJO TOTAL v20 (ADN Real) ---
+
+  Future<void> mirrorFirebaseToLocal() async {
+    try {
+      final uid = auth.currentUser?.uid;
+      if (uid == null) return;
+
+      print("📡 INICIANDO ESPEJO TOTAL v20...");
+      await _local.clearAllData();
+
+      // 1. Categorías
+      final catsSnap = await categoriesRef?.get();
+      if (catsSnap != null && catsSnap.docs.isNotEmpty) {
+        final items = catsSnap.docs.map((d) => 
+          CategoryModel.fromMap(d.data() as Map<String, dynamic>, d.id).toLocalMap()
+        ).toList();
+        await _local.insertBatch('categories', items);
+      }
+
+      // 2. Balances (Cuentas)
+      final balsSnap = await balancesRef?.get();
+      if (balsSnap != null && balsSnap.docs.isNotEmpty) {
+        final items = balsSnap.docs.map((d) => 
+          BalanceModel.fromMap(d.data() as Map<String, dynamic>, d.id).toLocalMap()
+        ).toList();
+        await _local.insertBatch('balances', items);
+      }
+
+      // 3. Plantillas (Templates)
+      final tempsSnap = await templatesRef?.get();
+      if (tempsSnap != null && tempsSnap.docs.isNotEmpty) {
+        final items = tempsSnap.docs.map((d) => 
+          RecurringModel.fromMap(d.data() as Map<String, dynamic>, d.id).toLocalMap()
+        ).toList();
+        await _local.insertBatch('templates', items);
+      }
+
+      // 4. Transacciones (Gastos/Ingresos/Tarjetas) - COLECCIÓN 'expenses'
+      final txSnap = await transactionsRef?.get();
+      if (txSnap != null && txSnap.docs.isNotEmpty) {
+        print("📥 Inyectando ${txSnap.docs.length} movimientos...");
+        final items = txSnap.docs.map((d) => 
+          TransactionModel.fromMap(d.data() as Map<String, dynamic>, d.id).toLocalMap()
+        ).toList();
+        await _local.insertBatch('transactions', items);
+      }
+
+      // 5. Suscripciones y Metas (Copia directa)
+      final goalsSnap = await goalsRef?.get();
+      if (goalsSnap != null) {
+        for (var d in goalsSnap.docs) {
+          final data = d.data() as Map<String, dynamic>;
+          await _local.insert('goals', {
+            ...data,
+            'id': d.id,
+            'createdAt': data['createdAt'] != null ? (data['createdAt'] is Timestamp ? (data['createdAt'] as Timestamp).toDate().toIso8601String() : data['createdAt'].toString()) : null,
+            'syncStatus': 'synced'
+          }, silent: true);
+        }
+      }
+
+      final subsSnap = await subscriptionsRef?.get();
+      if (subsSnap != null) {
+        for (var d in subsSnap.docs) {
+          await _local.insert('subscriptions', {
+            ...d.data() as Map<String, dynamic>,
+            'id': d.id,
+            'syncStatus': 'synced'
+          }, silent: true);
+        }
+      }
+
+      // Marcar como completado
+      await _local.insert('settings', {'id': 'mirror_sync_done', 'value': 'true'});
+      
+      _local.notify('balances');
+      _local.notify('transactions');
+      _local.notify('categories');
+      
+      print("✅ ESPEJO v20 FINALIZADO.");
+    } catch (e) {
+      print("❌ FALLO EN EL ESPEJO: $e");
+      rethrow;
+    }
+  }
+
+  Future<bool> isMirrorSyncDone() async {
+    final res = await _local.query('settings', where: 'id = ?', whereArgs: ['mirror_sync_done']);
+    return res.isNotEmpty;
+  }
+
   // --- USUARIOS / PERFIL ---
 
   Stream<Map<String, dynamic>?> getUserProfile() {
@@ -14,20 +113,12 @@ mixin UserService on FirebaseBase {
     try {
       final user = auth.currentUser;
       if (user == null) return;
-
       final ref = db.collection('users').doc(user.uid);
       final doc = await ref.get();
       if (!doc.exists) {
-        await ref.set({
-          'email': user.email,
-          'displayName': user.displayName ?? '', // Intenta obtener el nombre de Google/Auth
-          'isPremium': true,
-          'createdAt': Timestamp.now(),
-        });
+        await ref.set({'email': user.email, 'displayName': user.displayName ?? '', 'isPremium': true, 'createdAt': Timestamp.now()});
       }
-    } catch (e) {
-      print("Error createUserProfileIfNotExist: $e");
-    }
+    } catch (e) {}
   }
 
   Future<void> updateUserName(String name) async {
@@ -35,70 +126,10 @@ mixin UserService on FirebaseBase {
       final uid = auth.currentUser?.uid;
       if (uid == null) return;
       await db.collection('users').doc(uid).update({'displayName': name});
-    } catch (e) {
-      print("Error updateUserName: $e");
-    }
+    } catch (e) {}
   }
 
-  /// Ejecuta migraciones estructurales de forma automática y silenciosa
-  Future<void> checkAndPerformMigrations() async {
-    try {
-      final uid = auth.currentUser?.uid;
-      if (uid == null) return;
-
-      final userDoc = await db.collection('users').doc(uid).get();
-      if (!userDoc.exists) return;
-
-      final userData = userDoc.data()!;
-      
-      // MIGRACIÓN v3.1: Presupuestos a Categorías
-      if (userData['migratedToV31'] != true) {
-        // Marcamos como completada PRIMERO para evitar bucles si falla algo parcial
-        await db.collection('users').doc(uid).update({'migratedToV31': true});
-        
-        print("Iniciando migración automática v3.1 para el usuario...");
-        final migratedCount = await (this as dynamic).migrateBudgetsToCategories();
-        print("Migración v3.1 finalizada. Se mudaron $migratedCount presupuestos.");
-      }
-    } catch (e) {
-      print("Error en checkAndPerformMigrations: $e");
-    }
-  }
-
-  // --- CACHÉ DE INFORMES IA ---
-
-  Future<Map<String, dynamic>?> getCachedAiReport(String monthId, String dataHash) async {
-    final uid = auth.currentUser?.uid;
-    if (uid == null) return null;
-
-    // Buscamos el reporte más reciente de ese mes que coincida con el Hash
-    final snap = await db.collection('users').doc(uid).collection('ai_reports')
-        .where('monthId', isEqualTo: monthId)
-        .where('dataHash', isEqualTo: dataHash)
-        .orderBy('updatedAt', descending: true)
-        .limit(1)
-        .get();
-
-    if (snap.docs.isNotEmpty) {
-      return Map<String, dynamic>.from(snap.docs.first.data()['report']);
-    }
-    return null;
-  }
-
-  Future<void> saveAiReport(String monthId, String dataHash, Map<String, dynamic> report) async {
-    final uid = auth.currentUser?.uid;
-    if (uid == null) return;
-
-    // Usar un ID único por reporte (timestamp) para permitir múltiples versiones
-    final String reportId = "${monthId}_${DateTime.now().millisecondsSinceEpoch}";
-
-    await db.collection('users').doc(uid).collection('ai_reports').doc(reportId).set({
-      'monthId': monthId, // Guardamos a qué mes pertenece
-      'dataHash': dataHash,
-      'report': report,
-      'updatedAt': Timestamp.now(),
-    });
-  }
+  Future<void> checkAndPerformMigrations() async {}
 
   Future<void> deleteAiReport(String reportDocId) async {
     final uid = auth.currentUser?.uid;
@@ -109,13 +140,6 @@ mixin UserService on FirebaseBase {
   Stream<List<Map<String, dynamic>>> getAiReportsHistory() {
     final uid = auth.currentUser?.uid;
     if (uid == null) return Stream.value([]);
-
-    return db
-        .collection('users')
-        .doc(uid)
-        .collection('ai_reports')
-        .orderBy('updatedAt', descending: true)
-        .snapshots()
-        .map((snap) => snap.docs.map((doc) => {...doc.data(), 'id': doc.id}).toList());
+    return db.collection('users').doc(uid).collection('ai_reports').orderBy('updatedAt', descending: true).snapshots().map((snap) => snap.docs.map((doc) => {...doc.data(), 'id': doc.id}).toList());
   }
 }

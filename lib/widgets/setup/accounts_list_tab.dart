@@ -18,20 +18,25 @@ class AccountsListTab extends StatelessWidget {
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Icon(Icons.info_outline, size: 14, color: Colors.grey),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Arrastra desde el icono de las flechas para reordenar tus cuentas.',
-                  style: TextStyle(fontSize: 11, color: Colors.grey.shade600, fontStyle: FontStyle.italic),
-                ),
+              const Text('MIS CUENTAS', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1)),
+              TextButton.icon(
+                onPressed: () async {
+                  await service.syncBalancesFromCloud();
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cuentas sincronizadas')));
+                  }
+                },
+                icon: const Icon(Icons.cloud_download, size: 16),
+                label: const Text('Sincronizar Nube', style: TextStyle(fontSize: 11)),
               ),
             ],
           ),
         ),
+        const Divider(height: 1),
         Expanded(
           child: StreamBuilder<List<Map<String, dynamic>>>(
             stream: service.getBalances(),

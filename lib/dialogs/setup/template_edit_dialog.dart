@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/firebase_service.dart';
 import '../../utils/icon_utils.dart';
+import '../../utils/color_utils.dart';
 import '../../utils/currency_formatter.dart';
 import '../../widgets/forms/logo_selector_field.dart';
 import '../../widgets/brand_icon.dart';
@@ -44,11 +45,20 @@ class _TemplateEditDialogState extends State<TemplateEditDialog> {
     defaultAmountController = TextEditingController(
         text: widget.template != null ? CurrencyUtils.formatForInput((widget.template!['defaultAmount'] ?? 0.0).toDouble()) : '');
     selectedCurrency = widget.template?['currency'] ?? 'UYU';
-    isCreditCard = widget.template?['isCreditCard'] ?? false;
-    includedInCard = widget.template?['includedInCard'] ?? false;
+    
+    // Parseo seguro de booleanos (SQLite int 0/1 vs Firebase bool)
+    isCreditCard = widget.template?['isCreditCard'] == true || widget.template?['isCreditCard'] == 1;
+    includedInCard = widget.template?['includedInCard'] == true || widget.template?['includedInCard'] == 1;
+    isBimonetary = widget.template?['isBimonetaryPart'] == true || widget.template?['isBimonetaryPart'] == 1;
+
     selectedLogo = widget.template?['brandLogo'];
-    subscriptions = List<Map<String, dynamic>>.from(widget.template?['subscriptions'] ?? []);
-    isBimonetary = widget.template?['isBimonetaryPart'] ?? false;
+    
+    final rawSubs = widget.template?['subscriptions'];
+    if (rawSubs is List) {
+      subscriptions = List<Map<String, dynamic>>.from(rawSubs);
+    } else {
+      subscriptions = [];
+    }
   }
 
   @override
@@ -96,7 +106,7 @@ class _TemplateEditDialogState extends State<TemplateEditDialog> {
                   value: c['id'] as String,
                   child: Row(
                     children: [
-                      Icon(IconUtils.getIconData(c['icon'] ?? 'category'), color: Color(c['color'] ?? 0xFF9E9E9E), size: 20),
+                      Icon(IconUtils.getIconData(c['icon'] ?? 'category'), color: ColorUtils.parse(c['color']), size: 20),
                       const SizedBox(width: 10),
                       Text(c['name']),
                     ],
@@ -143,7 +153,7 @@ class _TemplateEditDialogState extends State<TemplateEditDialog> {
                     title: const Text('¿Es Bimonetaria?', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
                     subtitle: const Text('Crea registros para Pesos y Dólares', style: TextStyle(fontSize: 11)),
                     value: isBimonetary,
-                    onChanged: (widget.template?['isBimonetaryPart'] == true)
+                    onChanged: (widget.template?['isBimonetaryPart'] == true || widget.template?['isBimonetaryPart'] == 1)
                         ? null
                         : (v) => setState(() => isBimonetary = v),
                   )
@@ -173,14 +183,14 @@ class _TemplateEditDialogState extends State<TemplateEditDialog> {
                     'defaultAmount': double.tryParse(defaultAmountController.text) ?? 0.0,
                     'type': widget.type,
                     'category': categoryName,
-                    'isCreditCard': isCreditCard,
-                    'includedInCard': includedInCard,
+                    'isCreditCard': isCreditCard ? 1 : 0,
+                    'includedInCard': includedInCard ? 1 : 0,
                     'brandLogo': selectedLogo,
                     'subscriptions': isCreditCard ? subscriptions : [],
-                    'isBimonetaryPart': isBimonetary,
+                    'isBimonetaryPart': isBimonetary ? 1 : 0,
                   };
                   if (isEdit) {
-                    if (isBimonetary && (widget.template!['isBimonetaryPart'] != true)) {
+                    if (isBimonetary && (widget.template!['isBimonetaryPart'] != true && widget.template!['isBimonetaryPart'] != 1)) {
                       await _showTemplateBimonetaryUpgradeDialog(
                         context,
                         widget.service,
@@ -192,65 +202,6 @@ class _TemplateEditDialogState extends State<TemplateEditDialog> {
                       await widget.service.updateTemplate(widget.template!['id'], data);
                     }
                   } else {
-                    // CREACIÓN: Detección inteligente de duplicados antes de crear
-                    if (isCreditCard || isBimonetary) {
-                      final cleanName = titleController.text
-                          .replaceAll(RegExp(r'\s+(pesos|dólares|uyu|usd|dolares)$', caseSensitive: false), '')
-                          .trim();
-                      
-                      final otherCurrency = selectedCurrency == 'UYU' ? 'USD' : 'UYU';
-
-                      // Buscar candidatos que ya existan (mismo nombre o logo)
-                      final candidates = await widget.service.findPotentialCardTwins(
-                        baseName: cleanName,
-                        targetCurrency: selectedCurrency, // Buscamos en la MISMA moneda para detectar duplicados exactos
-                        logo: selectedLogo,
-                      );
-                      
-                      // También buscamos en la OTRA moneda para ver si podemos "bimonetizar" una existente
-                      final twins = await widget.service.findPotentialCardTwins(
-                        baseName: cleanName,
-                        targetCurrency: otherCurrency,
-                        logo: selectedLogo,
-                      );
-
-                      if (!context.mounted) return;
-
-                      // Si existe un duplicado exacto (mismo nombre/logo en misma moneda)
-                      if (candidates.isNotEmpty && candidates.any((c) => (c['matchScore'] ?? 0) >= 100)) {
-                         final duplicate = candidates.firstWhere((c) => (c['matchScore'] ?? 0) >= 100);
-                         final confirm = await showDialog<bool>(
-                           context: context,
-                           builder: (c) => AlertDialog(
-                             title: const Text('Tarjeta Duplicada'),
-                             content: Text('Ya tienes una tarjeta llamada "${duplicate['title']}". ¿Quieres editar esa en lugar de crear una nueva?'),
-                             actions: [
-                               TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('No, crear nueva')),
-                               FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('Sí, editar existente')),
-                             ],
-                           )
-                         );
-                         if (confirm == true) {
-                           await widget.service.updateTemplate(duplicate['id'], data);
-                           if (context.mounted) Navigator.pop(context);
-                           return;
-                         }
-                      } 
-                      
-                      // Si queremos que sea bimonetaria y existe la "otra parte"
-                      if (isBimonetary && twins.isNotEmpty) {
-                        await _showTemplateBimonetaryUpgradeDialog(
-                          context,
-                          widget.service,
-                          twins.first, // Usamos la existente como "original" para absorberla
-                          data,
-                          selectedLogo,
-                        );
-                        if (context.mounted) Navigator.pop(context);
-                        return;
-                      }
-                    }
-
                     await widget.service.addTemplate(data, isBimonetary: isBimonetary);
                   }
                   if (context.mounted) Navigator.pop(context);

@@ -12,7 +12,6 @@ class _AboutPageState extends State<AboutPage> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Paleta simplificada: Blanco para modo oscuro, Negro para modo claro.
     final Color primaryTextColor = isDark ? Colors.white : Colors.black;
     final Color secondaryTextColor = isDark ? Colors.white70 : Colors.black87;
 
@@ -32,7 +31,6 @@ class _AboutPageState extends State<AboutPage> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Cabecera Centrada
                   Center(
                     child: Column(
                       children: [
@@ -59,7 +57,7 @@ class _AboutPageState extends State<AboutPage> {
                           ),
                         ),
                         Text(
-                          'Versión 3.4.2',
+                          'Versión 3.7.0 "Reloj Suizo"',
                           style: TextStyle(
                             fontSize: 16,
                             color: secondaryTextColor,
@@ -71,7 +69,6 @@ class _AboutPageState extends State<AboutPage> {
                     ),
                   ),
                   
-                  // Secciones alineadas a la izquierda
                   _buildSection(
                     'Misión del Proyecto',
                     'Proporcionar una plataforma integral y eficiente para la administración de activos y pasivos personales, facilitando un control riguroso sobre la liquidez real y el cumplimiento de metas financieras a largo plazo.',
@@ -80,19 +77,20 @@ class _AboutPageState extends State<AboutPage> {
                   ),
                   const SizedBox(height: 32),
                   _buildSection(
-                    'Capacidades del Sistema v3.4',
+                    'Capacidades del Sistema v3.7',
+                    '• Arquitectura SQLite-First: Funcionamiento instantáneo y modo offline total.\n'
+                    '• Sincronización Granular: Botones de nube por sección y pull-to-refresh en dashboard.\n'
+                    '• Estabilidad Visual: Soporte nativo ARGB para colores impecables.\n'
+                    '• IDs Determinísticos: Prevención de duplicados en registros recurrentes.\n'
                     '• Herencia de identidad visual (icono/color) en nuevos registros.\n'
-                    '• Registro Relámpago (Quick Actions) con iconos circulares premium.\n'
-                    '• Respeto a ajustes manuales en tarjetas de crédito.\n'
-                    '• Centro de Inteligencia Finanz-IA con sincronización perfecta.\n'
-                    '• Gestión de presupuestos integrada directamente en categorías.',
+                    '• Registro Relámpago (Quick Actions) con iconos circulares premium.',
                     primaryTextColor,
                     secondaryTextColor,
                   ),
                   const SizedBox(height: 32),
                   _buildSection(
                     'Infraestructura y Seguridad',
-                    'La arquitectura del sistema utiliza servicios de alta disponibilidad en la nube para garantizar la integridad y persistencia de la información, permitiendo el acceso multiplataforma bajo estándares de seguridad corporativa.',
+                    'El sistema opera bajo un modelo híbrido donde el almacenamiento local garantiza la velocidad, mientras que la nube proporciona respaldo seguro y sincronización multiplataforma para usuarios Premium.',
                     primaryTextColor,
                     secondaryTextColor,
                   ),
@@ -101,7 +99,7 @@ class _AboutPageState extends State<AboutPage> {
                   
                   Center(
                     child: Text(
-                      'Solución desarrollada para optimizar la gestión económica y promover una salud financiera sostenible.',
+                      'La precisión de un reloj suizo con la potencia de la nube.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 15,

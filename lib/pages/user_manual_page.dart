@@ -11,7 +11,7 @@ class UserManualPage extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Manual del Usuario v3.4.2'),
+        title: const Text('Manual del Usuario v3.7.0'),
         elevation: 0,
       ),
       body: Center(
@@ -23,53 +23,45 @@ class UserManualPage extends StatelessWidget {
               _buildHeader('Guía de Uso Profesional', titleColor),
               const SizedBox(height: 8),
               Text(
-                'Novedades y herramientas del Centro de Inteligencia Finanz-IA.',
+                'Arquitectura Soberanía Local: Rapidez y fiabilidad de un Reloj Suizo.',
                 style: TextStyle(fontSize: 16, color: textColor, fontStyle: FontStyle.italic),
               ),
               const SizedBox(height: 24),
               
-              _buildSectionTitle('1. CENTRO DE INTELIGENCIA', titleColor),
+              _buildSectionTitle('1. SOBERANÍA LOCAL Y MODO OFFLINE', titleColor),
               _buildParagraph(
-                'Accede desde el menú principal para interactuar con Finanz-IA:\n\n'
-                '• Sincronización Total: Tus análisis se guardan en la nube y son idénticos en todos tus dispositivos.\n'
-                '• Cotización del Día: Informa el valor oficial del dólar en Uruguay para tus cálculos.\n'
-                '• Auditoría Mensual: Analiza tu gasto real y detecta erosión de ahorros.\n'
-                '• Planificación Estratégica: Audita tus presupuestos vs tus ingresos fijos proyectados a 6 meses.',
+                '• Funcionamiento Instantáneo: Los datos se leen de la base de datos local (SQLite), garantizando que la App nunca se "trabe" esperando a la nube.\n'
+                '• Modo Avión: Puedes registrar cualquier movimiento sin internet. La App lo guardará localmente y lo subirá a Firebase en cuanto detecte conexión.\n'
+                '• Sincronización Granular: En el Panel de Control encontrarás botones de nube individuales para bajar tus categorías, cuentas y plantillas solo cuando tú lo decidas.',
                 textColor
               ),
 
-              _buildSectionTitle('2. PANTALLA PRINCIPAL (Gestión Temporal)', titleColor),
+              _buildSectionTitle('2. DASHBOARD Y MOVIMIENTOS', titleColor),
               _buildParagraph(
-                '• Actualizar Datos: Desliza hacia abajo sobre la lista de movimientos (Móvil) o pulsa la flecha circular (PC) para sincronizar plantillas. Nota: El gesto debe hacerse específicamente dentro del área de la lista.\n'
-                '• Tarjeta de Cobertura Inteligente: \n'
-                '  - Pasado: Cierre de Mes (Superávit/Déficit real).\n'
-                '  - Presente: Disponibilidad real vs deudas pendientes.\n'
-                '  - Futuro: Proyecciones basadas en datos actualizados.\n'
-                '• Saldos de Cuentas: Si ves un icono de ojo tachado, la cuenta está excluida del cálculo de cobertura.',
+                '• Pull-to-Refresh: Tira hacia abajo en la lista principal para bajar tu historial de gastos reales del mes desde la nube.\n'
+                '• Colores Dinámicos: Los gastos en el dashboard reflejan siempre el color e icono actual que tengas definido en tu configuración de categorías.\n'
+                '• Agrupación de Tarjetas: Las compras con tarjeta se suman inteligentemente al total de la tarjeta correspondiente, evitando filas duplicadas innecesarias.',
                 textColor
               ),
 
-              _buildSectionTitle('3. MANTENIMIENTO Y DATOS', titleColor),
+              _buildSectionTitle('3. CENTRO DE INTELIGENCIA IA', titleColor),
               _buildParagraph(
-                'Suite interactiva (Menú > Mantenimiento):\n\n'
-                '• Normalizar Formatos: Elimina comas de miles en bloque.\n'
-                '• Corregir Error 100x: Arregla montos inflados mediante aprobación manual.\n'
-                '• Sincronizar Cuotas: Propone corregir montos discrepantes basándose en el historial.',
+                '• Auditoría de Ahorros: Finanz-IA detecta si tus gastos están erosionando tu patrimonio.\n'
+                '• Planificación a 6 meses: Análisis bimonetario (UYU/USD) proyectado según tus presupuestos actuales.',
                 textColor
               ),
 
               _buildSectionTitle('4. OPERACIONES CLAVE', titleColor),
               _buildParagraph(
-                '• Pago en Efectivo: Al crear un gasto, elige "Pago en Efectivo (Sin cuenta)" para no afectar tus balances bancarios.\n'
-                '• Tarjetas Bimonetarias: Al editar el vencimiento o logo en una parte (UYU/USD), se sincroniza su gemela automáticamente.\n'
-                '• Inicio de Cuotas Flexible: Usa el campo "Cuota Próxima" al registrar una tarjeta para empezar desde donde te toca pagar ahora.',
+                '• Quick Actions: Mantén presionado el icono de la App para registrar un gasto rápido sin entrar al menú principal.\n'
+                '• Arqueo de Cuentas: Gestiona tus saldos bancarios y de efectivo con total precisión.',
                 textColor
               ),
 
-              _buildSectionTitle('5. REGLAS DE ORO (Integridad de Datos)', titleColor),
+              _buildSectionTitle('5. REGLAS DE ORO (Integridad)', titleColor),
               _buildParagraph(
-                '• Punto Decimal Estricto: Usa siempre el punto (.) para decimales. La app convertirá las comas de tu teclado automáticamente.\n'
-                '• Cero Comas de Miles: No uses comas para separar miles para evitar errores aritméticos.',
+                '• Punto Decimal: Usa siempre el punto (.) para decimales. La app convertirá las comas automáticamente.\n'
+                '• Sin Comas de Miles: No utilices comas para separar miles; el sistema maneja la aritmética de forma exacta sin ellas.',
                 textColor
               ),
 

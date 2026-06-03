@@ -19,11 +19,11 @@ class CategoryDialog extends StatefulWidget {
 
 class _CategoryDialogState extends State<CategoryDialog> {
   late TextEditingController nameCtrl;
-  late TextEditingController budgetCtrl; // Nuevo
+  late TextEditingController budgetCtrl;
   late String type;
-  late int selectedColor;
+  late Color selectedColor;
   late String selectedIcon;
-  late String budgetCurrency; // Nuevo
+  late String budgetCurrency;
   bool isEdit = false;
 
   @override
@@ -32,7 +32,6 @@ class _CategoryDialogState extends State<CategoryDialog> {
     isEdit = widget.category != null;
     nameCtrl = TextEditingController(text: widget.category?['name'] ?? '');
     
-    // Inicialización de presupuesto
     final double budgetVal = (widget.category?['budgetAmount'] ?? 0.0).toDouble();
     budgetCtrl = TextEditingController(
       text: budgetVal > 0 ? budgetVal.toStringAsFixed(0) : ''
@@ -40,14 +39,24 @@ class _CategoryDialogState extends State<CategoryDialog> {
     budgetCurrency = widget.category?['budgetCurrency'] ?? 'UYU';
 
     type = widget.category?['type'] ?? 'EXPENSE';
-    selectedColor = widget.category?['color'] ?? Colors.blue.value;
+    
+    // Parseo defensivo del color para evitar pantalla blanca
+    final dynamic rawColor = widget.category?['color'];
+    if (rawColor is num) {
+      selectedColor = Color(rawColor.toInt());
+    } else if (rawColor is String && rawColor.startsWith('#')) {
+      selectedColor = Color(int.parse(rawColor.replaceFirst('#', '0xff'), radix: 16));
+    } else {
+      selectedColor = Colors.blue;
+    }
+    
     selectedIcon = widget.category?['icon'] ?? 'category';
   }
 
   @override
   void dispose() {
     nameCtrl.dispose();
-    budgetCtrl.dispose(); // Nuevo
+    budgetCtrl.dispose();
     super.dispose();
   }
 
@@ -73,7 +82,6 @@ class _CategoryDialogState extends State<CategoryDialog> {
               decoration: const InputDecoration(labelText: 'Nombre de categoría', border: OutlineInputBorder()),
             ),
             
-            // SECCIÓN DE PRESUPUESTO (Solo para gastos)
             if (type == 'EXPENSE') ...[
               const SizedBox(height: 20),
               const Align(
@@ -99,7 +107,7 @@ class _CategoryDialogState extends State<CategoryDialog> {
                     height: 56,
                     padding: const EdgeInsets.symmetric(horizontal: 8),
                     decoration: BoxDecoration(
-                      border: Border.all(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.5)),
+                      border: Border.all(color: Theme.of(context).colorScheme.outline.withOpacity(0.5)),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: DropdownButtonHideUnderline(
@@ -123,21 +131,11 @@ class _CategoryDialogState extends State<CategoryDialog> {
               child: ListView(
                 scrollDirection: Axis.horizontal,
                 children: [
-                  Colors.blue,
-                  Colors.red,
-                  Colors.green,
-                  Colors.orange,
-                  Colors.purple,
-                  Colors.teal,
-                  Colors.pink,
-                  Colors.amber,
-                  Colors.brown,
-                  Colors.grey,
-                  Colors.indigo,
-                  Colors.cyan
-                ]
-                    .map((color) => GestureDetector(
-                          onTap: () => setState(() => selectedColor = color.value),
+                  Colors.blue, Colors.red, Colors.green, Colors.orange,
+                  Colors.purple, Colors.teal, Colors.pink, Colors.amber,
+                  Colors.brown, Colors.grey, Colors.indigo, Colors.cyan
+                ].map((color) => GestureDetector(
+                          onTap: () => setState(() => selectedColor = color),
                           child: Container(
                             margin: const EdgeInsets.symmetric(horizontal: 5),
                             width: 35,
@@ -146,7 +144,7 @@ class _CategoryDialogState extends State<CategoryDialog> {
                               color: color,
                               shape: BoxShape.circle,
                               border: Border.all(
-                                  color: selectedColor == color.value ? Colors.black : Colors.transparent, width: 2),
+                                  color: selectedColor.value == color.value ? Colors.black : Colors.transparent, width: 2),
                             ),
                           ),
                         ))
@@ -162,12 +160,12 @@ class _CategoryDialogState extends State<CategoryDialog> {
               leading: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Color(selectedColor).withValues(alpha: 0.1),
+                  color: selectedColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: selectedIcon.endsWith('.png')
                     ? Image.asset('assets/logos/$selectedIcon', width: 24, height: 24, fit: BoxFit.contain)
-                    : Icon(IconUtils.getIconData(selectedIcon), color: Color(selectedColor)),
+                    : Icon(IconUtils.getIconData(selectedIcon), color: selectedColor),
               ),
               title: Text(selectedIcon.endsWith('.png') ? 'Logo: $selectedIcon' : 'Icono: $selectedIcon',
                   style: const TextStyle(fontSize: 14)),
@@ -199,7 +197,7 @@ class _CategoryDialogState extends State<CategoryDialog> {
               final data = {
                 'name': nameCtrl.text,
                 'type': type,
-                'color': selectedColor,
+                'color': selectedColor.value, // Guardar como int ARGB
                 'icon': selectedIcon,
                 'budgetAmount': type == 'EXPENSE' ? (double.tryParse(budgetCtrl.text) ?? 0.0) : 0.0,
                 'budgetCurrency': type == 'EXPENSE' ? budgetCurrency : 'UYU',

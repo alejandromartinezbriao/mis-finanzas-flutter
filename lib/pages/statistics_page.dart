@@ -2,6 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/transaction_model.dart';
+import '../utils/color_utils.dart';
 import '../services/firebase_service.dart';
 import '../utils/export_utils.dart';
 
@@ -116,7 +117,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                             return Padding(
                               padding: const EdgeInsets.only(right: 8),
                               child: ChoiceChip(
-                                avatar: Icon(Icons.label, size: 16, color: Color(catData['color'] ?? 0xFF9E9E9E)),
+                                avatar: Icon(Icons.label, size: 16, color: ColorUtils.parse(catData['color'])),
                                 label: Text(cat),
                                 selected: _selectedCategory == cat,
                                 onSelected: (val) => setState(() => _selectedCategory = val ? cat : null),

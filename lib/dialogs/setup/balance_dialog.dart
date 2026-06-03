@@ -34,8 +34,10 @@ class _BalanceDialogState extends State<BalanceDialog> {
     currency = widget.account?['currency'] ?? 'UYU';
     accountType = widget.account?['accountType'] ?? 'BANK';
     selectedLogo = widget.account?['brandLogo'];
-    isBimonetary = widget.account?['isBimonetaryPart'] ?? false;
-    includeInCoverage = widget.account?['includeInCoverage'] ?? true;
+    
+    // Parseo seguro de booleanos (SQLite int 0/1 vs Firebase bool)
+    isBimonetary = widget.account?['isBimonetaryPart'] == true || widget.account?['isBimonetaryPart'] == 1;
+    includeInCoverage = widget.account?['includeInCoverage'] == true || widget.account?['includeInCoverage'] == 1 || widget.account?['includeInCoverage'] == null;
   }
 
   @override
@@ -73,7 +75,7 @@ class _BalanceDialogState extends State<BalanceDialog> {
                 title: const Text('¿Es Bimonetaria?', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
                 subtitle: const Text('Crea registros para Pesos y Dólares', style: TextStyle(fontSize: 11)),
                 value: isBimonetary,
-                onChanged: (widget.account?['isBimonetaryPart'] == true)
+                onChanged: (widget.account?['isBimonetaryPart'] == true || widget.account?['isBimonetaryPart'] == 1)
                     ? null
                     : (v) => setState(() => isBimonetary = v),
               ),
@@ -110,7 +112,7 @@ class _BalanceDialogState extends State<BalanceDialog> {
             if (nameCtrl.text.isNotEmpty) {
               final String currentName = nameCtrl.text;
 
-              if (isEdit && isBimonetary && (widget.account!['isBimonetaryPart'] != true)) {
+              if (isEdit && isBimonetary && (widget.account!['isBimonetaryPart'] != true && widget.account!['isBimonetaryPart'] != 1)) {
                 // MIGRACIÓN INTELIGENTE
                 final cleanBaseName = currentName
                     .replaceAll(RegExp(r'\s+(pesos|dólares|uyu|usd|dolares)$', caseSensitive: false), '')
@@ -165,14 +167,14 @@ class _BalanceDialogState extends State<BalanceDialog> {
                 return;
               }
 
-              // FLUJO NORMAL (Creación o edición simple)
+              // FLUJO NORMAL
               final data = {
                 'accountName': currentName,
                 'currency': currency,
                 'accountType': accountType,
                 'brandLogo': selectedLogo,
-                'isBimonetaryPart': isBimonetary,
-                'includeInCoverage': includeInCoverage,
+                'isBimonetaryPart': isBimonetary ? 1 : 0,
+                'includeInCoverage': includeInCoverage ? 1 : 0,
               };
 
               if (isEdit) {

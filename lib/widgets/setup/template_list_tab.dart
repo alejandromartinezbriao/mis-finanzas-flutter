@@ -20,20 +20,25 @@ class TemplateListTab extends StatelessWidget {
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Icon(Icons.info_outline, size: 14, color: Colors.grey),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Arrastra desde el icono de las flechas para reordenar.',
-                  style: TextStyle(fontSize: 11, color: Colors.grey.shade600, fontStyle: FontStyle.italic),
-                ),
+              Text(type == 'EXPENSE' ? 'GASTOS FIJOS / TARJETAS' : 'INGRESOS FIJOS', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1)),
+              TextButton.icon(
+                onPressed: () async {
+                  await service.syncTemplatesFromCloud();
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Plantillas sincronizadas')));
+                  }
+                },
+                icon: const Icon(Icons.cloud_download, size: 16),
+                label: const Text('Sincronizar Nube', style: TextStyle(fontSize: 11)),
               ),
             ],
           ),
         ),
+        const Divider(height: 1),
         Expanded(
           child: StreamBuilder<List<Map<String, dynamic>>>(
             stream: service.getTemplates(type: type),
@@ -54,7 +59,7 @@ class TemplateListTab extends StatelessWidget {
               }
 
               return ReorderableListView.builder(
-                buildDefaultDragHandles: false, // Desactivamos el "long press" por defecto
+                buildDefaultDragHandles: false,
                 itemCount: templates.length,
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 onReorder: (oldIndex, newIndex) {
@@ -87,7 +92,6 @@ class TemplateListTab extends StatelessWidget {
                               }
                             }
                           ),
-                          // Escuchador específico para activar el arrastre inmediatamente en PC y Móvil
                           ReorderableDragStartListener(
                             index: index,
                             child: const Padding(

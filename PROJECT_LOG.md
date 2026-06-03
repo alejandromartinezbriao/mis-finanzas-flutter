@@ -1,33 +1,38 @@
-# Log de Desarrollo - Mis Finanzas (v3.4.2)
+# Log de Desarrollo - Mis Finanzas (v3.7.0 "Reloj Suizo")
 
-## Estado Actual (Última actualización: 10/05/2026)
-- **Versión**: 3.4.2 "Transición Fluida".
+## Estado Actual (Última actualización: 02/06/2026)
+- **Versión**: 3.7.0 "Reloj Suizo" (Consolidación de Soberanía Local).
+- **Arquitectura**: Migración exitosa a **SQLite-First (Offline-First)**. El teléfono es ahora la fuente de verdad primaria para máxima velocidad y funcionamiento sin internet.
+- **Sincronización**:
+    - **Sincronización Granular**: Implementación de botones "Sincronizar Nube" por sección (Cuentas, Categorías, Plantillas) para un control total del flujo de datos.
+    - **Dashboard Dinámico**: Gesto de tirar hacia abajo (Pull-to-refresh) para bajar movimientos reales del mes y generar proyecciones instantáneamente.
+- **Estabilidad y ADN**:
+    - **Nativo ARGB**: Transición de colores de texto hexadecimal a Integers ARGB nativos en SQLite y Firebase, eliminando definitivamente el error de "Pantalla Gris".
+    - **ID Determinístico**: Muerte al bucle 20x mediante la creación de IDs únicos basados en el tiempo para gastos recurrentes.
+    - **Limpieza de Identidad**: Corrección en el agrupamiento de tarjetas de crédito (eliminación de sufijos de moneda duplicados), asegurando que los gastos se sumen correctamente a sus tarjetas dueñas.
+- **Planes**: Preparado para diferenciar Gratis (Local Puro) y Premium (Cloud Sync / Backup).
+
+---
+
+# Historial de Versiones Anteriores
+
+## Versión 3.4.2 (10/05/2026)
 - **Interfaz**: Accesos Rápidos con iconografía circular premium, aviso de éxito y cierre optimizado.
 - **Aritmética**: Respeto total a ajustes manuales en tarjetas de crédito durante la eliminación de ítems.
 - **Usabilidad**: 
-    - **Cierre Silencioso (v3.4.2)**: Optimización de la salida en Quick Actions para evitar parpadeos visuales del dashboard principal. La App se cierra manteniendo el modo foco y se resetea internamente en segundo plano.
-    - **Aviso de Confirmación (v3.4.1)**: Diálogo explícito de "¡Registro Exitoso!" al usar acciones rápidas, garantizando al usuario que los datos se guardaron antes de cerrar la App.
-    - **Registro Relámpago (v3.4.0)**: Menú de acceso rápido (mantener presionado el icono). Utiliza diseños circulares exclusivos de Mica que ocupan todo el espacio del lanzador. Etiqueta unificada "Ingreso / Gasto".
-    - **Herencia Visual (v3.4.0)**: Al registrar un movimiento, este hereda instantáneamente el **icono y el color** de su categoría, eliminando la necesidad de ediciones posteriores.
-    - **Modo Foco**: Al abrir vía Quick Action, la App se cierra automáticamente tras el registro o cancelación (`SystemNavigator.pop()`).
-    - **Soberanía Contable (v3.4.0)**: Al borrar un consumo de una tarjeta, el sistema resta el monto exacto del total actual en lugar de recalcular todo, respetando así los ajustes manuales (impuestos o céntimos) realizados por el usuario.
+    - **Cierre Silencioso**: Optimización de la salida en Quick Actions para evitar parpadeos visuales del dashboard principal.
+    - **Aviso de Confirmación**: Diálogo explícito de "¡Registro Exitoso!" en acciones rápidas.
+    - **Herencia Visual**: Al registrar un movimiento, hereda icono y color de su categoría automáticamente.
+    - **Soberanía Contable**: Al borrar un consumo de una tarjeta, el sistema resta el monto exacto del total actual respetando ajustes manuales.
 
 ## 🍎 Guía de Preparación para iOS (Quick Actions)
-Para asegurar que los iconos personalizados funcionen en iPhone cuando se realice la compilación en macOS:
-1. **Nombres de Recursos**: El código Flutter ya busca los identificadores `shortcut_simple` y `shortcut_card`.
-2. **Xcode Assets**: Abrir `Runner.xcworkspace` -> `Assets.xcassets`.
-3. **Creación**: Crear dos nuevos "Image Set" nombrados exactamente `shortcut_simple` y `shortcut_card`.
-4. **Formato**: Arrastrar los iconos de Mica (PNG con transparencia).
-5. **Consistencia**: No es necesario tocar `main.dart`.
-
-## Decisiones Arquitectónicas Tomadas (v3.1 - v3.4)
-1. **Lógica Centralizada (Server-Side)**: El servidor (Firebase Functions) es la única fuente de verdad para la IA y firmas de datos, garantizando sincronización perfecta entre dispositivos.
-2. **Modularización del Backend**: Código dividido en `data_processor.js`, `ai_analyzer.js` e `index.js`.
-3. **UX de Refresco Nativo**: Sincronización de plantillas mediante pull-to-refresh en móvil y botón dedicado en PC.
+1. **Nombres de Recursos**: Identificadores `shortcut_simple` y `shortcut_card`.
+2. **Xcode Assets**: Crear Image Sets nombrados exactamente así en `Assets.xcassets`.
+3. **Mica Design**: Usar iconos circulares con transparencia.
 
 ## Hoja de Ruta (Roadmap) - Versión 3.x
 - [ ] **Modo Familiar**: Sistema de "Hogares" para compartir gastos con visibilidad selectiva.
 - [ ] **Análisis de Inversiones**: IA asesorando sobre dónde colocar el superávit detectado.
 
 ---
-*Mis Finanzas v3.4 - La unión perfecta entre diseño industrial y lógica financiera.*
+*Mis Finanzas v3.7 - La precisión de un reloj suizo con la potencia de la nube.*

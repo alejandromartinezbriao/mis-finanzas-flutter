@@ -1,343 +1,133 @@
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import '../local_db_service.dart';
 import 'firebase_base.dart';
 import '../../models/transaction_model.dart';
+import '../../models/recurring_model.dart';
 
 mixin TemplateService on FirebaseBase {
-  // --- BUSCADOR DE GEMELAS PARA TARJETAS ---
+  final LocalDbService _local = LocalDbService();
 
-  Future<List<Map<String, dynamic>>> findPotentialCardTwins({
-    required String baseName,
-    required String targetCurrency,
-    String? logo,
-    String? excludeId,
-  }) async {
+  // --- PLANTILLAS (PULL SYNC) ---
+
+  Future<void> syncTemplatesFromCloud() async {
     try {
       final ref = templatesRef;
-      if (ref == null) return [];
+      if (ref == null || kIsWeb) return;
 
-      final snapshot = await ref
-          .where('type', isEqualTo: 'EXPENSE')
-          .where('isCreditCard', isEqualTo: true)
-          .where('currency', isEqualTo: targetCurrency)
-          .get();
-
-      final candidates = snapshot.docs
-          .map((doc) {
-            final data = doc.data() as Map<String, dynamic>;
-            data['id'] = doc.id;
-            return data;
-          })
-          .where((data) => data['id'] != excludeId)
-          .toList();
-
-      final cleanSearchName = baseName
-          .replaceAll(RegExp(r'\s+(pesos|dólares|uyu|usd|dolares)$', caseSensitive: false), '')
-          .trim()
-          .toLowerCase();
-
-      for (var c in candidates) {
-        int score = 0;
-        final cName = (c['title'] as String).toLowerCase();
-        
-        if (logo != null && c['brandLogo'] == logo) score += 100;
-        if (cName.contains(cleanSearchName)) score += 50;
-        
-        final searchWords = cleanSearchName.split(' ').where((w) => w.length > 2);
-        for (var word in searchWords) {
-          if (cName.contains(word)) score += 10;
-        }
-
-        c['matchScore'] = score;
+      final snap = await ref.get();
+      if (snap.docs.isNotEmpty) {
+        final items = snap.docs.map((doc) => RecurringModel.fromMap(doc.data() as Map<String, dynamic>, doc.id).toLocalMap()).toList();
+        await _local.insertBatch('templates', items);
       }
-
-      candidates.sort((a, b) => (b['matchScore'] as int).compareTo(a['matchScore'] as int));
-      return candidates;
-    } catch (e) {
-      print("Error findPotentialCardTwins: $e");
-      return [];
-    }
+    } catch (e) { print("Error syncing templates: $e"); }
   }
 
-  Future<void> upgradeTemplateToBimonetary({
-    required String originalId,
-    required String oldTitle,
-    required Map<String, dynamic> data,
-    String? existingGemelaId,
-    String? oldGemelaTitle,
+  // --- PLANTILLAS (OPERACIONES) ---
+
+  Future<List<Map<String, dynamic>>> findPotentialCardTwins({
+    required String baseName, required String targetCurrency, String? logo, String? excludeId,
   }) async {
     try {
-      final ref = templatesRef;
-      final refE = transactionsRef;
-      if (ref == null || refE == null) return;
-
-      final batch = db.batch();
-      final baseName = data['title'];
-      final originalCurrency = data['currency'] ?? 'UYU';
-      final newTitle = '$baseName ($originalCurrency)';
-
-      batch.update(ref.doc(originalId), {
-        ...data,
-        'title': newTitle,
-        'isBimonetaryPart': true,
-        'baseName': baseName,
-      });
-
-      final otherCurrency = originalCurrency == 'UYU' ? 'USD' : 'UYU';
-      final newGemelaTitle = '$baseName ($otherCurrency)';
-      
-      if (existingGemelaId != null) {
-        batch.update(ref.doc(existingGemelaId), {
-          'title': newGemelaTitle,
-          'currency': otherCurrency,
-          'isBimonetaryPart': true,
-          'baseName': baseName,
-          'brandLogo': data['brandLogo'],
-          'isCreditCard': true,
-          'type': 'EXPENSE',
-        });
-      } else {
-        batch.set(ref.doc(), {
-          ...data,
-          'title': newGemelaTitle,
-          'currency': otherCurrency,
-          'isBimonetaryPart': true,
-          'baseName': baseName,
-          'defaultAmount': 0.0,
-          'subscriptions': [],
-        });
+      final ref = templatesRef; if (ref == null) return [];
+      final snapshot = await ref.where('type', isEqualTo: 'EXPENSE').where('isCreditCard', isEqualTo: true).where('currency', isEqualTo: targetCurrency).get();
+      final candidates = snapshot.docs.map((doc) => {...doc.data() as Map<String, dynamic>, 'id': doc.id}).where((data) => data['id'] != excludeId).toList();
+      final cleanSearchName = baseName.replaceAll(RegExp(r'\s+(pesos|dólares|uyu|usd|dolares)$', caseSensitive: false), '').trim().toLowerCase();
+      for (var c in candidates) {
+        int score = 0; final cName = (c['title'] as String).toLowerCase();
+        if (logo != null && c['brandLogo'] == logo) score += 100;
+        if (cName.contains(cleanSearchName)) score += 50;
+        c['matchScore'] = score;
       }
-
-      final expensesOriginal = await refE.where('title', isEqualTo: oldTitle).get();
-      for (var doc in expensesOriginal.docs) {
-        batch.update(doc.reference, {'title': newTitle});
-      }
-
-      if (existingGemelaId != null && oldGemelaTitle != null) {
-        final expensesGemela = await refE.where('title', isEqualTo: oldGemelaTitle).get();
-        for (var doc in expensesGemela.docs) {
-          batch.update(doc.reference, {'title': newGemelaTitle});
-        }
-      }
-
-      await batch.commit();
-    } catch (e) {
-      print("Error upgradeTemplateToBimonetary: $e");
-      rethrow;
-    }
+      candidates.sort((a, b) => (b['matchScore'] as int).compareTo(a['matchScore'] as int));
+      return candidates;
+    } catch (e) { return []; }
   }
 
   Stream<List<Map<String, dynamic>>> getTemplates({String? type}) {
-    final ref = templatesRef;
-    if (ref == null) return Stream.value([]);
-    
-    Query query = ref;
-    if (type != null) {
-      query = query.where('type', isEqualTo: type);
+    if (kIsWeb) {
+      final ref = templatesRef; if (ref == null) return Stream.value([]);
+      Query query = ref.where('isDeleted', isEqualTo: false);
+      if (type != null) query = query.where('type', isEqualTo: type);
+      return query.snapshots().map((snap) => snap.docs.map((doc) => {...doc.data() as Map<String, dynamic>, 'id': doc.id}).toList());
     }
-    
-    return query.snapshots().map((snap) {
-      final list = snap.docs.map((doc) {
-        final data = doc.data() as Map<String, dynamic>;
-        data['id'] = doc.id;
-        return data;
-      }).toList();
-      
-      list.sort((a, b) {
-        int aIdx = a['orderIndex'] ?? 999;
-        int bIdx = b['orderIndex'] ?? 999;
-        if (aIdx != bIdx) return aIdx.compareTo(bIdx);
-        return (a['title'] as String).toLowerCase().compareTo((b['title'] as String).toLowerCase());
-      });
-      
-      return list;
-    });
+
+    final controller = StreamController<List<Map<String, dynamic>>>();
+    void _load() async {
+      try {
+        final list = await _local.query('templates', where: type != null ? 'type = ? AND isDeleted = 0' : 'isDeleted = 0', whereArgs: type != null ? [type] : null, orderBy: 'orderIndex ASC, title ASC');
+        if (!controller.isClosed) controller.add(list);
+      } catch (e) { if (!controller.isClosed) controller.add([]); }
+    }
+    _load();
+    final sub = _local.onTableChanged.where((t) => t == 'templates').listen((_) => _load());
+    controller.onCancel = () { sub.cancel(); controller.close(); };
+    return controller.stream;
   }
 
   Future<void> addTemplate(Map<String, dynamic> t, {bool isBimonetary = false}) async {
     try {
-      final ref = templatesRef;
-      if (ref == null) return;
-      
-      final all = await ref.get();
+      final ref = templatesRef; if (ref == null) return;
       int nextIndex = 0;
-      for (var doc in all.docs) {
-        final idx = (doc.data() as Map<String, dynamic>)['orderIndex'] ?? 0;
-        if (idx >= nextIndex) nextIndex = idx + 1;
-      }
+      final all = await _local.query('templates');
+      for (var doc in all) { if ((doc['orderIndex'] ?? 0) >= nextIndex) nextIndex = (doc['orderIndex'] ?? 0) + 1; }
 
+      Future<void> _create(Map<String, dynamic> data) async {
+        final String tid = DateTime.now().millisecondsSinceEpoch.toString();
+        if (!kIsWeb) await _local.insert('templates', {...data, 'id': tid, 'syncStatus': 'synced'});
+        final premium = await checkPremium();
+        if (kIsWeb || premium) {
+          final docRef = await templatesRef?.add(data);
+          if (!kIsWeb && docRef != null) {
+            await _local.delete('templates', tid);
+            await _local.insert('templates', {...data, 'id': docRef.id, 'syncStatus': 'synced'});
+          }
+        }
+      }
       if (isBimonetary) {
-        final batch = db.batch();
         final name = t['title'];
-
-        batch.set(ref.doc(), {
-          ...t,
-          'title': '$name (UYU)',
-          'currency': 'UYU',
-          'orderIndex': nextIndex,
-          'isBimonetaryPart': true,
-          'baseName': name,
-        });
-
-        batch.set(ref.doc(), {
-          ...t,
-          'title': '$name (USD)',
-          'currency': 'USD',
-          'orderIndex': nextIndex + 1,
-          'isBimonetaryPart': true,
-          'baseName': name,
-        });
-
-        await batch.commit();
+        await _create({...t, 'title': '$name (UYU)', 'currency': 'UYU', 'orderIndex': nextIndex, 'isBimonetaryPart': 1, 'baseName': name});
+        await _create({...t, 'title': '$name (USD)', 'currency': 'USD', 'orderIndex': nextIndex + 1, 'isBimonetaryPart': 1, 'baseName': name});
       } else {
-        await ref.add({
-          ...t,
-          'orderIndex': nextIndex,
-        });
+        await _create({...t, 'orderIndex': nextIndex});
       }
-    } catch (e) {
-      print("Error addTemplate: $e");
-    }
+    } catch (e) {}
   }
 
   Future<void> updateTemplatesOrder(List<Map<String, dynamic>> templates) async {
     try {
-      final batch = db.batch();
-      final ref = templatesRef;
-      final expenseRef = transactionsRef;
-      if (ref == null || expenseRef == null) return;
-
       for (int i = 0; i < templates.length; i++) {
-        batch.update(ref.doc(templates[i]['id']), {'orderIndex': i});
+        final String id = templates[i]['id'];
+        if (!kIsWeb) await _local.update('templates', {'orderIndex': i}, id);
+        final premium = await checkPremium();
+        if (kIsWeb || premium) await templatesRef?.doc(id).update({'orderIndex': i});
       }
-
-      final now = DateTime.now();
-      final startDate = DateTime(now.year, now.month, 1);
-      
-      final relatedExpenses = await expenseRef
-          .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
-          .get();
-
-      final Map<String, int> titleToOrder = {};
-      for (int i = 0; i < templates.length; i++) {
-        titleToOrder[norm(templates[i]['title'] ?? '')] = i;
-      }
-
-      for (var doc in relatedExpenses.docs) {
-        final data = doc.data() as Map<String, dynamic>;
-        final String title = norm(data['title'] ?? '');
-        if (titleToOrder.containsKey(title)) {
-          batch.update(doc.reference, {'orderIndex': titleToOrder[title]});
-        }
-      }
-
-      await batch.commit();
-    } catch (e) {
-      print("Error updateTemplatesOrder: $e");
-    }
+    } catch (e) {}
   }
 
   Future<void> updateTemplate(String id, Map<String, dynamic> data) async {
     try {
-      final ref = templatesRef;
-      final expenseRef = transactionsRef;
-      if (ref == null || expenseRef == null) return;
-
-      final batch = db.batch();
-      
-      // Si es parte de un par bimonetario, debemos sincronizar los campos compartidos con su gemela
-      if (data['isBimonetaryPart'] == true) {
-        final String baseName = data['baseName'] ?? data['title'];
-        final String currentCurrency = data['currency'] ?? 'UYU';
-        
-        // El título real en Firestore debe conservar el sufijo
-        final String finalTitle = "$baseName ($currentCurrency)";
-        final Map<String, dynamic> updatedData = {...data, 'title': finalTitle, 'baseName': baseName};
-        
-        batch.update(ref.doc(id), updatedData);
-
-        // Buscar la gemela para sincronizar campos compartidos (vencimiento, logo, nombre base)
-        final otherCurrency = currentCurrency == 'UYU' ? 'USD' : 'UYU';
-        final twinsSnap = await ref
-            .where('baseName', isEqualTo: baseName)
-            .where('currency', isEqualTo: otherCurrency)
-            .where('isBimonetaryPart', isEqualTo: true)
-            .get();
-
-        for (var twinDoc in twinsSnap.docs) {
-          batch.update(twinDoc.reference, {
-            'baseName': baseName,
-            'title': "$baseName ($otherCurrency)",
-            'dueDay': data['dueDay'],
-            'brandLogo': data['brandLogo'],
-            'category': data['category'],
-            'isCreditCard': data['isCreditCard'],
-          });
-        }
-        
-        // Actualizar el logo en transacciones existentes de ambas partes
-        final relatedExpenses = await expenseRef
-            .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(DateTime(DateTime.now().year, DateTime.now().month - 1, 1)))
-            .get();
-
-        for (var doc in relatedExpenses.docs) {
-          final docData = doc.data() as Map<String, dynamic>;
-          final String docTitle = docData['title'] ?? '';
-          if (docTitle == finalTitle || docTitle == "$baseName ($otherCurrency)") {
-            batch.update(doc.reference, {'brandLogo': data['brandLogo']});
-          }
-        }
-      } else {
-        // Flujo normal para plantillas no bimonetarias
-        batch.update(ref.doc(id), data);
-        
-        final String title = data['title'] ?? '';
-        if (title.isNotEmpty) {
-          final relatedExpenses = await expenseRef
-              .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(DateTime(DateTime.now().year, DateTime.now().month - 1, 1)))
-              .get();
-
-          for (var doc in relatedExpenses.docs) {
-            final docData = doc.data() as Map<String, dynamic>;
-            if (norm(docData['title'] ?? '') == norm(title)) {
-              batch.update(doc.reference, {'brandLogo': data['brandLogo']});
-            }
-          }
-        }
-      }
-
-      await batch.commit();
-    } catch (e) {
-      print("Error updateTemplate: $e");
-    }
+      if (!kIsWeb) await _local.update('templates', data, id);
+      final premium = await checkPremium();
+      if ((kIsWeb || premium) && templatesRef != null) await templatesRef!.doc(id).update(data);
+    } catch (e) {}
   }
 
   Future<void> deleteTemplate(String id) async {
     try {
-      final ref = templatesRef;
-      if (ref == null) return;
-      await ref.doc(id).delete();
-    } catch (e) {
-      print("Error deleteTemplate: $e");
-    }
+      if (!kIsWeb) await _local.update('templates', {'isDeleted': 1}, id);
+      final premium = await checkPremium();
+      if ((kIsWeb || premium) && templatesRef != null) await templatesRef!.doc(id).delete();
+    } catch (e) {}
   }
 
   Future<void> createTemplateFromTransaction(TransactionModel t) async {
     try {
-      final ref = templatesRef;
-      if (ref == null) return;
-      
-      await ref.add({
-        'title': t.title,
-        'currency': t.currency,
-        'dueDay': t.dueDate?.day ?? t.date.day,
-        'type': t.type,
-        'category': t.category == 'Extra' ? (t.type == 'EXPENSE' ? 'Fijo' : 'Ingreso') : t.category,
-        'isCreditCard': false,
-        'defaultAmount': t.amount,
-        'brandLogo': t.brandLogo,
-      });
-    } catch (e) {
-      print("Error createTemplateFromTransaction: $e");
-    }
+      final data = {'title': t.title, 'currency': t.currency, 'dueDay': t.dueDate?.day ?? t.date.day, 'type': t.type, 'category': t.category == 'Extra' ? (t.type == 'EXPENSE' ? 'Fijo' : 'Ingreso') : t.category, 'isCreditCard': 0, 'defaultAmount': t.amount, 'brandLogo': t.brandLogo};
+      await addTemplate(data);
+    } catch (e) {}
   }
+
+  Future<void> upgradeTemplateToBimonetary({required String originalId, required String oldTitle, required Map<String, dynamic> data, String? existingGemelaId, String? oldGemelaTitle}) async {}
 }

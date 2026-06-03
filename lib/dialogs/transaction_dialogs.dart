@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/transaction_model.dart';
+import '../models/category_model.dart';
 import '../services/firebase_service.dart';
 import '../utils/icon_utils.dart';
 import '../utils/currency_formatter.dart';
 import '../utils/dialog_utils.dart';
+import '../utils/color_utils.dart';
 
 class SimpleTransactionDialog extends StatefulWidget {
   final FirebaseService service;
@@ -97,7 +99,7 @@ class _SimpleTransactionDialogState extends State<SimpleTransactionDialog> {
                           value: c['id'] as String,
                           child: Row(
                             children: [
-                              Icon(IconUtils.getIconData(c['icon'] ?? 'category'), color: Color(c['color'] ?? 0xFF9E9E9E), size: 20),
+                              Icon(IconUtils.getIconData(c['icon'] ?? 'category'), color: ColorUtils.parse(c['color']), size: 20),
                               const SizedBox(width: 10),
                               Text(c['name']),
                             ],
@@ -111,7 +113,6 @@ class _SimpleTransactionDialogState extends State<SimpleTransactionDialog> {
                       stream: widget.service.getBalances(),
                       builder: (context, snapshot) {
                         final allAccounts = snapshot.data ?? [];
-                        // Filtrar cuentas por la moneda seleccionada para el ingreso
                         final accounts = allAccounts.where((a) => a['currency'] == currency).toList();
 
                         return DropdownButtonFormField<String>(
@@ -248,7 +249,7 @@ class _SimpleTransactionDialogState extends State<SimpleTransactionDialog> {
                             value: currency,
                             onChanged: (v) => setState(() {
                               currency = v!;
-                              selectedAccountId = null; // Resetear cuenta al cambiar moneda
+                              selectedAccountId = null;
                             }),
                             items: ['UYU', 'USD'].map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
                           ),
@@ -289,7 +290,7 @@ class _SimpleTransactionDialogState extends State<SimpleTransactionDialog> {
             FilledButton(
               onPressed: () async {
                 if (_formKey.currentState!.validate()) {
-                  final double amount = double.tryParse(amountController.text) ?? 0.0;
+                  final double amount = widget.service.parseAmount(amountController.text);
                   final String concept = titleController.text;
 
                   final confirm = await DialogUtils.confirmAction(
@@ -307,38 +308,38 @@ class _SimpleTransactionDialogState extends State<SimpleTransactionDialog> {
                   if (type == 'INCOME') {
                     categoryName = 'Ingreso';
                   } else if (selectedCategoryId != null) {
-                    final cat = allCategories.firstWhere((c) => c['id'] == selectedCategoryId);
-                    categoryName = cat['name'];
-                    categoryLogo = cat['icon'];
-                    categoryColor = cat['color'];
+                    final catData = allCategories.firstWhere((c) => c['id'] == selectedCategoryId);
+                    final cat = CategoryModel.fromMap(catData, catData['id']);
+                    categoryName = cat.name;
+                    categoryLogo = cat.icon;
+                    categoryColor = cat.color;
                   }
 
                   final transaction = TransactionModel(
                     id: '',
                     title: titleController.text,
-                    amount: double.tryParse(amountController.text) ?? 0.0,
+                    amount: amount,
                     date: selectedDate,
                     category: categoryName,
                     currency: currency,
                     type: type,
-                    isCompleted: selectedAccountId != null, // Auto-completar si hay cuenta
+                    isCompleted: selectedAccountId != null,
+                    isPaid: selectedAccountId != null,
                     includedInCard: includedInCard,
                     brandLogo: categoryLogo, 
-                    categoryColor: categoryColor, // Guardamos también el color
+                    categoryColor: categoryColor,
                   );
 
                   if (selectedAccountId != null && selectedAccountId != 'CASH_PAYMENT') {
-                    // Si seleccionó cuenta real (sea Ingreso o Gasto), usamos la lógica atómica
                     await widget.service.addTransactionWithBalanceUpdate(
                       transaction: transaction,
                       accountId: selectedAccountId,
                     );
                   } else {
-                    // Si no hay cuenta (Efectivo o Gasto pendiente)
                     await widget.service.addTransaction(transaction);
                   }
                   
-                  if (mounted) Navigator.pop(context, true); // Devuelve TRUE al guardar con éxito
+                  if (mounted) Navigator.pop(context, true);
                 }
               },
               child: const Text('Añadir'),
@@ -375,10 +376,6 @@ class _CreditCardTransactionDialogState extends State<CreditCardTransactionDialo
   String currency = 'UYU';
   late DateTime selectedDate;
 
-  String accTruncate(String name) {
-    return name.length > 18 ? '${name.substring(0, 15)}...' : name;
-  }
-
   @override
   void initState() {
     super.initState();
@@ -410,7 +407,7 @@ class _CreditCardTransactionDialogState extends State<CreditCardTransactionDialo
               );
             }
 
-            final cards = snapshot.data?.where((t) => t['isCreditCard'] == true && t['currency'] == currency).toList() ?? [];
+            final cards = snapshot.data?.where((t) => t['isCreditCard'] == true || t['isCreditCard'] == 1).where((t) => t['currency'] == currency).toList() ?? [];
 
             return AlertDialog(
               title: Row(children: [
@@ -509,7 +506,7 @@ class _CreditCardTransactionDialogState extends State<CreditCardTransactionDialo
                                   value: c['id'] as String,
                                   child: Row(
                                     children: [
-                                      Icon(IconUtils.getIconData(c['icon'] ?? 'category'), color: Color(c['color'] ?? 0xFF9E9E9E), size: 18),
+                                      Icon(IconUtils.getIconData(c['icon'] ?? 'category'), color: ColorUtils.parse(c['color']), size: 18),
                                       const SizedBox(width: 10),
                                       Expanded(child: Text(c['name'], overflow: TextOverflow.ellipsis)),
                                     ],
@@ -633,7 +630,7 @@ class _CreditCardTransactionDialogState extends State<CreditCardTransactionDialo
                     style: FilledButton.styleFrom(backgroundColor: Colors.deepOrange.shade800),
                     onPressed: () async {
                       if (_formKey.currentState!.validate()) {
-                        final double totalAmount = double.tryParse(amountController.text) ?? 0.0;
+                        final double totalAmount = widget.service.parseAmount(amountController.text);
                         final int installments = int.parse(installmentsController.text);
                         
                         final confirm = await DialogUtils.confirmAction(
@@ -646,27 +643,31 @@ class _CreditCardTransactionDialogState extends State<CreditCardTransactionDialo
 
                         if (confirm != true) return;
 
-                        final cat = allCategories.firstWhere(
-                          (c) => c['id'] == selectedCategoryId,
-                          orElse: () => {'name': 'Tarjeta', 'icon': null, 'color': null}
-                        );
-                        final String categoryName = cat['name'];
-                        final String? categoryLogo = cat['icon'];
-                        final int? categoryColor = cat['color'];
+                        final catData = allCategories.where((c) => c['id'] == selectedCategoryId).firstOrNull;
+                        String categoryName = 'Tarjeta';
+                        String? categoryLogo;
+                        int? categoryColor;
+                        
+                        if (catData != null) {
+                          final cat = CategoryModel.fromMap(catData, catData['id']);
+                          categoryName = cat.name;
+                          categoryLogo = cat.icon;
+                          categoryColor = cat.color;
+                        }
 
                         widget.service.addCreditCardExpense(
                           cardName: selectedCard!,
-                          totalAmount: double.tryParse(amountController.text) ?? 0.0,
-                          installments: int.parse(installmentsController.text),
+                          totalAmount: totalAmount,
+                          installments: installments,
                           initialInstallment: int.parse(initialInstallmentController.text),
                           currency: currency,
                           startDate: selectedDate,
                           concept: conceptController.text.isNotEmpty ? conceptController.text : null,
                           category: categoryName,
                           categoryLogo: categoryLogo,
-                          categoryColor: categoryColor, // Nuevo parámetro
+                          categoryColor: categoryColor,
                         );
-                        if (context.mounted) Navigator.pop(context, true); // Devuelve TRUE al guardar con éxito
+                        if (context.mounted) Navigator.pop(context, true);
                       }
                     },
                     child: const Text('Registrar Compra'),
@@ -703,7 +704,6 @@ class _EditTransactionDialogState extends State<EditTransactionDialog> {
   @override
   void initState() {
     super.initState();
-    // Cargamos el monto directo como un string con punto decimal, sin formato de miles.
     amountController = TextEditingController(
       text: CurrencyUtils.formatForInput(widget.transaction.amount),
     );
@@ -718,12 +718,12 @@ class _EditTransactionDialogState extends State<EditTransactionDialog> {
   }
 
   Future<void> _togglePaidStatus(BuildContext context, TransactionModel t) async {
-    final double currentAmount = double.tryParse(amountController.text) ?? 0.0;
+    final double currentAmount = widget.service.parseAmount(amountController.text);
     final transactionToUse = t.copyWith(amount: currentAmount);
 
     if (t.isCompleted) {
       if (t.paidFromAccountId == null) {
-        await widget.service.updateTransaction(transactionToUse.copyWith(isCompleted: false));
+        await widget.service.updateTransaction(transactionToUse.copyWith(isCompleted: false, isPaid: false));
         if (mounted) Navigator.pop(context);
         return;
       }
@@ -749,7 +749,7 @@ class _EditTransactionDialogState extends State<EditTransactionDialog> {
           isUndoing: true,
         );
       } else {
-        await widget.service.updateTransaction(transactionToUse.copyWith(isCompleted: false, paidFromAccountId: null));
+        await widget.service.updateTransaction(transactionToUse.copyWith(isCompleted: false, isPaid: false, paidFromAccountId: null));
       }
       if (mounted) Navigator.pop(context);
     } else {
@@ -762,7 +762,7 @@ class _EditTransactionDialogState extends State<EditTransactionDialog> {
 
     showDialog(
       context: context,
-      barrierDismissible: false, // Evitar cerrar mientras se procesa
+      barrierDismissible: false,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setS) => StreamBuilder<List<Map<String, dynamic>>>(
           stream: widget.service.getBalances(),
@@ -770,8 +770,6 @@ class _EditTransactionDialogState extends State<EditTransactionDialog> {
             if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
             
             final allAccounts = snapshot.data!;
-            // Mostramos todas las cuentas para que el usuario vea que existen, 
-            // pero resaltamos las que coinciden con la moneda.
             final accounts = allAccounts; 
 
             return AlertDialog(
@@ -797,7 +795,7 @@ class _EditTransactionDialogState extends State<EditTransactionDialog> {
                                   onTap: isProcessing ? null : () async {
                                     setS(() => isProcessing = true);
                                     try {
-                                      await widget.service.updateTransaction(t.copyWith(isCompleted: true));
+                                      await widget.service.updateTransaction(t.copyWith(isCompleted: true, isPaid: true));
                                       if (ctx.mounted) Navigator.pop(ctx);
                                       if (mounted) Navigator.pop(this.context);
                                     } catch (e) {
@@ -820,7 +818,6 @@ class _EditTransactionDialogState extends State<EditTransactionDialog> {
                                 subtitle: Text('${acc['currency']} ${acc['amount']}', style: TextStyle(color: sameCurrency ? null : Colors.grey)),
                                 trailing: sameCurrency ? null : const Icon(Icons.warning_amber_rounded, size: 16, color: Colors.orange),
                                 onTap: () async {
-                                  // DIÁLOGO DE CONFIRMACIÓN
                                   final confirm = await showDialog<bool>(
                                     context: context,
                                     builder: (c) => AlertDialog(
@@ -1018,17 +1015,19 @@ class _EditTransactionDialogState extends State<EditTransactionDialog> {
         FilledButton(
           onPressed: () async {
             if (_formKey.currentState!.validate()) {
-              final double val = double.tryParse(amountController.text) ?? 0.0;
+              final double val = widget.service.parseAmount(amountController.text);
               
-              // Obtener el nombre de la categoría seleccionada
               String newCategory = t.category;
               if (selectedCategoryId != null) {
                 if (selectedCategoryId == 'income_cat') {
                   newCategory = 'Ingreso';
                 } else {
                   final categories = await widget.service.getCategories(type: t.type).first;
-                  final cat = categories.where((c) => c['id'] == selectedCategoryId).firstOrNull;
-                  if (cat != null) newCategory = cat['name'];
+                  final catData = categories.where((c) => c['id'] == selectedCategoryId).firstOrNull;
+                  if (catData != null) {
+                    final cat = CategoryModel.fromMap(catData, catData['id']);
+                    newCategory = cat.name;
+                  }
                 }
               }
 

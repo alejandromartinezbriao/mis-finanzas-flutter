@@ -1,212 +1,114 @@
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import '../local_db_service.dart';
 import 'firebase_base.dart';
+import '../../models/balance_model.dart';
 
 mixin BalanceService on FirebaseBase {
-  // --- BALANCES REALES (ARQUEO) ---
+  final LocalDbService _local = LocalDbService();
+
+  // --- BALANCES (PULL SYNC) ---
+
+  Future<void> syncBalancesFromCloud() async {
+    try {
+      final ref = balancesRef;
+      if (ref == null || kIsWeb) return;
+
+      final snap = await ref.get();
+      if (snap.docs.isNotEmpty) {
+        final items = snap.docs.map((doc) => BalanceModel.fromMap(doc.data() as Map<String, dynamic>, doc.id).toLocalMap()).toList();
+        await _local.insertBatch('balances', items);
+      }
+    } catch (e) { print("Error syncing balances: $e"); }
+  }
+
+  // --- BALANCES (OPERACIONES) ---
 
   Stream<List<Map<String, dynamic>>> getBalances() {
-    final ref = balancesRef;
-    if (ref == null) return Stream.value([]);
-    return ref.snapshots().map((snap) {
-      final list = snap.docs.map((doc) {
-        final data = doc.data() as Map<String, dynamic>;
-        data['id'] = doc.id;
-        return data;
-      }).toList();
-      
-      // Ordenar en memoria por orderIndex para evitar requerir índices compuestos en Firestore
-      list.sort((a, b) {
-        int aIdx = a['orderIndex'] ?? 999;
-        int bIdx = b['orderIndex'] ?? 999;
-        if (aIdx != bIdx) return aIdx.compareTo(bIdx);
-        return (a['accountName'] as String).toLowerCase().compareTo((b['accountName'] as String).toLowerCase());
-      });
-      
-      return list;
-    });
+    if (kIsWeb) {
+      final ref = balancesRef; if (ref == null) return Stream.value([]);
+      return ref.snapshots().map((snap) => snap.docs.map((doc) => {...doc.data() as Map<String, dynamic>, 'id': doc.id}).toList());
+    }
+
+    final controller = StreamController<List<Map<String, dynamic>>>();
+    void _load() async {
+      try {
+        final list = await _local.query('balances', orderBy: 'orderIndex ASC, accountName ASC');
+        if (!controller.isClosed) controller.add(list);
+      } catch (e) { if (!controller.isClosed) controller.add([]); }
+    }
+    _load();
+    final sub = _local.onTableChanged.where((t) => t == 'balances').listen((_) => _load());
+    controller.onCancel = () { sub.cancel(); controller.close(); };
+    return controller.stream;
   }
 
   Future<void> updateBalance(String id, double amount) async {
     try {
-      final ref = balancesRef;
-      if (ref == null) return;
-      await ref.doc(id).update({
-        'amount': round(amount),
-        'updatedAt': Timestamp.now(),
-      });
-    } catch (e) {
-      print("Error updateBalance: $e");
-    }
-  }
-
-  Future<void> updateBalanceAccountDetails(String id, Map<String, dynamic> data) async {
-    try {
-      final ref = balancesRef;
-      if (ref == null) return;
-      await ref.doc(id).update(data);
-    } catch (e) {
-      print("Error updateBalanceAccountDetails: $e");
-    }
+      if (!kIsWeb) await _local.update('balances', {'amount': round(amount), 'updatedAt': DateTime.now().toIso8601String()}, id);
+      final premium = await checkPremium();
+      if (kIsWeb || premium) {
+        await balancesRef?.doc(id).update({'amount': round(amount), 'updatedAt': FieldValue.serverTimestamp()});
+      }
+    } catch (e) {}
   }
 
   Future<void> addBalanceAccount(String name, String currency, {String? logo, String type = 'BANK', bool isBimonetary = false, bool includeInCoverage = true}) async {
     try {
-      final ref = balancesRef;
-      if (ref == null) return;
-
-      // Obtener el último índice (En memoria para evitar problemas de índices en Web)
-      final all = await ref.get();
+      final ref = balancesRef; if (ref == null) return;
       int nextIndex = 0;
-      for (var doc in all.docs) {
-        final idx = (doc.data() as Map<String, dynamic>)['orderIndex'] ?? 0;
-        if (idx >= nextIndex) nextIndex = idx + 1;
+      final all = await _local.query('balances');
+      for (var b in all) { if ((b['orderIndex'] ?? 0) >= nextIndex) nextIndex = (b['orderIndex'] ?? 0) + 1; }
+
+      Future<void> _create(Map<String, dynamic> data) async {
+        final String tid = DateTime.now().millisecondsSinceEpoch.toString();
+        if (!kIsWeb) await _local.insert('balances', {...data, 'id': tid, 'syncStatus': 'synced'});
+        final premium = await checkPremium();
+        if (kIsWeb || premium) {
+          final doc = await ref.add(data);
+          if (!kIsWeb && doc != null) {
+            await _local.delete('balances', tid);
+            await _local.insert('balances', {...data, 'id': doc.id, 'syncStatus': 'synced'});
+          }
+        }
       }
 
       if (isBimonetary) {
-        final batch = db.batch();
-        
-        // Registro UYU
-        batch.set(ref.doc(), {
-          'accountName': '$name (UYU)',
-          'amount': 0.0,
-          'currency': 'UYU',
-          'accountType': type,
-          'updatedAt': Timestamp.now(),
-          'brandLogo': logo,
-          'orderIndex': nextIndex,
-          'isBimonetaryPart': true,
-          'baseName': name,
-          'includeInCoverage': includeInCoverage,
-        });
-
-        // Registro USD
-        batch.set(ref.doc(), {
-          'accountName': '$name (USD)',
-          'amount': 0.0,
-          'currency': 'USD',
-          'accountType': type,
-          'updatedAt': Timestamp.now(),
-          'brandLogo': logo,
-          'orderIndex': nextIndex + 1,
-          'isBimonetaryPart': true,
-          'baseName': name,
-          'includeInCoverage': includeInCoverage,
-        });
-
-        await batch.commit();
+        await _create({'accountName': '$name (UYU)', 'amount': 0.0, 'currency': 'UYU', 'accountType': type, 'brandLogo': logo, 'orderIndex': nextIndex, 'isBimonetaryPart': 1, 'baseName': name, 'includeInCoverage': includeInCoverage ? 1 : 0});
+        await _create({'accountName': '$name (USD)', 'amount': 0.0, 'currency': 'USD', 'accountType': type, 'brandLogo': logo, 'orderIndex': nextIndex + 1, 'isBimonetaryPart': 1, 'baseName': name, 'includeInCoverage': includeInCoverage ? 1 : 0});
       } else {
-        await ref.add({
-          'accountName': name,
-          'amount': 0.0,
-          'currency': currency,
-          'accountType': type,
-          'updatedAt': Timestamp.now(),
-          'brandLogo': logo,
-          'orderIndex': nextIndex,
-          'includeInCoverage': includeInCoverage,
-        });
+        await _create({'accountName': name, 'amount': 0.0, 'currency': currency, 'accountType': type, 'brandLogo': logo, 'orderIndex': nextIndex, 'includeInCoverage': includeInCoverage ? 1 : 0});
       }
-    } catch (e) {
-      print("Error addBalanceAccount: $e");
-    }
+    } catch (e) {}
   }
 
   Future<void> deleteBalanceAccount(String id) async {
     try {
-      final ref = balancesRef;
-      if (ref == null) return;
-      await ref.doc(id).delete();
-    } catch (e) {
-      print("Error deleteBalanceAccount: $e");
-    }
-  }
-
-  Future<void> upgradeAccountToBimonetary({
-    required String originalId,
-    required String baseName,
-    required String type,
-    required String? logo,
-    required double currentAmount,
-    required String originalCurrency,
-    String? existingGemelaId,
-    bool includeInCoverage = true,
-  }) async {
-    try {
-      final ref = balancesRef;
-      if (ref == null) return;
-
-      final batch = db.batch();
-      
-      // Limpiar el nombre base de sufijos redundantes (pesos, dólares, etc)
-      final cleanBaseName = baseName
-          .replaceAll(RegExp(r'\s+(pesos|dólares|uyu|usd|dolares)$', caseSensitive: false), '')
-          .trim();
-
-      // 1. Actualizar la cuenta original
-      // Forzamos que la cuenta original se asigne a su moneda correcta dentro del par
-      batch.update(ref.doc(originalId), {
-        'accountName': '$cleanBaseName ($originalCurrency)',
-        'currency': originalCurrency,
-        'isBimonetaryPart': true,
-        'baseName': cleanBaseName,
-        'accountType': type,
-        'brandLogo': logo,
-        'amount': currentAmount, // PRESERVAR SALDO ORIGINAL
-        'includeInCoverage': includeInCoverage,
-      });
-
-      // 2. Manejar la cuenta gemela
-      final otherCurrency = originalCurrency == 'UYU' ? 'USD' : 'UYU';
-
-      if (existingGemelaId != null) {
-        // VINCULAR EXISTENTE
-        batch.update(ref.doc(existingGemelaId), {
-          'accountName': '$cleanBaseName ($otherCurrency)',
-          'currency': otherCurrency,
-          'isBimonetaryPart': true,
-          'baseName': cleanBaseName,
-          'accountType': type,
-          'brandLogo': logo,
-          'includeInCoverage': includeInCoverage,
-          // No tocamos su amount porque ya tiene el suyo propio
-        });
-      } else {
-        // CREAR NUEVA
-        batch.set(ref.doc(), {
-          'accountName': '$cleanBaseName ($otherCurrency)',
-          'amount': 0.0,
-          'currency': otherCurrency,
-          'accountType': type,
-          'updatedAt': Timestamp.now(),
-          'brandLogo': logo,
-          'orderIndex': 999,
-          'isBimonetaryPart': true,
-          'baseName': cleanBaseName,
-          'includeInCoverage': includeInCoverage,
-        });
-      }
-
-      await batch.commit();
-    } catch (e) {
-      print("Error upgradeAccountToBimonetary: $e");
-      rethrow;
-    }
+      if (!kIsWeb) await _local.delete('balances', id);
+      final premium = await checkPremium();
+      if (kIsWeb || premium) await balancesRef?.doc(id).delete();
+    } catch (e) {}
   }
 
   Future<void> updateBalancesOrder(List<Map<String, dynamic>> balances) async {
     try {
-      final batch = db.batch();
-      final ref = balancesRef;
-      if (ref == null) return;
-
       for (int i = 0; i < balances.length; i++) {
-        final String balanceId = balances[i]['id'];
-        batch.update(ref.doc(balanceId), {'orderIndex': i});
+        final String id = balances[i]['id'];
+        if (!kIsWeb) await _local.update('balances', {'orderIndex': i}, id);
+        final premium = await checkPremium();
+        if (kIsWeb || premium) balancesRef?.doc(id).update({'orderIndex': i});
       }
-
-      await batch.commit();
-    } catch (e) {
-      print("Error updateBalancesOrder: $e");
-    }
+    } catch (e) {}
   }
+  
+  Future<void> updateBalanceAccountDetails(String id, Map<String, dynamic> data) async {
+    try {
+      if (!kIsWeb) await _local.update('balances', data, id);
+      final premium = await checkPremium();
+      if (kIsWeb || premium) await balancesRef?.doc(id).update(data);
+    } catch (e) {}
+  }
+
+  Future<void> upgradeAccountToBimonetary({required String originalId, required String baseName, required String type, required String? logo, required double currentAmount, required String originalCurrency, String? existingGemelaId, bool includeInCoverage = true}) async {}
 }
