@@ -2,6 +2,7 @@
 
 ## Estado Actual (Última actualización: 02/06/2026)
 - **Versión**: 3.7.0 "Reloj Suizo" (Consolidación de Soberanía Local).
+- **Protección Legal (BrandShield)**: Reemplazo total de logotipos de instituciones financieras y entes públicos por un sistema de **Identidad por Color e Iniciales**. Esto blinda a la aplicación contra infracciones de marca registrada, manteniendo una estética premium y profesional.
 - **Arquitectura**: Migración exitosa a **SQLite-First (Offline-First)**. El teléfono es ahora la fuente de verdad primaria para máxima velocidad y funcionamiento sin internet.
 - **Sincronización**:
     - **Sincronización Granular**: Implementación de botones "Sincronizar Nube" por sección (Cuentas, Categorías, Plantillas) para un control total del flujo de datos.

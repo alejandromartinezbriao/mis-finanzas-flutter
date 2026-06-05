@@ -15,7 +15,7 @@ mixin BalanceService on FirebaseBase {
       final ref = balancesRef;
       if (ref == null || kIsWeb) return;
 
-      final snap = await ref.get();
+      final snap = await ref.orderBy('orderIndex').get();
       if (snap.docs.isNotEmpty) {
         final items = snap.docs.map((doc) => BalanceModel.fromMap(doc.data() as Map<String, dynamic>, doc.id).toLocalMap()).toList();
         await _local.insertBatch('balances', items);
@@ -28,28 +28,32 @@ mixin BalanceService on FirebaseBase {
   Stream<List<Map<String, dynamic>>> getBalances() {
     if (kIsWeb) {
       final ref = balancesRef; if (ref == null) return Stream.value([]);
-      return ref.snapshots().map((snap) => snap.docs.map((doc) => {...doc.data() as Map<String, dynamic>, 'id': doc.id}).toList());
+      // REPARACIÓN ORDEN WEB: Forzamos el orden por índice
+      return ref.orderBy('orderIndex').snapshots().map((snap) => 
+        snap.docs.map((doc) => {...doc.data() as Map<String, dynamic>, 'id': doc.id}).toList()
+      );
     }
 
     final controller = StreamController<List<Map<String, dynamic>>>();
-    void _load() async {
+    void load() async {
       try {
         final list = await _local.query('balances', orderBy: 'orderIndex ASC, accountName ASC');
         if (!controller.isClosed) controller.add(list);
       } catch (e) { if (!controller.isClosed) controller.add([]); }
     }
-    _load();
-    final sub = _local.onTableChanged.where((t) => t == 'balances').listen((_) => _load());
+    load();
+    final sub = _local.onTableChanged.where((t) => t == 'balances').listen((_) => load());
     controller.onCancel = () { sub.cancel(); controller.close(); };
     return controller.stream;
   }
 
   Future<void> updateBalance(String id, double amount) async {
     try {
-      if (!kIsWeb) await _local.update('balances', {'amount': round(amount), 'updatedAt': DateTime.now().toIso8601String()}, id);
+      final String sid = id.toString();
+      if (!kIsWeb) await _local.update('balances', {'amount': round(amount), 'updatedAt': DateTime.now().toIso8601String()}, sid);
       final premium = await checkPremium();
       if (kIsWeb || premium) {
-        await balancesRef?.doc(id).update({'amount': round(amount), 'updatedAt': FieldValue.serverTimestamp()});
+        await balancesRef?.doc(sid).update({'amount': round(amount), 'updatedAt': FieldValue.serverTimestamp()});
       }
     } catch (e) {}
   }
@@ -61,13 +65,13 @@ mixin BalanceService on FirebaseBase {
       final all = await _local.query('balances');
       for (var b in all) { if ((b['orderIndex'] ?? 0) >= nextIndex) nextIndex = (b['orderIndex'] ?? 0) + 1; }
 
-      Future<void> _create(Map<String, dynamic> data) async {
+      Future<void> create(Map<String, dynamic> data) async {
         final String tid = DateTime.now().millisecondsSinceEpoch.toString();
         if (!kIsWeb) await _local.insert('balances', {...data, 'id': tid, 'syncStatus': 'synced'});
         final premium = await checkPremium();
         if (kIsWeb || premium) {
           final doc = await ref.add(data);
-          if (!kIsWeb && doc != null) {
+          if (!kIsWeb) {
             await _local.delete('balances', tid);
             await _local.insert('balances', {...data, 'id': doc.id, 'syncStatus': 'synced'});
           }
@@ -75,38 +79,47 @@ mixin BalanceService on FirebaseBase {
       }
 
       if (isBimonetary) {
-        await _create({'accountName': '$name (UYU)', 'amount': 0.0, 'currency': 'UYU', 'accountType': type, 'brandLogo': logo, 'orderIndex': nextIndex, 'isBimonetaryPart': 1, 'baseName': name, 'includeInCoverage': includeInCoverage ? 1 : 0});
-        await _create({'accountName': '$name (USD)', 'amount': 0.0, 'currency': 'USD', 'accountType': type, 'brandLogo': logo, 'orderIndex': nextIndex + 1, 'isBimonetaryPart': 1, 'baseName': name, 'includeInCoverage': includeInCoverage ? 1 : 0});
+        await create({'accountName': '$name (UYU)', 'amount': 0.0, 'currency': 'UYU', 'accountType': type, 'brandLogo': logo, 'orderIndex': nextIndex, 'isBimonetaryPart': 1, 'baseName': name, 'includeInCoverage': includeInCoverage ? 1 : 0});
+        await create({'accountName': '$name (USD)', 'amount': 0.0, 'currency': 'USD', 'accountType': type, 'brandLogo': logo, 'orderIndex': nextIndex + 1, 'isBimonetaryPart': 1, 'baseName': name, 'includeInCoverage': includeInCoverage ? 1 : 0});
       } else {
-        await _create({'accountName': name, 'amount': 0.0, 'currency': currency, 'accountType': type, 'brandLogo': logo, 'orderIndex': nextIndex, 'includeInCoverage': includeInCoverage ? 1 : 0});
+        await create({'accountName': name, 'amount': 0.0, 'currency': currency, 'accountType': type, 'brandLogo': logo, 'orderIndex': nextIndex, 'includeInCoverage': includeInCoverage ? 1 : 0});
       }
     } catch (e) {}
   }
 
   Future<void> deleteBalanceAccount(String id) async {
     try {
-      if (!kIsWeb) await _local.delete('balances', id);
+      final String sid = id.toString();
+      if (!kIsWeb) await _local.delete('balances', sid);
       final premium = await checkPremium();
-      if (kIsWeb || premium) await balancesRef?.doc(id).delete();
+      if (kIsWeb || premium) await balancesRef?.doc(sid).delete();
     } catch (e) {}
   }
 
   Future<void> updateBalancesOrder(List<Map<String, dynamic>> balances) async {
     try {
+      final premium = await checkPremium();
+      final batch = (kIsWeb || premium) ? db.batch() : null;
+
       for (int i = 0; i < balances.length; i++) {
-        final String id = balances[i]['id'];
-        if (!kIsWeb) await _local.update('balances', {'orderIndex': i}, id);
-        final premium = await checkPremium();
-        if (kIsWeb || premium) balancesRef?.doc(id).update({'orderIndex': i});
+        final String id = balances[i]['id'].toString();
+        if (!kIsWeb) await _local.update('balances', {'orderIndex': i}, id, silent: true);
+        if (batch != null && balancesRef != null) {
+          batch.update(balancesRef!.doc(id), {'orderIndex': i});
+        }
       }
-    } catch (e) {}
+      
+      if (batch != null) await batch.commit();
+      if (!kIsWeb) _local.notify('balances');
+    } catch (e) { print("Error updateBalancesOrder: $e"); }
   }
   
   Future<void> updateBalanceAccountDetails(String id, Map<String, dynamic> data) async {
     try {
-      if (!kIsWeb) await _local.update('balances', data, id);
+      final String sid = id.toString();
+      if (!kIsWeb) await _local.update('balances', data, sid);
       final premium = await checkPremium();
-      if (kIsWeb || premium) await balancesRef?.doc(id).update(data);
+      if (kIsWeb || premium) await balancesRef?.doc(sid).update(data);
     } catch (e) {}
   }
 

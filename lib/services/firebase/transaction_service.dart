@@ -103,7 +103,7 @@ mixin TransactionService on FirebaseBase {
   Stream<List<TransactionModel>> getTransactions({int? month, int? year}) {
     if (kIsWeb) {
       final ref = transactionsRef; if (ref == null) return Stream.value([]);
-      Query query = ref.where('isDeleted', isEqualTo: false);
+      Query query = ref;
       if (month != null && year != null) {
         DateTime start = DateTime(year, month, 1);
         DateTime end = DateTime(year, month + 1, 1).subtract(const Duration(milliseconds: 1));
@@ -116,7 +116,7 @@ mixin TransactionService on FirebaseBase {
     if (month == null || year == null) return Stream.value([]);
     final String monthPrefix = "$year-${month.toString().padLeft(2, '0')}%";
 
-    void _load() async {
+    void load() async {
       try {
         final list = await _local.query('transactions', where: "date LIKE ? AND isDeleted = 0", whereArgs: [monthPrefix], orderBy: 'date DESC');
         final txs = list.map((m) => TransactionModel.fromMap(m, m['id'])).toList();
@@ -124,8 +124,8 @@ mixin TransactionService on FirebaseBase {
       } catch (e) { if (!controller.isClosed) controller.add([]); }
     }
 
-    _load();
-    final sub = _local.onTableChanged.where((t) => t == 'transactions').listen((_) => _load());
+    load();
+    final sub = _local.onTableChanged.where((t) => t == 'transactions').listen((_) => load());
     controller.onCancel = () { sub.cancel(); controller.close(); };
     return controller.stream;
   }
@@ -133,8 +133,7 @@ mixin TransactionService on FirebaseBase {
   Stream<List<TransactionModel>> getTransactionsInRange(DateTime start, DateTime end) {
     if (kIsWeb) {
       final ref = transactionsRef; if (ref == null) return Stream.value([]);
-      return ref.where('isDeleted', isEqualTo: false)
-          .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
+      return ref.where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
           .where('date', isLessThanOrEqualTo: Timestamp.fromDate(end))
           .snapshots().map((snap) => snap.docs.map((doc) => TransactionModel.fromMap(doc.data() as Map<String, dynamic>, doc.id)).toList());
     }
@@ -143,7 +142,7 @@ mixin TransactionService on FirebaseBase {
     final String startStr = start.toIso8601String();
     final String endStr = end.toIso8601String();
 
-    void _load() async {
+    void load() async {
       try {
         final list = await _local.query('transactions', where: "date >= ? AND date <= ? AND isDeleted = 0", whereArgs: [startStr, endStr], orderBy: 'date DESC');
         final txs = list.map((m) => TransactionModel.fromMap(m, m['id'])).toList();
@@ -151,8 +150,8 @@ mixin TransactionService on FirebaseBase {
       } catch (e) { if (!controller.isClosed) controller.add([]); }
     }
 
-    _load();
-    final sub = _local.onTableChanged.where((t) => t == 'transactions').listen((_) => _load());
+    load();
+    final sub = _local.onTableChanged.where((t) => t == 'transactions').listen((_) => load());
     controller.onCancel = () { sub.cancel(); controller.close(); };
     return controller.stream;
   }
@@ -182,7 +181,6 @@ mixin TransactionService on FirebaseBase {
         await addTransaction(tx, silent: silent);
       }
       if (silent) _local.notify('transactions');
-    } catch (e) {
     } finally {
       _generatingMonths.remove(monthKey); 
     }

@@ -69,7 +69,7 @@ class DebtCoverageCard extends StatelessWidget {
             _comparisonRow(context, 'Pesos (UYU)', realUYU, debtUYU, uyuFormat, isMobile: isMobile, isClosure: isClosureMode, isProjection: isProjectionMode),
             if (debtUSD > 0 || realUSD > 0) ...[
               Divider(
-                color: Theme.of(context).colorScheme.onPrimaryContainer.withValues(alpha: 0.1),
+                color: Theme.of(context).colorScheme.onPrimaryContainer.withOpacity(0.1),
                 height: isMobile ? 12 : 24,
               ),
               _comparisonRow(context, 'Dólares (USD)', realUSD, debtUSD, usdFormat, isMobile: isMobile, isClosure: isClosureMode, isProjection: isProjectionMode),
@@ -131,7 +131,7 @@ class DebtCoverageCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: isCovered ? Colors.green.withValues(alpha: 0.2) : Colors.deepOrange.withValues(alpha: 0.2),
+                color: isCovered ? Colors.green.withOpacity(0.2) : Colors.deepOrange.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
@@ -154,7 +154,7 @@ class DebtCoverageCard extends StatelessWidget {
               child: Text(
                 realLabel,
                 style: TextStyle(
-                  color: Theme.of(context).colorScheme.onPrimaryContainer.withValues(alpha: 0.7),
+                  color: Theme.of(context).colorScheme.onPrimaryContainer.withOpacity(0.7),
                   fontSize: isMobile ? 10 : 9,
                 ),
               ),
@@ -164,7 +164,7 @@ class DebtCoverageCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(2),
                 child: LinearProgressIndicator(
                   value: realProgress,
-                  backgroundColor: Theme.of(context).colorScheme.onPrimaryContainer.withValues(alpha: 0.1),
+                  backgroundColor: Theme.of(context).colorScheme.onPrimaryContainer.withOpacity(0.1),
                   color: Colors.greenAccent,
                   minHeight: isMobile ? 2 : 4,
                 ),
@@ -194,7 +194,7 @@ class DebtCoverageCard extends StatelessWidget {
               child: Text(
                 debtLabel,
                 style: TextStyle(
-                  color: Theme.of(context).colorScheme.onPrimaryContainer.withValues(alpha: 0.7),
+                  color: Theme.of(context).colorScheme.onPrimaryContainer.withOpacity(0.7),
                   fontSize: isMobile ? 10 : 9,
                 ),
               ),
@@ -204,7 +204,7 @@ class DebtCoverageCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(2),
                 child: LinearProgressIndicator(
                   value: debtProgress,
-                  backgroundColor: Theme.of(context).colorScheme.onPrimaryContainer.withValues(alpha: 0.1),
+                  backgroundColor: Theme.of(context).colorScheme.onPrimaryContainer.withOpacity(0.1),
                   color: Colors.deepOrangeAccent,
                   minHeight: isMobile ? 2 : 4,
                 ),

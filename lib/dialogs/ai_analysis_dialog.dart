@@ -203,10 +203,4 @@ class _AiAnalysisDialogState extends State<AiAnalysisDialog> {
       ]),
     );
   }
-
-  Color _getScoreColor(int score) {
-    if (score >= 80) return Colors.green;
-    if (score >= 50) return Colors.orange;
-    return Colors.red;
-  }
 }

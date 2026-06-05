@@ -31,9 +31,9 @@ class _BalanceDialogState extends State<BalanceDialog> {
     isEdit = widget.account != null;
     nameCtrl = TextEditingController(
         text: widget.account?['accountName']?.toString().replaceAll(RegExp(r' \((UYU|USD)\)$'), '') ?? '');
-    currency = widget.account?['currency'] ?? 'UYU';
-    accountType = widget.account?['accountType'] ?? 'BANK';
-    selectedLogo = widget.account?['brandLogo'];
+    currency = widget.account?['currency']?.toString() ?? 'UYU';
+    accountType = widget.account?['accountType']?.toString() ?? 'BANK';
+    selectedLogo = widget.account?['brandLogo']?.toString();
     
     // Parseo seguro de booleanos (SQLite int 0/1 vs Firebase bool)
     isBimonetary = widget.account?['isBimonetaryPart'] == true || widget.account?['isBimonetaryPart'] == 1;
@@ -82,7 +82,7 @@ class _BalanceDialogState extends State<BalanceDialog> {
             if (!isBimonetary) ...[
               const SizedBox(height: 10),
               DropdownButtonFormField<String>(
-                initialValue: currency,
+                value: currency,
                 items: ['UYU', 'USD'].map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
                 onChanged: (v) => setState(() => currency = v!),
                 decoration: const InputDecoration(labelText: 'Moneda'),
@@ -118,15 +118,15 @@ class _BalanceDialogState extends State<BalanceDialog> {
                     .replaceAll(RegExp(r'\s+(pesos|dólares|uyu|usd|dolares)$', caseSensitive: false), '')
                     .trim();
 
-                final otherCurrency = (widget.account!['currency'] ?? 'UYU') == 'UYU' ? 'USD' : 'UYU';
+                final otherCurrency = (widget.account!['currency']?.toString() ?? 'UYU') == 'UYU' ? 'USD' : 'UYU';
 
                 // Buscar posible gemela existente
                 final allAccounts = await widget.service.getBalances().first;
                 final existingGemela = allAccounts.where((a) {
-                  final name = (a['accountName'] as String).toLowerCase();
+                  final name = a['accountName']?.toString().toLowerCase() ?? '';
                   return name.contains(cleanBaseName.toLowerCase()) &&
-                      a['currency'] == otherCurrency &&
-                      a['id'] != widget.account!['id'];
+                      a['currency']?.toString() == otherCurrency &&
+                      a['id']?.toString() != widget.account!['id']?.toString();
                 }).firstOrNull;
 
                 String message = "¿Deseas pasar esta cuenta a bimonetaria?";
@@ -153,13 +153,13 @@ class _BalanceDialogState extends State<BalanceDialog> {
 
                 if (confirm == true) {
                   await widget.service.upgradeAccountToBimonetary(
-                    originalId: widget.account!['id'],
+                    originalId: widget.account!['id'].toString(),
                     baseName: cleanBaseName,
                     type: accountType,
                     logo: selectedLogo,
                     currentAmount: (widget.account!['amount'] ?? 0.0).toDouble(),
-                    originalCurrency: widget.account!['currency'] ?? 'UYU',
-                    existingGemelaId: existingGemela?['id'],
+                    originalCurrency: widget.account!['currency']?.toString() ?? 'UYU',
+                    existingGemelaId: existingGemela?['id']?.toString(),
                     includeInCoverage: includeInCoverage,
                   );
                   if (context.mounted) Navigator.pop(context);
@@ -168,7 +168,7 @@ class _BalanceDialogState extends State<BalanceDialog> {
               }
 
               // FLUJO NORMAL
-              final data = {
+              final Map<String, dynamic> data = {
                 'accountName': currentName,
                 'currency': currency,
                 'accountType': accountType,
@@ -178,7 +178,7 @@ class _BalanceDialogState extends State<BalanceDialog> {
               };
 
               if (isEdit) {
-                await widget.service.updateBalanceAccountDetails(widget.account!['id'], data);
+                await widget.service.updateBalanceAccountDetails(widget.account!['id'].toString(), data);
               } else {
                 await widget.service.addBalanceAccount(currentName, currency,
                     logo: selectedLogo, type: accountType, isBimonetary: isBimonetary, includeInCoverage: includeInCoverage);

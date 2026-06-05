@@ -91,7 +91,7 @@ class AccountBalanceGrid extends StatelessWidget {
                             border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.02),
+                                color: Colors.black.withOpacity(0.02),
                                 blurRadius: 4,
                                 offset: const Offset(0, 2),
                               ),
@@ -182,23 +182,6 @@ class AccountBalanceRow extends StatelessWidget {
             final balances = balSnapshot.data!;
             final goals = goalSnapshot.data ?? [];
 
-            // Calcular sumas totales por moneda restando lo reservado
-            double totalUYUAvailable = 0;
-            double totalUSDAvailable = 0;
-
-            for (var b in balances) {
-              final double reserved = goals
-                  .where((g) => g['linkedAccountId'] == b['id'])
-                  .fold(0.0, (sum, g) => sum + (g['currentAmount'] ?? 0.0));
-              final double available = (b['amount'] ?? 0.0).toDouble() - reserved;
-              
-              if (b['currency'] == 'UYU') {
-                totalUYUAvailable += available;
-              } else {
-                totalUSDAvailable += available;
-              }
-            }
-
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -235,7 +218,7 @@ class AccountBalanceRow extends StatelessWidget {
                               border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.02),
+                                  color: Colors.black.withOpacity(0.02),
                                   blurRadius: 2,
                                   offset: const Offset(0, 1),
                                 )

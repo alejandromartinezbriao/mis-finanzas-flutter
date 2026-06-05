@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
-
 import '../utils/icon_utils.dart';
 
 class BrandIcon extends StatelessWidget {
   final String name;
-  final String? manualLogo; // Nuevo campo para logo manual
-  final String? fallbackIcon; // Nuevo: Icono de categoría
-  final Color? fallbackColor; // Nuevo: Color de categoría
+  final String? manualLogo;
+  final String? fallbackIcon;
+  final Color? fallbackColor;
   final double size;
 
   const BrandIcon({
@@ -21,93 +20,51 @@ class BrandIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final String label = name.toLowerCase();
+    final design = _getInstitutionDesign(label);
+
+    Widget content;
+    Color iconColor = design.color;
     
-    // Mapeo de palabras clave a la ruta del asset
-    String? assetPath;
+    // --- LÓGICA DE PRIORIDAD DE LOGO ---
     
     if (manualLogo != null) {
       if (manualLogo!.startsWith('http')) {
-        // Es una URL
+        // 1. Logo por URL (Premium/Manual)
+        content = Image.network(
+          manualLogo!,
+          width: size * 0.8, height: size * 0.8, fit: BoxFit.contain,
+          errorBuilder: (context, error, stackTrace) => _buildDesignContent(design, iconColor),
+        );
       } else if (manualLogo!.endsWith('.png')) {
-        assetPath = 'assets/logos/$manualLogo';
+        // 2. Logo por Asset local (Protegido o genérico)
+        content = Image.asset(
+          'assets/logos/$manualLogo',
+          width: size * 0.8, height: size * 0.8, fit: BoxFit.contain,
+          errorBuilder: (context, error, stackTrace) => _buildDesignContent(design, iconColor),
+        );
       } else {
-        // Es un nombre de icono material
+        // 3. Logo por Nombre de Icono Material (Personalizado por el usuario)
+        content = Icon(
+          IconUtils.getIconData(manualLogo),
+          size: size * 0.6,
+          color: iconColor,
+        );
       }
-    }
-
-    if (assetPath == null && manualLogo == null) {
-      if (label.contains('santander')) {
-        assetPath = 'assets/logos/santander.png';
-      } else if (label.contains('itau') || label.contains('itaú')) {
-        assetPath = 'assets/logos/itau.png';
-      } else if (label.contains('bbva')) {
-        assetPath = 'assets/logos/bbva.png';
-      } else if (label.contains('scotia')) {
-        assetPath = 'assets/logos/scotiabank.png';
-      } else if (label.contains('republica') || label.contains('brou')) {
-        assetPath = 'assets/logos/banco-republica.png';
-      } else if (label.contains('oca-blue')) {
-        assetPath = 'assets/logos/oca-blue.png';
-      } else if (label.contains('oca')) {
-        assetPath = 'assets/logos/oca.png';
-      } else if (label.contains('prex')) {
-        assetPath = 'assets/logos/prex.png';
-      } else if (label.contains('dinero') || label.contains('midinero')) {
-        assetPath = 'assets/logos/midinero.png';
-      } else if (label.contains('srpffaa') || label.contains('militar')) {
-        assetPath = 'assets/logos/srpffaa.png';
-      } else if (label.contains('queen')) {
-        assetPath = 'assets/logos/queen.png';
-      } else if (label.contains('bodyguard')) {
-        assetPath = 'assets/logos/bodyguard.png';
-      } else if (label.contains('ahorros')) {
-        assetPath = 'assets/logos/ahorros.png';
-      } else if (label.contains('cabal')) {
-        assetPath = 'assets/logos/cabal.png';
-      } else if (label.contains('ose')) {
-        assetPath = 'assets/logos/ose.png';
-      } else if (label.contains('ute')) {
-        assetPath = 'assets/logos/ute.png';
-      } else if (label.contains('antel')) {
-        assetPath = 'assets/logos/antel.png';
-      } else if (label.contains('imm') || label.contains('intendencia') || label.contains('montevideo')) {
-        assetPath = 'assets/logos/imm.png';
-      } else if (label.contains('ces')) {
-        assetPath = 'assets/logos/ces.png';
-      } else if (label.contains('alquiler')) {
-        assetPath = 'assets/logos/alquiler.png';
-      } else if (label.contains('comunes')) {
-        assetPath = 'assets/logos/gastos-comunes.png';
-      }
-    }
-
-    Widget content;
-    if (manualLogo != null && manualLogo!.startsWith('http')) {
-      content = Image.network(
-        manualLogo!,
-        width: size * 0.8,
-        height: size * 0.8,
-        fit: BoxFit.contain,
-        errorBuilder: (context, error, stackTrace) => _defaultIcon(context, label),
-      );
-    } else if (assetPath != null) {
-      // Es un asset local
-      content = Image.asset(
-        assetPath,
-        width: size * 0.8,
-        height: size * 0.8,
-        fit: BoxFit.contain,
-        errorBuilder: (context, error, stackTrace) => _defaultIcon(context, label),
-      );
-    } else if (manualLogo != null && !manualLogo!.endsWith('.png')) {
-      // Es un icono material
-      content = Icon(
-        IconUtils.getIconData(manualLogo),
-        size: size * 0.7,
-        color: fallbackColor ?? Theme.of(context).colorScheme.primary, // CORREGIDO: Usa el color de la categoría
-      );
     } else {
-      content = _defaultIcon(context, label);
+      // 4. Si no hay logo manual, ver si es una institución reconocida
+      if (!design.isGeneric) {
+        content = _buildDesignContent(design, iconColor);
+      } else if (fallbackIcon != null) {
+        // 5. Fallback a icono de categoría
+        content = Icon(
+          IconUtils.getIconData(fallbackIcon!),
+          size: size * 0.6,
+          color: iconColor,
+        );
+      } else {
+        // 6. Diseño genérico por defecto
+        content = _buildDesignContent(design, iconColor);
+      }
     }
 
     return Container(
@@ -115,69 +72,61 @@ class BrandIcon extends StatelessWidget {
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: RadialGradient(
-          colors: [
-            Theme.of(context).colorScheme.surface,
-            Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-            Theme.of(context).colorScheme.surfaceContainerHighest,
-          ],
-          center: const Alignment(-0.3, -0.3),
-          radius: 0.7,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: size * 0.2,
-            offset: Offset(0, size * 0.1),
-          ),
-          if (Theme.of(context).brightness == Brightness.light)
-            BoxShadow(
-              color: Colors.white.withValues(alpha: 0.9),
-              blurRadius: size * 0.08,
-              offset: Offset(-size * 0.05, -size * 0.05),
-              spreadRadius: -1,
-            ),
-        ],
+        color: iconColor.withOpacity(0.15),
         border: Border.all(
-          color: Theme.of(context).colorScheme.outlineVariant,
-          width: 0.5,
+          color: iconColor.withOpacity(0.3),
+          width: 1.0,
         ),
       ),
-      child: Center(
-        child: Padding(
-          padding: EdgeInsets.all(size * 0.15),
-          child: content,
-        ),
+      child: Center(child: content),
+    );
+  }
+
+  Widget _buildDesignContent(_BrandDesign design, Color color) {
+    if (design.icon != null) {
+      return Icon(design.icon, size: size * 0.6, color: color);
+    }
+    return Text(
+      design.initials ?? '',
+      style: TextStyle(
+        color: color,
+        fontWeight: FontWeight.w900,
+        fontSize: size * 0.4,
+        letterSpacing: -0.5,
       ),
     );
   }
 
-  Widget _defaultIcon(BuildContext context, String label) {
-    if (fallbackIcon != null) {
-      return Icon(
-        IconUtils.getIconData(fallbackIcon!),
-        size: size * 0.7,
-        color: fallbackColor ?? Colors.grey,
-      );
-    }
+  _BrandDesign _getInstitutionDesign(String label) {
+    if (label.contains('santander')) return _BrandDesign(color: const Color(0xFFEC0000), initials: 'SA');
+    if (label.contains('itau') || label.contains('itaú')) return _BrandDesign(color: const Color(0xFFFF7900), initials: 'IT');
+    if (label.contains('bbva')) return _BrandDesign(color: const Color(0xFF004481), initials: 'BB');
+    if (label.contains('scotia')) return _BrandDesign(color: const Color(0xFFED1C24), initials: 'SC');
+    if (label.contains('republica') || label.contains('brou')) return _BrandDesign(color: const Color(0xFF00549A), initials: 'BR');
+    if (label.contains('oca')) return _BrandDesign(color: const Color(0xFF0033A0), initials: 'OC');
+    if (label.contains('prex')) return _BrandDesign(color: const Color(0xFF00B5E2), initials: 'PR');
+    if (label.contains('midinero') || label.contains('dinero')) return _BrandDesign(color: const Color(0xFF00A9E0), initials: 'MD');
+    if (label.contains('cabal')) return _BrandDesign(color: const Color(0xFF003876), initials: 'CA');
+    if (label.contains('srpffaa') || label.contains('militar')) return _BrandDesign(color: const Color(0xFF2E7D32), initials: 'SR');
 
-    IconData iconData = Icons.account_balance_wallet;
-    Color color = Colors.grey;
+    if (label.contains('ute') || label.contains('luz')) return _BrandDesign(color: const Color(0xFFFFD600), icon: Icons.bolt);
+    if (label.contains('ose') || label.contains('agua')) return _BrandDesign(color: const Color(0xFF0072CE), icon: Icons.water_drop);
+    if (label.contains('antel') || label.contains('teléfono')) return _BrandDesign(color: const Color(0xFF8BC34A), initials: 'AN');
+    if (label.contains('imm') || label.contains('intendencia')) return _BrandDesign(color: const Color(0xFF009688), initials: 'IM');
+    if (label.contains('ces') || label.contains('alarma')) return _BrandDesign(color: const Color(0xFFD32F2F), icon: Icons.security);
 
-    if (label.contains('tarjeta') || label.contains('visa') || label.contains('master')) {
-      iconData = Icons.credit_card;
-      color = Theme.of(context).colorScheme.primary;
-    } else if (label.contains('ose') || label.contains('agua')) {
-      iconData = Icons.water_drop;
-      color = Colors.blue;
-    } else if (label.contains('antel') || label.contains('teléfono')) {
-      iconData = Icons.phone_android;
-      color = Colors.green;
-    } else if (label.contains('luz') || label.contains('ute')) {
-      iconData = Icons.lightbulb;
-      color = Colors.amber;
-    }
+    if (label.contains('alquiler') || label.contains('casa')) return _BrandDesign(color: const Color(0xFF5D4037), icon: Icons.home);
+    if (label.contains('comunes')) return _BrandDesign(color: const Color(0xFF455A64), icon: Icons.apartment);
+    if (label.contains('tarjeta') || label.contains('visa') || label.contains('master')) return _BrandDesign(color: Colors.blueGrey, icon: Icons.credit_card);
 
-    return Icon(iconData, size: size, color: color);
+    return _BrandDesign(color: fallbackColor ?? Colors.blueGrey, icon: null, isGeneric: true);
   }
+}
+
+class _BrandDesign {
+  final Color color;
+  final String? initials;
+  final IconData? icon;
+  final bool isGeneric;
+  _BrandDesign({required this.color, this.initials, this.icon, this.isGeneric = false});
 }

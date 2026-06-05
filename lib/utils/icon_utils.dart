@@ -19,12 +19,8 @@ class IconUtils {
     'shopping_bag', 'build', 'flag', 'category', 'sports_score'
   ];
 
-  // Lista unificada de logos personalizados en assets
   static const List<String> _assetLogos = [
-    'banco-republica.png', 'itau.png', 'santander.png', 'bbva.png', 'scotiabank.png',
-    'oca.png', 'oca-blue.png', 'prex.png', 'midinero.png', 'ahorros.png', 'cabal.png',
-    'srpffaa.png', 'dinero.png', 'queen.png', 'bodyguard.png', 'alquiler.png',
-    'ose.png', 'ute.png', 'imm.png', 'ces.png', 'gastos-comunes.png'
+    'ahorros.png', 'dinero.png', 'queen.png', 'bodyguard.png'
   ];
 
   static IconData getIconData(String? name) {
@@ -94,7 +90,6 @@ class IconUtils {
   
   static List<String> getAllAssetLogos() => _assetLogos;
 
-  /// Muestra una galería unificada que permite elegir entre íconos de Material y Logos de Assets
   static void showUnifiedIconPicker({
     required BuildContext context,
     required Function(String?, bool isAsset) onSelected,
@@ -139,7 +134,7 @@ class IconUtils {
                               isSelected: selectedValue == null,
                               onTap: () {
                                 onSelected(null, false);
-                                Navigator.pop(context);
+                                Navigator.pop(ctx);
                               },
                             );
                           }
@@ -150,7 +145,7 @@ class IconUtils {
                             isSelected: !isSelectedValueAsset && selectedValue == name,
                             onTap: () {
                               onSelected(name, false);
-                              Navigator.pop(context);
+                              Navigator.pop(ctx);
                             },
                           );
                         },
@@ -174,7 +169,7 @@ class IconUtils {
                             isSelected: isSelectedValueAsset && selectedValue == logo,
                             onTap: () {
                               onSelected(logo, true);
-                              Navigator.pop(context);
+                              Navigator.pop(ctx);
                             },
                           );
                         },

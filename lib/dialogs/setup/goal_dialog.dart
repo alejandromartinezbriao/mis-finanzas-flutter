@@ -31,10 +31,15 @@ class _GoalDialogState extends State<GoalDialog> {
     super.initState();
     isEdit = widget.goal != null;
     titleCtrl = TextEditingController(text: widget.goal?['title'] ?? '');
+    
+    final double target = (widget.goal?['targetAmount'] ?? 0.0).toDouble();
     targetCtrl = TextEditingController(
-        text: widget.goal != null ? CurrencyUtils.formatForInput((widget.goal!['targetAmount'] ?? 0.0).toDouble()) : '');
+        text: target > 0 ? CurrencyUtils.formatForInput(target) : '');
+        
+    final double current = (widget.goal?['currentAmount'] ?? 0.0).toDouble();
     currentCtrl = TextEditingController(
-        text: widget.goal != null ? CurrencyUtils.formatForInput((widget.goal!['currentAmount'] ?? 0.0).toDouble()) : '');
+        text: current > 0 ? CurrencyUtils.formatForInput(current) : '');
+        
     currency = widget.goal?['currency'] ?? 'UYU';
     selectedIcon = widget.goal?['icon'] ?? 'savings';
     linkedAccountId = widget.goal?['linkedAccountId'];
@@ -157,8 +162,8 @@ class _GoalDialogState extends State<GoalDialog> {
             if (titleCtrl.text.isNotEmpty && targetCtrl.text.isNotEmpty) {
               final data = {
                 'title': titleCtrl.text,
-                'targetAmount': double.tryParse(targetCtrl.text) ?? 0.0,
-                'currentAmount': double.tryParse(currentCtrl.text) ?? 0.0,
+                'targetAmount': widget.service.parseAmount(targetCtrl.text),
+                'currentAmount': widget.service.parseAmount(currentCtrl.text),
                 'currency': currency,
                 'icon': selectedIcon,
                 'linkedAccountId': linkedAccountId,

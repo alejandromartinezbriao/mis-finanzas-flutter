@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import '../local_db_service.dart';
 import 'firebase_base.dart';
 import '../../models/transaction_model.dart';

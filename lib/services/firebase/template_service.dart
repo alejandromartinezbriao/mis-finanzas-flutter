@@ -16,7 +16,7 @@ mixin TemplateService on FirebaseBase {
       final ref = templatesRef;
       if (ref == null || kIsWeb) return;
 
-      final snap = await ref.get();
+      final snap = await ref.orderBy('orderIndex').get();
       if (snap.docs.isNotEmpty) {
         final items = snap.docs.map((doc) => RecurringModel.fromMap(doc.data() as Map<String, dynamic>, doc.id).toLocalMap()).toList();
         await _local.insertBatch('templates', items);
@@ -48,20 +48,23 @@ mixin TemplateService on FirebaseBase {
   Stream<List<Map<String, dynamic>>> getTemplates({String? type}) {
     if (kIsWeb) {
       final ref = templatesRef; if (ref == null) return Stream.value([]);
-      Query query = ref.where('isDeleted', isEqualTo: false);
-      if (type != null) query = query.where('type', isEqualTo: type);
-      return query.snapshots().map((snap) => snap.docs.map((doc) => {...doc.data() as Map<String, dynamic>, 'id': doc.id}).toList());
+      // REPARACIÓN WEB: Pedimos todo ordenado y filtramos en Dart para evitar la necesidad de índices compuestos
+      return ref.orderBy('orderIndex').snapshots().map((snap) {
+        final all = snap.docs.map((doc) => {...doc.data() as Map<String, dynamic>, 'id': doc.id}).toList();
+        if (type == null) return all;
+        return all.where((t) => t['type'] == type).toList();
+      });
     }
 
     final controller = StreamController<List<Map<String, dynamic>>>();
-    void _load() async {
+    void load() async {
       try {
         final list = await _local.query('templates', where: type != null ? 'type = ? AND isDeleted = 0' : 'isDeleted = 0', whereArgs: type != null ? [type] : null, orderBy: 'orderIndex ASC, title ASC');
         if (!controller.isClosed) controller.add(list);
       } catch (e) { if (!controller.isClosed) controller.add([]); }
     }
-    _load();
-    final sub = _local.onTableChanged.where((t) => t == 'templates').listen((_) => _load());
+    load();
+    final sub = _local.onTableChanged.where((t) => t == 'templates').listen((_) => load());
     controller.onCancel = () { sub.cancel(); controller.close(); };
     return controller.stream;
   }
@@ -73,7 +76,7 @@ mixin TemplateService on FirebaseBase {
       final all = await _local.query('templates');
       for (var doc in all) { if ((doc['orderIndex'] ?? 0) >= nextIndex) nextIndex = (doc['orderIndex'] ?? 0) + 1; }
 
-      Future<void> _create(Map<String, dynamic> data) async {
+      Future<void> create(Map<String, dynamic> data) async {
         final String tid = DateTime.now().millisecondsSinceEpoch.toString();
         if (!kIsWeb) await _local.insert('templates', {...data, 'id': tid, 'syncStatus': 'synced'});
         final premium = await checkPremium();
@@ -87,38 +90,47 @@ mixin TemplateService on FirebaseBase {
       }
       if (isBimonetary) {
         final name = t['title'];
-        await _create({...t, 'title': '$name (UYU)', 'currency': 'UYU', 'orderIndex': nextIndex, 'isBimonetaryPart': 1, 'baseName': name});
-        await _create({...t, 'title': '$name (USD)', 'currency': 'USD', 'orderIndex': nextIndex + 1, 'isBimonetaryPart': 1, 'baseName': name});
+        await create({...t, 'title': '$name (UYU)', 'currency': 'UYU', 'orderIndex': nextIndex, 'isBimonetaryPart': 1, 'baseName': name});
+        await create({...t, 'title': '$name (USD)', 'currency': 'USD', 'orderIndex': nextIndex + 1, 'isBimonetaryPart': 1, 'baseName': name});
       } else {
-        await _create({...t, 'orderIndex': nextIndex});
+        await create({...t, 'orderIndex': nextIndex});
       }
     } catch (e) {}
   }
 
   Future<void> updateTemplatesOrder(List<Map<String, dynamic>> templates) async {
     try {
+      final premium = await checkPremium();
+      final batch = (kIsWeb || premium) ? db.batch() : null;
+
       for (int i = 0; i < templates.length; i++) {
-        final String id = templates[i]['id'];
-        if (!kIsWeb) await _local.update('templates', {'orderIndex': i}, id);
-        final premium = await checkPremium();
-        if (kIsWeb || premium) await templatesRef?.doc(id).update({'orderIndex': i});
+        final String id = templates[i]['id'].toString();
+        if (!kIsWeb) await _local.update('templates', {'orderIndex': i}, id, silent: true);
+        if (batch != null && templatesRef != null) {
+          batch.update(templatesRef!.doc(id), {'orderIndex': i});
+        }
       }
-    } catch (e) {}
+      
+      if (batch != null) await batch.commit();
+      if (!kIsWeb) _local.notify('templates');
+    } catch (e) { print("Error updateTemplatesOrder: $e"); }
   }
 
   Future<void> updateTemplate(String id, Map<String, dynamic> data) async {
     try {
-      if (!kIsWeb) await _local.update('templates', data, id);
+      final String sid = id.toString();
+      if (!kIsWeb) await _local.update('templates', data, sid);
       final premium = await checkPremium();
-      if ((kIsWeb || premium) && templatesRef != null) await templatesRef!.doc(id).update(data);
+      if ((kIsWeb || premium) && templatesRef != null) await templatesRef!.doc(sid).update(data);
     } catch (e) {}
   }
 
   Future<void> deleteTemplate(String id) async {
     try {
-      if (!kIsWeb) await _local.update('templates', {'isDeleted': 1}, id);
+      final String sid = id.toString();
+      if (!kIsWeb) await _local.update('templates', {'isDeleted': 1}, sid);
       final premium = await checkPremium();
-      if ((kIsWeb || premium) && templatesRef != null) await templatesRef!.doc(id).delete();
+      if ((kIsWeb || premium) && templatesRef != null) await templatesRef!.doc(sid).delete();
     } catch (e) {}
   }
 

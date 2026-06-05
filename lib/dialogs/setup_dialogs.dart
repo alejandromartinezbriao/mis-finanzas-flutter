@@ -10,35 +10,40 @@ class SetupDialogs {
   static void showCategoryDialog(BuildContext context, FirebaseService service, Map<String, dynamic>? category) {
     showDialog(
       context: context,
-      builder: (context) => CategoryDialog(service: service, category: category),
+      barrierDismissible: false,
+      builder: (ctx) => CategoryDialog(service: service, category: category),
     );
   }
 
   static void showBalanceDialog(BuildContext context, FirebaseService service, Map<String, dynamic>? account) {
     showDialog(
       context: context,
-      builder: (context) => BalanceDialog(service: service, account: account),
+      barrierDismissible: false,
+      builder: (ctx) => BalanceDialog(service: service, account: account),
     );
   }
 
   static void showGoalDialog(BuildContext context, FirebaseService service, Map<String, dynamic>? goal) {
     showDialog(
       context: context,
-      builder: (context) => GoalDialog(service: service, goal: goal),
+      barrierDismissible: false,
+      builder: (ctx) => GoalDialog(service: service, goal: goal),
     );
   }
 
   static void showEditTemplateDialog(BuildContext context, FirebaseService service, Map<String, dynamic>? template, String type) {
     showDialog(
       context: context,
-      builder: (context) => TemplateEditDialog(service: service, template: template, type: type),
+      barrierDismissible: false,
+      builder: (ctx) => TemplateEditDialog(service: service, template: template, type: type),
     );
   }
 
   static void showSubscriptionDialog(BuildContext context, FirebaseService service, Map<String, dynamic>? sub) {
     showDialog(
       context: context,
-      builder: (context) => SubscriptionDialog(service: service, sub: sub),
+      barrierDismissible: false,
+      builder: (ctx) => SubscriptionDialog(service: service, sub: sub),
     );
   }
 

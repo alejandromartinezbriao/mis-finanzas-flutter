@@ -23,6 +23,7 @@ class _SubscriptionDialogState extends State<SubscriptionDialog> {
   late String currency;
   late String linkType;
   String? linkId;
+  String? initialCategoryName;
   String? selectedCategoryId;
   bool isEdit = false;
 
@@ -31,13 +32,16 @@ class _SubscriptionDialogState extends State<SubscriptionDialog> {
     super.initState();
     isEdit = widget.sub != null;
     nameCtrl = TextEditingController(text: widget.sub?['name'] ?? '');
+    
+    final double amount = (widget.sub?['amount'] ?? 0.0).toDouble();
     amountCtrl = TextEditingController(
-        text: widget.sub != null ? CurrencyUtils.formatForInput((widget.sub!['amount'] ?? 0.0).toDouble()) : '');
+        text: amount > 0 ? CurrencyUtils.formatForInput(amount) : '');
+        
     dayCtrl = TextEditingController(text: widget.sub?['dueDay']?.toString() ?? '');
     currency = widget.sub?['currency'] ?? 'UYU';
     linkType = widget.sub?['linkType'] ?? 'CARD';
     linkId = widget.sub?['linkId'];
-    selectedCategoryId = widget.sub?['category']; // En el original se guardaba el nombre
+    initialCategoryName = widget.sub?['category']; 
   }
 
   @override
@@ -54,9 +58,13 @@ class _SubscriptionDialogState extends State<SubscriptionDialog> {
       stream: widget.service.getCategories(type: 'EXPENSE'),
       builder: (context, catSnapshot) {
         final categories = catSnapshot.data ?? [];
-        if (isEdit && selectedCategoryId == null && widget.sub!['category'] != null) {
-          final match = categories.where((c) => c['name'] == widget.sub!['category']).firstOrNull;
-          if (match != null) selectedCategoryId = match['id'];
+        
+        // Sincronizar ID de categoría basándose en el nombre guardado (legacy/cloud)
+        if (selectedCategoryId == null && initialCategoryName != null && categories.isNotEmpty) {
+          final match = categories.where((c) => c['name'] == initialCategoryName).firstOrNull;
+          if (match != null) {
+            selectedCategoryId = match['id'];
+          }
         }
 
         return AlertDialog(
@@ -93,7 +101,7 @@ class _SubscriptionDialogState extends State<SubscriptionDialog> {
                 ),
                 const SizedBox(height: 15),
                 DropdownButtonFormField<String>(
-                  initialValue: selectedCategoryId,
+                  value: selectedCategoryId,
                   hint: const Text('Categoría'),
                   decoration: const InputDecoration(labelText: 'Categoría', border: OutlineInputBorder()),
                   items: categories
@@ -121,9 +129,9 @@ class _SubscriptionDialogState extends State<SubscriptionDialog> {
                   StreamBuilder<List<Map<String, dynamic>>>(
                     stream: widget.service.getTemplates(type: 'EXPENSE'),
                     builder: (context, snapshot) {
-                      final cards = snapshot.data?.where((t) => t['isCreditCard'] == true).toList() ?? [];
+                      final cards = snapshot.data?.where((t) => t['isCreditCard'] == true || t['isCreditCard'] == 1).toList() ?? [];
                       return DropdownButtonFormField<String>(
-                        initialValue: linkId,
+                        value: linkId,
                         hint: const Text('Seleccionar Tarjeta de Crédito'),
                         decoration: const InputDecoration(labelText: 'Vincular a Crédito:', border: OutlineInputBorder()),
                         items: cards
@@ -139,7 +147,7 @@ class _SubscriptionDialogState extends State<SubscriptionDialog> {
                     builder: (context, snapshot) {
                       final accounts = snapshot.data?.where((a) => a['currency'] == currency).toList() ?? [];
                       return DropdownButtonFormField<String>(
-                        initialValue: linkId,
+                        value: linkId,
                         hint: const Text('¿Desde qué cuenta se debita? (Opcional)'),
                         decoration: const InputDecoration(labelText: 'Vincular a Débito:', border: OutlineInputBorder()),
                         items: [
@@ -171,7 +179,7 @@ class _SubscriptionDialogState extends State<SubscriptionDialog> {
 
                   final data = {
                     'name': nameCtrl.text,
-                    'amount': double.tryParse(amountCtrl.text) ?? 0.0,
+                    'amount': widget.service.parseAmount(amountCtrl.text),
                     'currency': currency,
                     'linkType': linkType,
                     'linkId': linkId,

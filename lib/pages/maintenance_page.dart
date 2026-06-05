@@ -84,93 +84,86 @@ class _MaintenancePageState extends State<MaintenancePage> {
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 600),
-          child: FutureBuilder<bool>(
-            future: _service.isMirrorSyncDone(),
-            builder: (context, snapshot) {
-              final bool isDone = snapshot.data ?? false;
+          child: ListView(
+            padding: const EdgeInsets.all(24),
+            children: [
+              // BOTÓN NUCLEAR
+              _buildMaintenanceCard(
+                title: '⚡ ACTIVAR RELOJ SUIZO (Fase Final)',
+                subtitle: 'IMPORTANTE: Ejecuta esto para ver tus datos actuales de la web en el teléfono.',
+                icon: Icons.bolt,
+                iconColor: Colors.orange.shade900,
+                onTap: _isNuclearLoading ? null : _runNuclearSync,
+                isLoading: _isNuclearLoading,
+              ),
+              
+              const SizedBox(height: 16),
+              const Divider(),
+              const SizedBox(height: 16),
 
-              return ListView(
-                padding: const EdgeInsets.all(24),
-                children: [
-                  // BOTÓN NUCLEAR
-                  _buildMaintenanceCard(
-                    title: '⚡ ACTIVAR RELOJ SUIZO (Fase Final)',
-                    subtitle: 'IMPORTANTE: Ejecuta esto para ver tus datos actuales de la web en el teléfono.',
-                    icon: Icons.bolt,
-                    iconColor: Colors.orange.shade900,
-                    onTap: _isNuclearLoading ? null : _runNuclearSync,
-                    isLoading: _isNuclearLoading,
-                  ),
-                  
-                  const SizedBox(height: 16),
-                  const Divider(),
-                  const SizedBox(height: 16),
+              _buildMaintenanceCard(
+                title: 'Normalizar Formatos (Quitar Comas)',
+                subtitle: 'Purifica la base de datos eliminando comas de miles.',
+                icon: Icons.cleaning_services,
+                iconColor: Colors.blueGrey,
+                onTap: _isNormalizeLoading ? null : _runNormalization,
+                isLoading: _isNormalizeLoading,
+              ),
+              const SizedBox(height: 16),
+              
+              _buildMaintenanceCard(
+                title: 'Corregir Error 100x (Decimales)',
+                subtitle: 'Detecta y arregla montos inflados.',
+                icon: Icons.exposure_minus_2,
+                iconColor: Colors.orange.shade800,
+                onTap: () => showDialog(context: context, builder: (c) => DecimalRepairDialog(service: _service)),
+              ),
+              const SizedBox(height: 16),
 
-                  _buildMaintenanceCard(
-                    title: 'Normalizar Formatos (Quitar Comas)',
-                    subtitle: 'Purifica la base de datos eliminando comas de miles.',
-                    icon: Icons.cleaning_services,
-                    iconColor: Colors.blueGrey,
-                    onTap: _isNormalizeLoading ? null : _runNormalization,
-                    isLoading: _isNormalizeLoading,
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  _buildMaintenanceCard(
-                    title: 'Corregir Error 100x (Decimales)',
-                    subtitle: 'Detecta y arregla montos inflados.',
-                    icon: Icons.exposure_minus_2,
-                    iconColor: Colors.orange.shade800,
-                    onTap: () => showDialog(context: context, builder: (c) => DecimalRepairDialog(service: _service)),
-                  ),
-                  const SizedBox(height: 16),
+              _buildMaintenanceCard(
+                title: 'Sincronizar Montos de Cuotas',
+                subtitle: 'Corrige diferencias en las cuotas.',
+                icon: Icons.sync_problem,
+                iconColor: Colors.purple,
+                onTap: () => showDialog(context: context, builder: (c) => SyncInstallmentsDialog(service: _service)),
+              ),
+              const SizedBox(height: 16),
 
-                  _buildMaintenanceCard(
-                    title: 'Sincronizar Montos de Cuotas',
-                    subtitle: 'Corrige diferencias en las cuotas.',
-                    icon: Icons.sync_problem,
-                    iconColor: Colors.purple,
-                    onTap: () => showDialog(context: context, builder: (c) => SyncInstallmentsDialog(service: _service)),
-                  ),
-                  const SizedBox(height: 16),
+              _buildMaintenanceCard(
+                title: 'Mantenimiento Automático (Reconexión)',
+                subtitle: 'Vincula gastos a plantillas.',
+                icon: Icons.settings_suggest,
+                iconColor: Colors.teal,
+                onTap: () => showDialog(context: context, builder: (c) => TemplateReconnectDialog(service: _service)),
+              ),
+              const SizedBox(height: 16),
 
-                  _buildMaintenanceCard(
-                    title: 'Mantenimiento Automático (Reconexión)',
-                    subtitle: 'Vincula gastos a plantillas.',
-                    icon: Icons.settings_suggest,
-                    iconColor: Colors.teal,
-                    onTap: () => showDialog(context: context, builder: (c) => TemplateReconnectDialog(service: _service)),
-                  ),
-                  const SizedBox(height: 16),
+              _buildMaintenanceCard(
+                title: 'Reparación de Emergencia',
+                subtitle: 'Elimina ítems duplicados en tarjetas.',
+                icon: Icons.health_and_safety_outlined,
+                iconColor: Colors.red.shade700,
+                onTap: () => showDialog(context: context, builder: (c) => DeepRepairDialog(service: _service)),
+              ),
+              const SizedBox(height: 16),
 
-                  _buildMaintenanceCard(
-                    title: 'Reparación de Emergencia',
-                    subtitle: 'Elimina ítems duplicados en tarjetas.',
-                    icon: Icons.health_and_safety_outlined,
-                    iconColor: Colors.red.shade700,
-                    onTap: () => showDialog(context: context, builder: (c) => DeepRepairDialog(service: _service)),
-                  ),
-                  const SizedBox(height: 16),
+              _buildMaintenanceCard(
+                title: 'Recuperar Cuotas Perdidas',
+                subtitle: 'Restaura cuotas que faltan.',
+                icon: Icons.history_edu,
+                iconColor: Colors.blue,
+                onTap: () => showDialog(context: context, builder: (c) => RecoverInstallmentsDialog(service: _service)),
+              ),
+              const SizedBox(height: 16),
 
-                  _buildMaintenanceCard(
-                    title: 'Recuperar Cuotas Perdidas',
-                    subtitle: 'Restaura cuotas que faltan.',
-                    icon: Icons.history_edu,
-                    iconColor: Colors.blue,
-                    onTap: () => showDialog(context: context, builder: (c) => RecoverInstallmentsDialog(service: _service)),
-                  ),
-                  const SizedBox(height: 16),
-
-                  _buildMaintenanceCard(
-                    title: 'Unificación Global',
-                    subtitle: 'Unifica variaciones de nombres.',
-                    icon: Icons.language,
-                    iconColor: Colors.indigo,
-                    onTap: () => showDialog(context: context, builder: (c) => GlobalUnifyDialog(service: _service)),
-                  ),
-                ],
-              );
-            }
+              _buildMaintenanceCard(
+                title: 'Unificación Global',
+                subtitle: 'Unifica variaciones de nombres.',
+                icon: Icons.language,
+                iconColor: Colors.indigo,
+                onTap: () => showDialog(context: context, builder: (c) => GlobalUnifyDialog(service: _service)),
+              ),
+            ],
           ),
         ),
       ),

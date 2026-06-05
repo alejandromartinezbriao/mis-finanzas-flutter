@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../utils/icon_utils.dart';
+import '../brand_icon.dart';
 
 class LogoSelectorField extends StatelessWidget {
   final String? selectedLogo;
@@ -21,36 +22,61 @@ class LogoSelectorField extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text('Logo Identificatorio:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+            const Text('Personalizar Identidad:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
             TextButton.icon(
               onPressed: () => IconUtils.showUnifiedIconPicker(
                 context: context,
                 selectedValue: selectedLogo,
-                isSelectedValueAsset: true,
+                isSelectedValueAsset: selectedLogo?.endsWith('.png') ?? false,
                 onSelected: (val, isAsset) => onSelect(val),
               ),
               icon: const Icon(Icons.grid_view, size: 16, color: Colors.teal),
-              label: const Text(
-                'Galería',
-                style: TextStyle(fontSize: 11, color: Colors.teal, fontWeight: FontWeight.bold),
-              ),
+              label: const Text('Galería', style: TextStyle(fontSize: 11, color: Colors.teal, fontWeight: FontWeight.bold)),
               style: TextButton.styleFrom(
                 visualDensity: VisualDensity.compact,
-                backgroundColor: Colors.teal.withValues(alpha: 0.05),
+                backgroundColor: Colors.teal.withOpacity(0.05),
               ),
             ),
           ],
         ),
         const SizedBox(height: 8),
-        SizedBox(
-          height: 60,
+        
+        // --- PREVISUALIZACIÓN Y ACCESO RÁPIDO ---
+        Container(
+          height: 70,
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+            borderRadius: BorderRadius.circular(12),
+          ),
           child: ListView(
             scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 8),
             children: [
-              if (selectedLogo != null && selectedLogo!.startsWith('http'))
-                _logoItem(selectedLogo, true, () => onSelect(null), isUrl: true),
-              _logoItem(null, selectedLogo == null, () => onSelect(null), isAuto: true),
-              ...IconUtils.getAllAssetLogos().take(10).map((logoName) => _logoItem(logoName, selectedLogo == logoName, () => onSelect(logoName))),
+              // 1. Opción Automática (Reset)
+              _item(
+                child: const Icon(Icons.auto_awesome, color: Colors.grey, size: 24),
+                label: 'Auto',
+                isSelected: selectedLogo == null,
+                onTap: () => onSelect(null),
+              ),
+
+              // 2. Logo Seleccionado (Si no está en la lista rápida)
+              if (selectedLogo != null && !IconUtils.getAllAssetLogos().contains(selectedLogo))
+                _item(
+                  child: BrandIcon(name: currentName, manualLogo: selectedLogo, size: 36),
+                  label: 'Actual',
+                  isSelected: true,
+                  onTap: () {},
+                ),
+
+              // 3. Logos Rápidos (Assets genéricos)
+              ...IconUtils.getAllAssetLogos().map((logo) => _item(
+                child: Image.asset('assets/logos/$logo', width: 30, height: 30, fit: BoxFit.contain),
+                label: logo.split('.').first,
+                isSelected: selectedLogo == logo,
+                onTap: () => onSelect(logo),
+              )),
             ],
           ),
         ),
@@ -58,35 +84,31 @@ class LogoSelectorField extends StatelessWidget {
     );
   }
 
-  Widget _logoItem(String? logo, bool isSelected, VoidCallback onTap, {bool isAuto = false, bool isUrl = false}) {
+  Widget _item({required Widget child, required String label, required bool isSelected, required VoidCallback onTap}) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 4),
-        width: 50,
-        height: 50,
-        decoration: BoxDecoration(
-          color: isSelected ? Colors.teal.withValues(alpha: 0.1) : Colors.transparent,
-          shape: BoxShape.circle,
-          border: Border.all(color: isSelected ? Colors.teal : Colors.grey.shade300, width: 2),
-        ),
-        child: Center(
-          child: isAuto
-              ? const Icon(Icons.auto_awesome, color: Colors.grey)
-              : isUrl
-                  ? ClipOval(child: Image.network(logo!, width: 40, height: 40, fit: BoxFit.contain, errorBuilder: (c, e, s) => const Icon(Icons.public, color: Colors.grey)))
-                  : ClipOval(
-                      child: Padding(
-                        padding: const EdgeInsets.all(4.0),
-                        child: Image.asset(
-                          'assets/logos/$logo', 
-                          width: 40, 
-                          height: 40, 
-                          fit: BoxFit.contain, 
-                          errorBuilder: (c, e, s) => const Icon(Icons.business, color: Colors.grey),
-                        ),
-                      ),
-                    ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 6),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: isSelected ? Colors.teal.withOpacity(0.2) : Colors.white,
+                border: Border.all(
+                  color: isSelected ? Colors.teal : Colors.grey.shade300,
+                  width: isSelected ? 2 : 1,
+                ),
+                boxShadow: isSelected ? [BoxShadow(color: Colors.teal.withOpacity(0.2), blurRadius: 4)] : null,
+              ),
+              child: Center(child: child),
+            ),
+            const SizedBox(height: 2),
+            Text(label, style: TextStyle(fontSize: 8, color: isSelected ? Colors.teal : Colors.grey, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
+          ],
         ),
       ),
     );

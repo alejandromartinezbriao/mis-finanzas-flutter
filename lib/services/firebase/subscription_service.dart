@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import '../local_db_service.dart';
 import 'firebase_base.dart';
@@ -35,14 +34,14 @@ mixin SubscriptionService on FirebaseBase {
     }
 
     final controller = StreamController<List<Map<String, dynamic>>>();
-    void _load() async {
+    void load() async {
       try {
         final list = await _local.query('subscriptions', where: 'isDeleted = 0');
         if (!controller.isClosed) controller.add(list);
       } catch (e) { if (!controller.isClosed) controller.add([]); }
     }
-    _load();
-    final sub = _local.onTableChanged.where((t) => t == 'subscriptions').listen((_) => _load());
+    load();
+    final sub = _local.onTableChanged.where((t) => t == 'subscriptions').listen((_) => load());
     controller.onCancel = () { sub.cancel(); controller.close(); };
     return controller.stream;
   }

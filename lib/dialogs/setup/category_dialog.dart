@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/firebase_service.dart';
 import '../../utils/icon_utils.dart';
+import '../../utils/color_utils.dart';
 import '../../widgets/forms/logo_selector_field.dart';
 
 class CategoryDialog extends StatefulWidget {
@@ -30,27 +31,21 @@ class _CategoryDialogState extends State<CategoryDialog> {
   void initState() {
     super.initState();
     isEdit = widget.category != null;
-    nameCtrl = TextEditingController(text: widget.category?['name'] ?? '');
+    nameCtrl = TextEditingController(text: widget.category?['name']?.toString() ?? '');
     
-    final double budgetVal = (widget.category?['budgetAmount'] ?? 0.0).toDouble();
+    final dynamic rawBudget = widget.category?['budgetAmount'];
+    double budgetVal = 0.0;
+    if (rawBudget is num) budgetVal = rawBudget.toDouble();
+    else if (rawBudget is String) budgetVal = double.tryParse(rawBudget) ?? 0.0;
+
     budgetCtrl = TextEditingController(
       text: budgetVal > 0 ? budgetVal.toStringAsFixed(0) : ''
     );
-    budgetCurrency = widget.category?['budgetCurrency'] ?? 'UYU';
+    budgetCurrency = widget.category?['budgetCurrency']?.toString() ?? 'UYU';
 
-    type = widget.category?['type'] ?? 'EXPENSE';
-    
-    // Parseo defensivo del color para evitar pantalla blanca
-    final dynamic rawColor = widget.category?['color'];
-    if (rawColor is num) {
-      selectedColor = Color(rawColor.toInt());
-    } else if (rawColor is String && rawColor.startsWith('#')) {
-      selectedColor = Color(int.parse(rawColor.replaceFirst('#', '0xff'), radix: 16));
-    } else {
-      selectedColor = Colors.blue;
-    }
-    
-    selectedIcon = widget.category?['icon'] ?? 'category';
+    type = widget.category?['type']?.toString() ?? 'EXPENSE';
+    selectedColor = ColorUtils.parse(widget.category?['color']);
+    selectedIcon = widget.category?['icon']?.toString() ?? 'category';
   }
 
   @override
@@ -86,7 +81,7 @@ class _CategoryDialogState extends State<CategoryDialog> {
               const SizedBox(height: 20),
               const Align(
                 alignment: Alignment.centerLeft, 
-                child: Text('Presupuesto Mensual (Opcional):', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))
+                child: Text('Presupuesto Mensual:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))
               ),
               const SizedBox(height: 10),
               Row(
@@ -95,11 +90,7 @@ class _CategoryDialogState extends State<CategoryDialog> {
                     child: TextField(
                       controller: budgetCtrl,
                       keyboardType: const TextInputType.numberWithOptions(decimal: false),
-                      decoration: const InputDecoration(
-                        labelText: 'Monto tope',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.speed, size: 20),
-                      ),
+                      decoration: const InputDecoration(labelText: 'Monto tope', border: OutlineInputBorder(), prefixIcon: Icon(Icons.speed)),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -123,8 +114,7 @@ class _CategoryDialogState extends State<CategoryDialog> {
             ],
 
             const SizedBox(height: 20),
-            const Align(
-                alignment: Alignment.centerLeft, child: Text('Color:', style: TextStyle(fontWeight: FontWeight.bold))),
+            const Align(alignment: Alignment.centerLeft, child: Text('Color Corporativo:', style: TextStyle(fontWeight: FontWeight.bold))),
             const SizedBox(height: 10),
             SizedBox(
               height: 45,
@@ -138,51 +128,19 @@ class _CategoryDialogState extends State<CategoryDialog> {
                           onTap: () => setState(() => selectedColor = color),
                           child: Container(
                             margin: const EdgeInsets.symmetric(horizontal: 5),
-                            width: 35,
-                            height: 35,
+                            width: 35, height: 35,
                             decoration: BoxDecoration(
-                              color: color,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                  color: selectedColor.value == color.value ? Colors.black : Colors.transparent, width: 2),
+                              color: color, shape: BoxShape.circle,
+                              border: Border.all(color: selectedColor.value == color.value ? Colors.black : Colors.transparent, width: 2),
                             ),
                           ),
-                        ))
-                    .toList(),
+                        )).toList(),
               ),
             ),
-            const SizedBox(height: 20),
-            const Align(
-                alignment: Alignment.centerLeft, child: Text('Icono o Logo:', style: TextStyle(fontWeight: FontWeight.bold))),
-            const SizedBox(height: 10),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: selectedColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: selectedIcon.endsWith('.png')
-                    ? Image.asset('assets/logos/$selectedIcon', width: 24, height: 24, fit: BoxFit.contain)
-                    : Icon(IconUtils.getIconData(selectedIcon), color: selectedColor),
-              ),
-              title: Text(selectedIcon.endsWith('.png') ? 'Logo: $selectedIcon' : 'Icono: $selectedIcon',
-                  style: const TextStyle(fontSize: 14)),
-              trailing: TextButton.icon(
-                onPressed: () => IconUtils.showUnifiedIconPicker(
-                  context: context,
-                  selectedValue: selectedIcon,
-                  isSelectedValueAsset: selectedIcon.endsWith('.png'),
-                  onSelected: (newVal, isAsset) => setState(() => selectedIcon = newVal ?? 'category'),
-                ),
-                icon: const Icon(Icons.grid_view, size: 16),
-                label: const Text('Cambiar'),
-              ),
-            ),
-            const SizedBox(height: 10),
+            
+            const SizedBox(height: 25),
             LogoSelectorField(
-              selectedLogo: selectedIcon.endsWith('.png') ? selectedIcon : null,
+              selectedLogo: selectedIcon,
               onSelect: (logo) => setState(() => selectedIcon = logo ?? 'category'),
               currentName: nameCtrl.text,
             ),
@@ -194,16 +152,16 @@ class _CategoryDialogState extends State<CategoryDialog> {
         FilledButton(
           onPressed: () {
             if (nameCtrl.text.isNotEmpty) {
-              final data = {
+              final Map<String, dynamic> data = {
                 'name': nameCtrl.text,
                 'type': type,
-                'color': selectedColor.value, // Guardar como int ARGB
+                'color': selectedColor.value,
                 'icon': selectedIcon,
-                'budgetAmount': type == 'EXPENSE' ? (double.tryParse(budgetCtrl.text) ?? 0.0) : 0.0,
+                'budgetAmount': type == 'EXPENSE' ? widget.service.parseAmount(budgetCtrl.text) : 0.0,
                 'budgetCurrency': type == 'EXPENSE' ? budgetCurrency : 'UYU',
               };
               if (isEdit) {
-                widget.service.updateCategory(widget.category!['id'], data);
+                widget.service.updateCategory(widget.category!['id'].toString(), data);
               } else {
                 widget.service.addCategory(data);
               }

@@ -86,12 +86,46 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: MainAppBar(service: _service, viewingDate: _viewingDate, uyuFormat: _uyuFormat, usdFormat: _usdFormat),
-      body: Column(
-        children: [
-          MonthSelector(selectedDate: _viewingDate, onDateChanged: (newDate) => setState(() => _viewingDate = newDate), onRefresh: _refreshMonthData),
-          Expanded(child: _buildTransactionList()),
-          SafeArea(child: _buildQuickAddButton()),
-        ],
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final bool isWide = constraints.maxWidth > 900;
+          
+          if (isWide) {
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: 400,
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        MonthSelector(selectedDate: _viewingDate, onDateChanged: (newDate) => setState(() => _viewingDate = newDate), onRefresh: _refreshFullSync),
+                        const SizedBox(height: 20),
+                        _buildCoverageCard(),
+                        const SizedBox(height: 20),
+                        AccountBalanceGrid(balancesStream: _service.getBalances(), goalsStream: _service.getGoals(), uyuFormat: _uyuFormat, usdFormat: _usdFormat, onAccountTap: _showUpdateBalanceDialog, onManageTap: () => Navigator.pushNamed(context, '/setup')),
+                      ],
+                    ),
+                  ),
+                ),
+                const VerticalDivider(width: 1),
+                Expanded(child: _buildTransactionList()),
+              ],
+            );
+          }
+
+          return Column(
+            children: [
+              MonthSelector(selectedDate: _viewingDate, onDateChanged: (newDate) => setState(() => _viewingDate = newDate), onRefresh: _refreshFullSync),
+              _buildCoverageCard(),
+              AccountBalanceRow(balancesStream: _service.getBalances(), goalsStream: _service.getGoals(), uyuFormat: _uyuFormat, usdFormat: _usdFormat, onAccountTap: _showUpdateBalanceDialog),
+              const Divider(height: 1),
+              Expanded(child: _buildTransactionList()),
+              SafeArea(child: _buildQuickAddButton()),
+            ],
+          );
+        },
       ),
     );
   }
@@ -115,6 +149,8 @@ class _HomePageState extends State<HomePage> {
     return StreamBuilder<List<Map<String, dynamic>>>(
       stream: _service.getCategories(),
       builder: (context, catSnapshot) {
+        if (catSnapshot.hasError) return _buildError('Error en Categorías', catSnapshot.error);
+        
         final userCategories = {
           for (var c in catSnapshot.data ?? []) 
             c['name'].toString().trim().toLowerCase(): CategoryModel.fromMap(c, c['id'])
@@ -123,15 +159,17 @@ class _HomePageState extends State<HomePage> {
         return StreamBuilder<List<TransactionModel>>(
           stream: _service.getTransactions(month: _viewingDate.month, year: _viewingDate.year),
           builder: (context, snapshot) {
+            if (snapshot.hasError) return _buildError('Error en Movimientos', snapshot.error);
             if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+            
             final transactions = snapshot.data!;
             
             if (transactions.isEmpty) {
               return RefreshIndicator(
-                onRefresh: _refreshMonthData,
+                onRefresh: _refreshFullSync,
                 child: const SingleChildScrollView(
                   physics: AlwaysScrollableScrollPhysics(),
-                  child: SizedBox(height: 300, child: Center(child: Text('No hay movimientos. Desliza para sincronizar.'))),
+                  child: SizedBox(height: 300, child: Center(child: Text('No hay movimientos en este mes.'))),
                 ),
               );
             }
@@ -141,57 +179,64 @@ class _HomePageState extends State<HomePage> {
 
             final sortedItems = [if (incomes.isNotEmpty) 'INGRESOS', ...incomes, if (expenses.isNotEmpty) 'GASTOS', ...expenses];
 
-            return Column(
-              children: [
-                if (MediaQuery.of(context).size.width <= 900) ...[
-                  _buildCoverageCard(),
-                  AccountBalanceRow(balancesStream: _service.getBalances(), goalsStream: _service.getGoals(), uyuFormat: _uyuFormat, usdFormat: _usdFormat, onAccountTap: _showUpdateBalanceDialog),
-                ],
-                Expanded(
-                  child: RefreshIndicator(
-                    onRefresh: _refreshMonthData,
-                    child: ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: sortedItems.length,
-                      itemBuilder: (context, index) {
-                        final item = sortedItems[index];
-                        if (item is String) return Padding(padding: const EdgeInsets.only(top: 16, bottom: 8), child: Text(item, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary, letterSpacing: 1)));
-                        
-                        final tx = item as TransactionModel;
-                        final String catKey = tx.category.trim().toLowerCase();
-                        
-                        // --- SOBERANÍA DE CATEGORÍAS (AJUSTADA) ---
-                        String? icon;
-                        Color? color;
+            return RefreshIndicator(
+              onRefresh: _refreshFullSync,
+              child: ListView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: sortedItems.length,
+                itemBuilder: (context, index) {
+                  final item = sortedItems[index];
+                  if (item is String) return Padding(padding: const EdgeInsets.only(top: 16, bottom: 8), child: Text(item, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary, letterSpacing: 1)));
+                  
+                  final tx = item as TransactionModel;
+                  final String catKey = tx.category.trim().toLowerCase();
+                  
+                  String? icon;
+                  Color? color;
 
-                        if (userCategories.containsKey(catKey)) {
-                          // REGLA DE ORO: La categoría del Panel manda
-                          icon = userCategories[catKey]!.icon;
-                          color = userCategories[catKey]!.colorValue;
-                        } else if (_systemCategories.containsKey(catKey)) {
-                          icon = _systemCategories[catKey]!['icon'];
-                          color = Color(_systemCategories[catKey]!['color']);
-                        }
+                  if (userCategories.containsKey(catKey)) {
+                    icon = userCategories[catKey]!.icon;
+                    color = userCategories[catKey]!.colorValue;
+                  } else if (_systemCategories.containsKey(catKey)) {
+                    icon = _systemCategories[catKey]!['icon'];
+                    color = Color(_systemCategories[catKey]!['color']);
+                  }
 
-                        return TransactionItemTile(
-                          transaction: tx, 
-                          uyuFormat: _uyuFormat, 
-                          usdFormat: _usdFormat, 
-                          // Priorizamos brandLogo del gasto SI es un PNG (Logo de banco)
-                          categoryIcon: (tx.brandLogo != null && tx.brandLogo!.endsWith('.png')) ? tx.brandLogo : (icon ?? tx.brandLogo),
-                          categoryColor: color ?? tx.colorValue, 
-                          onTap: () => showDialog(context: context, builder: (context) => EditTransactionDialog(transaction: tx, service: _service)), 
-                          onDeleteConfirmed: () => _service.deleteTransaction(tx.id)
-                        );
-                      },
-                    ),
-                  ),
-                ),
-              ],
+                  return TransactionItemTile(
+                    transaction: tx, 
+                    uyuFormat: _uyuFormat, 
+                    usdFormat: _usdFormat, 
+                    categoryIcon: (tx.brandLogo != null && tx.brandLogo!.endsWith('.png')) ? tx.brandLogo : (icon ?? tx.brandLogo), 
+                    categoryColor: color ?? tx.colorValue, 
+                    onTap: () => showDialog(context: context, builder: (context) => EditTransactionDialog(transaction: tx, service: _service)), 
+                    onDeleteConfirmed: () => _service.deleteTransaction(tx.id)
+                  );
+                },
+              ),
             );
           },
         );
       }
+    );
+  }
+
+  Widget _buildError(String title, dynamic error) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, color: Colors.red, size: 40),
+            const SizedBox(height: 16),
+            Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const SizedBox(height: 8),
+            Text(error.toString(), textAlign: TextAlign.center, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+            const SizedBox(height: 16),
+            ElevatedButton(onPressed: _refreshFullSync, child: const Text('Reintentar')),
+          ],
+        ),
+      ),
     );
   }
 
@@ -200,42 +245,49 @@ class _HomePageState extends State<HomePage> {
       stream: _service.getTransactions(month: _viewingDate.month, year: _viewingDate.year),
       builder: (context, txSnapshot) {
         final txs = txSnapshot.data ?? [];
+        
+        // INGRESOS Y GASTOS REALES DEL MES (Para modo Cierre/Proyección)
         double inUYU = txs.where((t) => t.type == 'INCOME' && t.currency == 'UYU').fold(0, (sum, t) => sum + t.amount);
         double outUYU = txs.where((t) => t.type == 'EXPENSE' && t.currency == 'UYU' && !t.includedInCard).fold(0, (sum, t) => sum + t.amount);
         double inUSD = txs.where((t) => t.type == 'INCOME' && t.currency == 'USD').fold(0, (sum, t) => sum + t.amount);
         double outUSD = txs.where((t) => t.type == 'EXPENSE' && t.currency == 'USD' && !t.includedInCard).fold(0, (sum, t) => sum + t.amount);
+        
+        // DEUDA PENDIENTE (Gastos no completados del presente)
         double debtUYU = txs.where((t) => t.type == 'EXPENSE' && t.currency == 'UYU' && !t.isCompleted && !t.includedInCard).fold(0, (sum, t) => sum + t.amount);
         double debtUSD = txs.where((t) => t.type == 'EXPENSE' && t.currency == 'USD' && !t.isCompleted && !t.includedInCard).fold(0, (sum, t) => sum + t.amount);
 
         return StreamBuilder<List<Map<String, dynamic>>>(
           stream: _service.getBalances(),
           builder: (context, balSnapshot) {
-            return StreamBuilder<List<Map<String, dynamic>>>(
-              stream: _service.getGoals(),
-              builder: (context, goalSnapshot) {
-                final balances = balSnapshot.data ?? [];
-                final goals = goalSnapshot.data ?? [];
-                double totalUYU = balances.where((b) => b['currency'] == 'UYU' && (b['includeInCoverage'] == true || b['includeInCoverage'] == 1)).fold(0.0, (sum, b) => sum + (b['amount'] ?? 0));
-                double totalUSD = balances.where((b) => b['currency'] == 'USD' && (b['includeInCoverage'] == true || b['includeInCoverage'] == 1)).fold(0.0, (sum, b) => sum + (b['amount'] ?? 0));
-                double reservedUYU = goals.where((g) => g['currency'] == 'UYU' && g['linkedAccountId'] != null).fold(0, (sum, g) => sum + (g['currentAmount'] ?? 0));
-                double reservedUSD = goals.where((g) => g['currency'] == 'USD' && g['linkedAccountId'] != null).fold(0, (sum, g) => sum + (g['currentAmount'] ?? 0));
+            final balances = balSnapshot.data ?? [];
+            
+            // --- CÁLCULO DE LIQUIDEZ TOTAL BLINDADO (Incluye null como visible) ---
+            double totalUYU = balances.where((b) {
+              final visible = b['includeInCoverage'];
+              return b['currency'] == 'UYU' && visible != false && visible != 0;
+            }).fold(0.0, (sum, b) => sum + (b['amount'] ?? 0));
 
-                final now = DateTime.now();
-                final viewingMonth = DateTime(_viewingDate.year, _viewingDate.month);
-                final currentMonth = DateTime(now.year, now.month);
-                final bool isPast = viewingMonth.isBefore(currentMonth);
-                final bool isFuture = viewingMonth.isAfter(currentMonth);
+            double totalUSD = balances.where((b) {
+              final visible = b['includeInCoverage'];
+              return b['currency'] == 'USD' && visible != false && visible != 0;
+            }).fold(0.0, (sum, b) => sum + (b['amount'] ?? 0));
 
-                return DebtCoverageCard(
-                  realUYU: isPast ? inUYU : (isFuture ? inUYU : totalUYU - reservedUYU),
-                  debtUYU: isPast ? outUYU : (isFuture ? outUYU : debtUYU),
-                  realUSD: isPast ? inUSD : (isFuture ? inUSD : totalUSD - reservedUSD),
-                  debtUSD: isPast ? outUSD : (isFuture ? outUSD : debtUSD),
-                  uyuFormat: _uyuFormat, usdFormat: _usdFormat,
-                  isClosureMode: isPast, isProjectionMode: isFuture,
-                  isMobile: MediaQuery.of(context).size.width <= 900,
-                );
-              }
+            final now = DateTime.now();
+            final viewingMonth = DateTime(_viewingDate.year, _viewingDate.month);
+            final currentMonth = DateTime(now.year, now.month);
+            final bool isPast = viewingMonth.isBefore(currentMonth);
+            final bool isFuture = viewingMonth.isAfter(currentMonth);
+
+            return DebtCoverageCard(
+              // Si es Pasado/Futuro comparamos Ingresos vs Gastos.
+              // Si es Presente comparamos Liquidez Total (sin restar metas) vs Deudas Pendientes.
+              realUYU: isPast ? inUYU : (isFuture ? inUYU : totalUYU),
+              debtUYU: isPast ? outUYU : (isFuture ? outUYU : debtUYU),
+              realUSD: isPast ? inUSD : (isFuture ? inUSD : totalUSD),
+              debtUSD: isPast ? outUSD : (isFuture ? outUSD : debtUSD),
+              uyuFormat: _uyuFormat, usdFormat: _usdFormat,
+              isClosureMode: isPast, isProjectionMode: isFuture,
+              isMobile: MediaQuery.of(context).size.width <= 900,
             );
           }
         );
@@ -252,7 +304,7 @@ class _HomePageState extends State<HomePage> {
         content: TextField(controller: controller, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Saldo Total', border: OutlineInputBorder())),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
-          FilledButton(onPressed: () { final val = double.tryParse(controller.text); if (val != null) { _service.updateBalance(b['id'], val); Navigator.pop(ctx); } }, child: const Text('Actualizar')),
+          FilledButton(onPressed: () { final val = double.tryParse(controller.text); if (val != null) { _service.updateBalance(b['id'].toString(), val); Navigator.pop(ctx); } }, child: const Text('Actualizar')),
         ],
       ),
     );
@@ -274,8 +326,13 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Future<void> _refreshMonthData() async {
-    await _service.syncTransactionsFromCloud(month: _viewingDate.month, year: _viewingDate.year);
-    if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sincronizado con la nube')));
+  Future<void> _refreshFullSync() async {
+    await Future.wait([
+      _service.syncTransactionsFromCloud(month: _viewingDate.month, year: _viewingDate.year),
+      _service.syncBalancesFromCloud(),
+      _service.syncGoalsFromCloud(),
+      _service.syncCategoriesFromCloud(),
+    ]);
+    if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Todo actualizado desde la nube 🚀')));
   }
 }

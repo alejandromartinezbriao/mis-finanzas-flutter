@@ -16,8 +16,6 @@ class _BudgetsPageState extends State<BudgetsPage> {
   final FirebaseService _service = FirebaseService();
   DateTime _viewingDate = DateTime.now();
 
-  final NumberFormat _uyuFormat = NumberFormat.currency(locale: 'en_US', symbol: r'$', decimalDigits: 0, customPattern: '\u00A4#0');
-
   @override
   Widget build(BuildContext context) {
     final monthYearLabel = DateFormat('MMMM yyyy', 'es_ES').format(_viewingDate);
@@ -104,7 +102,7 @@ class _BudgetsPageState extends State<BudgetsPage> {
 
   Widget _buildMonthSelector(String label) {
     return Container(
-      color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+      color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,

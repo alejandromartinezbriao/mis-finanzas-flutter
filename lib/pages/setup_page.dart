@@ -6,7 +6,12 @@ import '../widgets/setup/accounts_list_tab.dart';
 import '../widgets/setup/categories_list_tab.dart';
 import '../widgets/setup/goals_list_tab.dart';
 import '../widgets/setup/subscriptions_list_tab.dart';
-import '../dialogs/setup_dialogs.dart';
+
+import '../dialogs/setup/balance_dialog.dart';
+import '../dialogs/setup/template_edit_dialog.dart';
+import '../dialogs/setup/category_dialog.dart';
+import '../dialogs/setup/goal_dialog.dart';
+import '../dialogs/setup/subscription_dialog.dart';
 
 class SetupPage extends StatefulWidget {
   final int initialIndex;
@@ -25,7 +30,7 @@ class _SetupPageState extends State<SetupPage> with SingleTickerProviderStateMix
   void initState() {
     super.initState();
     _tabController = TabController(
-      length: 6, // Reducido de 7 a 6
+      length: 6,
       vsync: this, 
       initialIndex: widget.initialIndex >= 6 ? 5 : widget.initialIndex
     );
@@ -35,27 +40,73 @@ class _SetupPageState extends State<SetupPage> with SingleTickerProviderStateMix
 
     if (widget.goalToEdit != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        SetupDialogs.showGoalDialog(context, _service, widget.goalToEdit);
+        _showGoal(widget.goalToEdit);
       });
     }
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  // Métodos de apertura de diálogos directos y limpios
+  void _showTemplate(Map<String, dynamic>? t, String type) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => TemplateEditDialog(service: _service, template: t, type: type),
+    );
+  }
+
+  void _showBalance(Map<String, dynamic>? a) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => BalanceDialog(service: _service, account: a),
+    );
+  }
+
+  void _showCategory(Map<String, dynamic>? c) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => CategoryDialog(service: _service, category: c),
+    );
+  }
+
+  void _showSubscription(Map<String, dynamic>? s) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => SubscriptionDialog(service: _service, sub: s),
+    );
+  }
+
+  void _showGoal(Map<String, dynamic>? g) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => GoalDialog(service: _service, goal: g),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Configuración Maestra', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        title: const Text('Panel de Control', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         backgroundColor: Theme.of(context).colorScheme.primaryContainer,
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
-            tooltip: 'Cerrar Sesión',
             onPressed: () async {
               final confirm = await showDialog<bool>(
                 context: context,
                 builder: (ctx) => AlertDialog(
                   title: const Text('Cerrar Sesión'),
-                  content: const Text('¿Estás seguro de que quieres salir?'),
+                  content: const Text('¿Deseas salir de tu cuenta?'),
                   actions: [
                     TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
                     FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Salir')),
@@ -64,9 +115,7 @@ class _SetupPageState extends State<SetupPage> with SingleTickerProviderStateMix
               );
               if (confirm == true) {
                 await AuthService().signOut();
-                if (mounted) {
-                  Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
-                }
+                if (mounted) Navigator.pushReplacementNamed(context, '/login');
               }
             },
           ),
@@ -74,47 +123,26 @@ class _SetupPageState extends State<SetupPage> with SingleTickerProviderStateMix
         bottom: TabBar(
           controller: _tabController,
           labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-          unselectedLabelStyle: const TextStyle(fontSize: 12),
           isScrollable: true,
           tabs: const [
-            Tab(icon: Icon(Icons.money_off), text: 'Gastos / Tarjetas'),
+            Tab(icon: Icon(Icons.money_off), text: 'Gastos'),
             Tab(icon: Icon(Icons.attach_money), text: 'Ingresos'),
-            Tab(icon: Icon(Icons.account_balance), text: 'Mis Cuentas'),
-            Tab(icon: Icon(Icons.category_outlined), text: 'Categorías'),
-            Tab(icon: Icon(Icons.subscriptions_outlined), text: 'Suscripciones'),
-            Tab(icon: Icon(Icons.savings_outlined), text: 'Metas'),
+            Tab(icon: Icon(Icons.account_balance), text: 'Cuentas'),
+            Tab(icon: Icon(Icons.category), text: 'Categorías'),
+            Tab(icon: Icon(Icons.subscriptions), text: 'Suscrip.'),
+            Tab(icon: Icon(Icons.savings), text: 'Metas'),
           ],
         ),
       ),
       body: TabBarView(
         controller: _tabController,
         children: [
-          TemplateListTab(
-            type: 'EXPENSE', 
-            service: _service, 
-            onEdit: (template, type) => SetupDialogs.showEditTemplateDialog(context, _service, template, type)
-          ),
-          TemplateListTab(
-            type: 'INCOME', 
-            service: _service, 
-            onEdit: (template, type) => SetupDialogs.showEditTemplateDialog(context, _service, template, type)
-          ),
-          AccountsListTab(
-            service: _service, 
-            onEdit: (account) => SetupDialogs.showBalanceDialog(context, _service, account)
-          ),
-          CategoriesListTab(
-            service: _service, 
-            onEdit: (category) => SetupDialogs.showCategoryDialog(context, _service, category)
-          ),
-          SubscriptionsListTab(
-            service: _service,
-            onEdit: (sub) => SetupDialogs.showSubscriptionDialog(context, _service, sub)
-          ),
-          GoalsListTab(
-            service: _service, 
-            onEdit: (goal) => SetupDialogs.showGoalDialog(context, _service, goal)
-          ),
+          TemplateListTab(type: 'EXPENSE', service: _service, onEdit: (t, type) => _showTemplate(t, type)),
+          TemplateListTab(type: 'INCOME', service: _service, onEdit: (t, type) => _showTemplate(t, type)),
+          AccountsListTab(service: _service, onEdit: (a) => _showBalance(a)),
+          CategoriesListTab(service: _service, onEdit: (c) => _showCategory(c)),
+          SubscriptionsListTab(service: _service, onEdit: (s) => _showSubscription(s)),
+          GoalsListTab(service: _service, onEdit: (g) => _showGoal(g)),
         ],
       ),
       bottomNavigationBar: SafeArea(
@@ -122,28 +150,20 @@ class _SetupPageState extends State<SetupPage> with SingleTickerProviderStateMix
           padding: const EdgeInsets.all(12.0),
           child: SizedBox(
             width: double.infinity,
-            height: 48,
+            height: 50,
             child: FilledButton.icon(
               onPressed: () {
-                if (_tabController.index == 0) {
-                  SetupDialogs.showEditTemplateDialog(context, _service, null, 'EXPENSE');
-                } else if (_tabController.index == 1) {
-                  SetupDialogs.showEditTemplateDialog(context, _service, null, 'INCOME');
-                } else if (_tabController.index == 2) {
-                  SetupDialogs.showBalanceDialog(context, _service, null);
-                } else if (_tabController.index == 3) {
-                  SetupDialogs.showCategoryDialog(context, _service, null);
-                } else if (_tabController.index == 4) {
-                  SetupDialogs.showSubscriptionDialog(context, _service, null);
-                } else if (_tabController.index == 5) {
-                  SetupDialogs.showGoalDialog(context, _service, null);
+                switch (_tabController.index) {
+                  case 0: _showTemplate(null, 'EXPENSE'); break;
+                  case 1: _showTemplate(null, 'INCOME'); break;
+                  case 2: _showBalance(null); break;
+                  case 3: _showCategory(null); break;
+                  case 4: _showSubscription(null); break;
+                  case 5: _showGoal(null); break;
                 }
               },
-              icon: const Icon(Icons.add_circle_outline),
-              label: Text(_getButtonLabel(), style: const TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1)),
-              style: FilledButton.styleFrom(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              ),
+              icon: const Icon(Icons.add),
+              label: Text(_getButtonLabel(), style: const TextStyle(fontWeight: FontWeight.bold)),
             ),
           ),
         ),

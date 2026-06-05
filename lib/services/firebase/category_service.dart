@@ -15,7 +15,7 @@ mixin CategoryService on FirebaseBase {
       final ref = categoriesRef;
       if (ref == null || kIsWeb) return;
 
-      final snap = await ref.get();
+      final snap = await ref.orderBy('name').get();
       if (snap.docs.isNotEmpty) {
         final items = snap.docs.map((doc) => CategoryModel.fromMap(doc.data() as Map<String, dynamic>, doc.id).toLocalMap()).toList();
         await _local.insertBatch('categories', items);
@@ -28,20 +28,23 @@ mixin CategoryService on FirebaseBase {
   Stream<List<Map<String, dynamic>>> getCategories({String? type}) {
     if (kIsWeb) {
       final ref = categoriesRef; if (ref == null) return Stream.value([]);
-      Query query = ref.where('isDeleted', isEqualTo: false);
-      if (type != null) query = query.where('type', isEqualTo: type);
-      return query.snapshots().map((snap) => snap.docs.map((doc) => {...doc.data() as Map<String, dynamic>, 'id': doc.id}).toList());
+      // REPARACIÓN WEB: Bajamos todo por nombre y filtramos en Dart para no usar índices compuestos
+      return ref.orderBy('name').snapshots().map((snap) {
+        final all = snap.docs.map((doc) => {...doc.data() as Map<String, dynamic>, 'id': doc.id}).toList();
+        if (type == null) return all;
+        return all.where((c) => c['type'] == type).toList();
+      });
     }
 
     final controller = StreamController<List<Map<String, dynamic>>>();
-    void _load() async {
+    void load() async {
       try {
         final list = await _local.query('categories', where: type != null ? 'type = ? AND isDeleted = 0' : 'isDeleted = 0', whereArgs: type != null ? [type] : null, orderBy: 'name ASC');
         if (!controller.isClosed) controller.add(list);
       } catch (e) { if (!controller.isClosed) controller.add([]); }
     }
-    _load();
-    final sub = _local.onTableChanged.where((t) => t == 'categories').listen((_) => _load());
+    load();
+    final sub = _local.onTableChanged.where((t) => t == 'categories').listen((_) => load());
     controller.onCancel = () { sub.cancel(); controller.close(); };
     return controller.stream;
   }
@@ -63,17 +66,19 @@ mixin CategoryService on FirebaseBase {
 
   Future<void> updateCategory(String id, Map<String, dynamic> data) async {
     try {
-      if (!kIsWeb) await _local.update('categories', data, id);
+      final String sid = id.toString();
+      if (!kIsWeb) await _local.update('categories', data, sid);
       final premium = await checkPremium();
-      if ((kIsWeb || premium) && categoriesRef != null) await categoriesRef!.doc(id).update(data);
+      if ((kIsWeb || premium) && categoriesRef != null) await categoriesRef!.doc(sid).update(data);
     } catch (e) {}
   }
 
   Future<void> deleteCategory(String id) async {
     try {
-      if (!kIsWeb) await _local.update('categories', {'isDeleted': 1}, id);
+      final String sid = id.toString();
+      if (!kIsWeb) await _local.update('categories', {'isDeleted': 1}, sid);
       final premium = await checkPremium();
-      if ((kIsWeb || premium) && categoriesRef != null) await categoriesRef!.doc(id).delete();
+      if ((kIsWeb || premium) && categoriesRef != null) await categoriesRef!.doc(sid).delete();
     } catch (e) {}
   }
 

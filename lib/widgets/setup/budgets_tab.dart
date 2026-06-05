@@ -27,7 +27,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
     return Column(
       children: [
         Container(
-          color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+          color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
           padding: const EdgeInsets.symmetric(vertical: 4),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -82,7 +82,7 @@ class _BudgetsTabState extends State<BudgetsTab> {
 
                       return ListTile(
                         leading: CircleAvatar(
-                          backgroundColor: Color(cat['color'] ?? 0xFF9E9E9E).withValues(alpha: 0.1),
+                          backgroundColor: Color(cat['color'] ?? 0xFF9E9E9E).withOpacity(0.1),
                           child: Icon(IconUtils.getIconData(cat['icon']), color: Color(cat['color'] ?? 0xFF9E9E9E)),
                         ),
                         title: Text(cat['name']),

@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import '../local_db_service.dart';
 import 'firebase_base.dart';
+import '../../models/goal_model.dart';
 
 mixin GoalService on FirebaseBase {
   final LocalDbService _local = LocalDbService();
@@ -16,15 +17,9 @@ mixin GoalService on FirebaseBase {
 
       final snap = await ref.get();
       if (snap.docs.isNotEmpty) {
-        final items = snap.docs.map((doc) {
-          final data = doc.data() as Map<String, dynamic>;
-          return {
-            ...data,
-            'id': doc.id,
-            'createdAt': data['createdAt'] != null ? (data['createdAt'] is Timestamp ? (data['createdAt'] as Timestamp).toDate().toIso8601String() : data['createdAt'].toString()) : null,
-            'syncStatus': 'synced'
-          };
-        }).toList();
+        final List<Map<String, dynamic>> items = snap.docs.map((doc) => 
+          GoalModel.fromMap(doc.data() as Map<String, dynamic>, doc.id).toLocalMap()
+        ).toList();
         await _local.insertBatch('goals', items);
       }
     } catch (e) { print("Error syncing goals: $e"); }
@@ -39,14 +34,14 @@ mixin GoalService on FirebaseBase {
     }
 
     final controller = StreamController<List<Map<String, dynamic>>>();
-    void _load() async {
+    void load() async {
       try {
-        final list = await _local.query('goals', where: 'isDeleted = 0');
+        final list = await _local.query('goals', where: 'isDeleted = 0', orderBy: 'title ASC');
         if (!controller.isClosed) controller.add(list);
       } catch (e) { if (!controller.isClosed) controller.add([]); }
     }
-    _load();
-    final sub = _local.onTableChanged.where((t) => t == 'goals').listen((_) => _load());
+    load();
+    final sub = _local.onTableChanged.where((t) => t == 'goals').listen((_) => load());
     controller.onCancel = () { sub.cancel(); controller.close(); };
     return controller.stream;
   }
@@ -54,24 +49,51 @@ mixin GoalService on FirebaseBase {
   Future<void> addGoal(Map<String, dynamic> data) async {
     try {
       final String tid = DateTime.now().millisecondsSinceEpoch.toString();
-      if (!kIsWeb) await _local.insert('goals', {...data, 'id': tid, 'syncStatus': 'synced'});
+      final now = DateTime.now();
+      final goal = GoalModel.fromMap({
+        ...data, 
+        'createdAt': now.toIso8601String(),
+        'updatedAt': now.toIso8601String(),
+      }, tid);
+      
+      if (!kIsWeb) await _local.insert('goals', goal.toLocalMap());
+      
       final premium = await checkPremium();
       if (kIsWeb || premium) {
-        final doc = await goalsRef?.add({...data, 'createdAt': FieldValue.serverTimestamp()});
+        final doc = await goalsRef?.add({
+          ...data, 
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
         if (!kIsWeb && doc != null) {
           await _local.delete('goals', tid);
-          await _local.insert('goals', {...data, 'id': doc.id, 'syncStatus': 'synced'});
+          final updatedGoal = GoalModel.fromMap({
+            ...data,
+            'createdAt': now.toIso8601String(),
+            'updatedAt': now.toIso8601String(),
+          }, doc.id);
+          await _local.insert('goals', updatedGoal.toLocalMap());
         }
       }
-    } catch (e) {}
+    } catch (e) { print("Error adding goal: $e"); }
   }
 
   Future<void> updateGoal(String id, Map<String, dynamic> data) async {
     try {
-      if (!kIsWeb) await _local.update('goals', data, id);
+      final updateData = {
+        ...data,
+        'updatedAt': DateTime.now().toIso8601String(),
+      };
+      if (!kIsWeb) await _local.update('goals', updateData, id);
+      
       final premium = await checkPremium();
-      if ((kIsWeb || premium) && goalsRef != null) await goalsRef!.doc(id).update(data);
-    } catch (e) {}
+      if ((kIsWeb || premium) && goalsRef != null) {
+        await goalsRef!.doc(id).update({
+          ...data,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      }
+    } catch (e) { print("Error updating goal: $e"); }
   }
 
   Future<void> deleteGoal(String id) async {
@@ -79,6 +101,6 @@ mixin GoalService on FirebaseBase {
       if (!kIsWeb) await _local.update('goals', {'isDeleted': 1}, id);
       final premium = await checkPremium();
       if ((kIsWeb || premium) && goalsRef != null) await goalsRef!.doc(id).delete();
-    } catch (e) {}
+    } catch (e) { print("Error deleting goal: $e"); }
   }
 }
