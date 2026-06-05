@@ -1,28 +1,39 @@
-# Mis Finanzas - Inteligencia Financiera Real (v3.3)
+# MF (Antes Mis Finanzas) - El Reloj Suizo de las Finanzas Familiares
 
-Una aplicación de gestión financiera profesional que combina el control estricto de saldos bimonetarios con la potencia de la Inteligencia Artificial de Google Gemini.
+MF es una aplicación de gestión financiera de alto rendimiento, diseñada bajo el paradigma **Offline-First** (Soberanía Local) y extendida con capacidades de **Colaboración Familiar** en tiempo real.
 
-## 🚀 Características Estelares (v3.3)
+## 🏛️ Arquitectura del Sistema
 
-- **Registro Relámpago (Nuevo):** Acciones rápidas desde el icono de la App para registrar movimientos en segundos sin distracciones.
-- **Finanz-IA (Asesor Personal):** Un cerebro artificial centralizado en la nube que audita tus gastos, detecta erosión de ahorros y te guía en bimonetarismo.
-- **Centro de Inteligencia:** Sección dedicada para auditorías mensuales y planificación estratégica futura.
-- **Dólar en Vivo:** Conexión automática con el mercado oficial (BROU) para análisis exactos.
-- **Presupuestos Integrados:** Gestión unificada de topes de gasto dentro de las categorías.
-- **Sincronización Multi-dispositivo:** Firma de datos centralizada que garantiza informes idénticos en PC y móvil.
+### 1. Motor Local (Reloj Suizo)
+- **Tecnología**: SQLite v22.
+- **Soberanía**: El teléfono es la fuente de verdad primaria. La App es totalmente funcional sin internet (Modo Avión).
+- **ADN Nativo**: Uso de Integers ARGB para colores y gestión exacta de decimales para evitar errores aritméticos.
 
-## 📄 Documentación del Proyecto
+### 2. Círculo Familiar (v4.0 Ready)
+- **Ecosistema**: Permite unir a múltiples usuarios bajo un mismo paraguas económico.
+- **Privacidad**: Cada usuario decide, elemento por elemento (gastos, cuentas, metas), qué desea compartir con su familia y qué desea mantener privado.
+- **Online-Only**: Mientras los datos personales son locales, la vista familiar es una ventana directa a la nube, garantizando que todos los miembros vean exactamente lo mismo al mismo tiempo.
 
-- [Manual del Usuario](USER_MANUAL.md): Guía de uso de la versión 3.3.
-- [Acerca de la App](ABOUT_APP.md): Visión, tecnología y evolución.
-- [Log de Proyecto](PROJECT_LOG.md): Historial de cambios y decisiones técnicas.
+### 3. Centro de Inteligencia (Finanz-IA)
+- Auditoría de gastos y proyecciones estratégicas a 6 meses.
+- Sincronización transparente entre Web, PC y Móvil.
 
-## 🛠️ Stack Tecnológico
+## 🚀 Guía para Desarrolladores / Agentes
 
-- **Framework:** Flutter (Multiplataforma)
-- **Cerebro:** Google Vertex AI (Gemini 2.5 Flash)
-- **Backend:** Firebase Cloud Functions & Firestore
-- **Datos Reales:** ExchangeRate API Integration
+### Estado de la Sincronización
+- **Pull-to-refresh**: En el Dashboard, este gesto actualiza Movimientos, Balances, Metas y Categorías simultáneamente.
+- **Granularidad**: Cada sección del Panel de Control tiene su propio botón de "Sincronizar Nube".
+
+### Administración Remota
+La App incluye una **Suite de Control Maestro** accesible únicamente para el UID de administración (`M8DdrH5YCtS8lVzaUh93Fx1DoF63`). Desde aquí se puede:
+- Resolver correos electrónicos a UID.
+- Ejecutar limpiezas de datos remotos sobre cualquier cuenta de usuario.
+
+### Próximos pasos técnicos
+El foco actual es la validación del flujo de **Círculo Familiar**:
+1. Envío de invitación (Colección `invitations`).
+2. Aceptación de vínculo (Campo `familyId` en `users`).
+3. Filtrado dinámico en `HomePage` basado en `_isFamilyMode`.
 
 ---
-Desarrollado para quienes buscan un control financiero inteligente y sostenible.
+*Desarrollado para transformar la economía doméstica mediante ingeniería de software de precisión.*
