@@ -4,47 +4,46 @@ import 'package:firebase_auth/firebase_auth.dart';
 abstract class FirebaseBase {
   final FirebaseFirestore db = FirebaseFirestore.instance;
   final FirebaseAuth auth = FirebaseAuth.instance;
+  
+  // Campo para administración remota
+  String? _overrideUid;
+  void setOverrideUid(String? uid) => _overrideUid = uid;
+
+  String get currentUid => _overrideUid ?? auth.currentUser?.uid ?? '';
 
   CollectionReference? get transactionsRef {
-    final uid = auth.currentUser?.uid;
-    if (uid == null) return null;
-    return db.collection('users').doc(uid).collection('expenses');
+    if (currentUid.isEmpty) return null;
+    return db.collection('users').doc(currentUid).collection('expenses');
   }
 
   CollectionReference? get templatesRef {
-    final uid = auth.currentUser?.uid;
-    if (uid == null) return null;
-    return db.collection('users').doc(uid).collection('templates');
+    if (currentUid.isEmpty) return null;
+    return db.collection('users').doc(currentUid).collection('templates');
   }
 
   CollectionReference? get balancesRef {
-    final uid = auth.currentUser?.uid;
-    if (uid == null) return null;
-    return db.collection('users').doc(uid).collection('balances');
+    if (currentUid.isEmpty) return null;
+    return db.collection('users').doc(currentUid).collection('balances');
   }
 
   CollectionReference? get categoriesRef {
-    final uid = auth.currentUser?.uid;
-    if (uid == null) return null;
-    return db.collection('users').doc(uid).collection('categories');
+    if (currentUid.isEmpty) return null;
+    return db.collection('users').doc(currentUid).collection('categories');
   }
 
   CollectionReference? get budgetsRef {
-    final uid = auth.currentUser?.uid;
-    if (uid == null) return null;
-    return db.collection('users').doc(uid).collection('budgets');
+    if (currentUid.isEmpty) return null;
+    return db.collection('users').doc(currentUid).collection('budgets');
   }
 
   CollectionReference? get goalsRef {
-    final uid = auth.currentUser?.uid;
-    if (uid == null) return null;
-    return db.collection('users').doc(uid).collection('goals');
+    if (currentUid.isEmpty) return null;
+    return db.collection('users').doc(currentUid).collection('goals');
   }
 
   CollectionReference? get subscriptionsRef {
-    final uid = auth.currentUser?.uid;
-    if (uid == null) return null;
-    return db.collection('users').doc(uid).collection('subscriptions');
+    if (currentUid.isEmpty) return null;
+    return db.collection('users').doc(currentUid).collection('subscriptions');
   }
 
   Future<bool> checkPremium() async {
@@ -54,8 +53,18 @@ abstract class FirebaseBase {
     return doc.data()?['isPremium'] ?? false;
   }
 
-  String norm(String text) => text.trim().toLowerCase();
+  // MÉTODO MAESTRO: ¿Es el dueño de la App?
+  Future<bool> isAleAdmin() async {
+    final user = auth.currentUser;
+    if (user == null) return false;
+    // Verificamos por UID exacto (M8DdrH5YCtS8lVzaUh93Fx1DoF63) o por campo isAdmin en Firestore
+    if (user.uid == 'M8DdrH5YCtS8lVzaUh93Fx1DoF63') return true;
+    
+    final doc = await db.collection('users').doc(user.uid).get();
+    return doc.data()?['role'] == 'admin' || doc.data()?['isAdmin'] == true;
+  }
 
+  String norm(String text) => text.trim().toLowerCase();
   double round(double val) => double.parse(val.toStringAsFixed(2));
 
   String formatAmount(double amount, String currency) {

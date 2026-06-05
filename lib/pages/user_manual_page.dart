@@ -11,7 +11,7 @@ class UserManualPage extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Manual del Usuario v3.7.0'),
+        title: const Text('Manual del Usuario v3.7.8'),
         elevation: 0,
       ),
       body: Center(
@@ -23,45 +23,42 @@ class UserManualPage extends StatelessWidget {
               _buildHeader('Guía de Uso Profesional', titleColor),
               const SizedBox(height: 8),
               Text(
-                'Arquitectura Soberanía Local: Rapidez y fiabilidad de un Reloj Suizo.',
+                'Arquitectura Soberanía Local: Rapidez y fiabilidad profesional.',
                 style: TextStyle(fontSize: 16, color: textColor, fontStyle: FontStyle.italic),
               ),
               const SizedBox(height: 24),
               
               _buildSectionTitle('1. SOBERANÍA LOCAL Y MODO OFFLINE', titleColor),
               _buildParagraph(
-                '• Funcionamiento Instantáneo: Los datos se leen de la base de datos local (SQLite), garantizando que la App nunca se "trabe" esperando a la nube.\n'
-                '• Modo Avión: Puedes registrar cualquier movimiento sin internet. La App lo guardará localmente y lo subirá a Firebase en cuanto detecte conexión.\n'
-                '• Sincronización Granular: En el Panel de Control encontrarás botones de nube individuales para bajar tus categorías, cuentas y plantillas solo cuando tú lo decidas.',
+                '• Funcionamiento Instantáneo: Los datos se leen de la base de datos local (SQLite), garantizando máxima velocidad.\n'
+                '• Modo Offline: Puedes registrar movimientos sin internet. La App los sincronizará con la nube automáticamente al detectar conexión.',
                 textColor
               ),
 
               _buildSectionTitle('2. DASHBOARD Y MOVIMIENTOS', titleColor),
               _buildParagraph(
                 '• Pull-to-Refresh: Tira hacia abajo en la lista principal para bajar tu historial de gastos reales del mes desde la nube.\n'
-                '• Colores Dinámicos: Los gastos en el dashboard reflejan siempre el color e icono actual que tengas definido en tu configuración de categorías.\n'
-                '• Agrupación de Tarjetas: Las compras con tarjeta se suman inteligentemente al total de la tarjeta correspondiente, evitando filas duplicadas innecesarias.',
+                '• Colores Dinámicos: Los gastos reflejan el color e icono actual definido en tu configuración de categorías.',
                 textColor
               ),
 
-              _buildSectionTitle('3. CENTRO DE INTELIGENCIA IA', titleColor),
+              _buildSectionTitle('3. SOPORTE TÉCNICO PROFESIONAL', titleColor),
               _buildParagraph(
-                '• Auditoría de Ahorros: Finanz-IA detecta si tus gastos están erosionando tu patrimonio.\n'
-                '• Planificación a 6 meses: Análisis bimonetario (UYU/USD) proyectado según tus presupuestos actuales.',
+                '• Auditoría Remota: Si detectas inconsistencias en tus datos históricos, nuestro equipo puede realizar una auditoría de integridad remota para corregir errores de formato o duplicados sin que tengas que reinstalar la aplicación.',
                 textColor
               ),
 
               _buildSectionTitle('4. OPERACIONES CLAVE', titleColor),
               _buildParagraph(
-                '• Quick Actions: Mantén presionado el icono de la App para registrar un gasto rápido sin entrar al menú principal.\n'
+                '• Quick Actions: Mantén presionado el icono de la App para registros rápidos.\n'
                 '• Arqueo de Cuentas: Gestiona tus saldos bancarios y de efectivo con total precisión.',
                 textColor
               ),
 
-              _buildSectionTitle('5. REGLAS DE ORO (Integridad)', titleColor),
+              _buildSectionTitle('5. REGLAS DE ORO', titleColor),
               _buildParagraph(
-                '• Punto Decimal: Usa siempre el punto (.) para decimales. La app convertirá las comas automáticamente.\n'
-                '• Sin Comas de Miles: No utilices comas para separar miles; el sistema maneja la aritmética de forma exacta sin ellas.',
+                '• Punto Decimal: Usa siempre el punto (.) para decimales.\n'
+                '• Sin Comas de Miles: No utilices comas para separar miles para evitar errores aritméticos.',
                 textColor
               ),
 
@@ -74,40 +71,14 @@ class UserManualPage extends StatelessWidget {
   }
 
   Widget _buildHeader(String text, Color color) {
-    return Text(
-      text,
-      style: TextStyle(
-        fontSize: 28,
-        fontWeight: FontWeight.w900,
-        color: color,
-        letterSpacing: 0.5,
-      ),
-    );
+    return Text(text, style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: color, letterSpacing: 0.5));
   }
 
   Widget _buildSectionTitle(String text, Color color) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 32.0, bottom: 12.0),
-      child: Text(
-        text.toUpperCase(),
-        style: TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.w900,
-          color: color,
-          letterSpacing: 1.2,
-        ),
-      ),
-    );
+    return Padding(padding: const EdgeInsets.only(top: 32.0, bottom: 12.0), child: Text(text.toUpperCase(), style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: color, letterSpacing: 1.2)));
   }
 
   Widget _buildParagraph(String text, Color color) {
-    return Text(
-      text,
-      style: TextStyle(
-        fontSize: 16,
-        height: 1.6,
-        color: color,
-      ),
-    );
+    return Text(text, style: TextStyle(fontSize: 16, height: 1.6, color: color));
   }
 }

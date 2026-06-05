@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../services/firebase_service.dart';
-import '../../utils/icon_utils.dart';
 import '../../utils/color_utils.dart';
 import '../../widgets/forms/logo_selector_field.dart';
 
@@ -35,8 +34,9 @@ class _CategoryDialogState extends State<CategoryDialog> {
     
     final dynamic rawBudget = widget.category?['budgetAmount'];
     double budgetVal = 0.0;
-    if (rawBudget is num) budgetVal = rawBudget.toDouble();
-    else if (rawBudget is String) budgetVal = double.tryParse(rawBudget) ?? 0.0;
+    if (rawBudget is num) {
+      budgetVal = rawBudget.toDouble();
+    } else if (rawBudget is String) budgetVal = double.tryParse(rawBudget) ?? 0.0;
 
     budgetCtrl = TextEditingController(
       text: budgetVal > 0 ? budgetVal.toStringAsFixed(0) : ''

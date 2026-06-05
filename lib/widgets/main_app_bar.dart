@@ -36,20 +36,9 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.account_balance_wallet_rounded,
-              color: Theme.of(context).colorScheme.primary,
-              size: 22,
-            ),
+            Icon(Icons.account_balance_wallet_rounded, color: Theme.of(context).colorScheme.primary, size: 22),
             const SizedBox(width: 8),
-            const Text(
-              'Mis Finanzas',
-              style: TextStyle(
-                fontWeight: FontWeight.w800,
-                fontSize: 16,
-                letterSpacing: 0.2,
-              ),
-            ),
+            const Text('Mis Finanzas', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16, letterSpacing: 0.2)),
           ],
         ),
       ),
@@ -58,30 +47,22 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
       backgroundColor: Theme.of(context).colorScheme.surface,
       foregroundColor: Theme.of(context).colorScheme.onSurface,
       actions: [
-        IconButton(
-          icon: const Icon(Icons.pie_chart_outline, size: 22),
-          tooltip: 'Distribución',
-          onPressed: () => _showDistribution(context),
-        ),
-        IconButton(
-          icon: const Icon(Icons.query_stats, size: 22),
-          tooltip: 'Estadísticas',
-          onPressed: () => Navigator.pushNamed(context, '/statistics'),
-        ),
-        IconButton(
-          icon: const Icon(Icons.savings_outlined, size: 22),
-          tooltip: 'Metas',
-          onPressed: () => Navigator.pushNamed(context, '/goals'),
-        ),
-        IconButton(
-          icon: const Icon(Icons.bar_chart_outlined, size: 22),
-          tooltip: 'Presupuestos',
-          onPressed: () => Navigator.pushNamed(context, '/budgets'),
-        ),
-        PopupMenuButton<String>(
-          icon: const Icon(Icons.more_vert),
-          onSelected: (value) => _handleMenuAction(context, value, monthYearLabel),
-          itemBuilder: (context) => _buildMenuItems(),
+        IconButton(icon: const Icon(Icons.pie_chart_outline, size: 22), tooltip: 'Distribución', onPressed: () => _showDistribution(context)),
+        IconButton(icon: const Icon(Icons.query_stats, size: 22), tooltip: 'Estadísticas', onPressed: () => Navigator.pushNamed(context, '/statistics')),
+        IconButton(icon: const Icon(Icons.savings_outlined, size: 22), tooltip: 'Metas', onPressed: () => Navigator.pushNamed(context, '/goals')),
+        IconButton(icon: const Icon(Icons.bar_chart_outlined, size: 22), tooltip: 'Presupuestos', onPressed: () => Navigator.pushNamed(context, '/budgets')),
+        
+        // MENÚ DINÁMICO
+        FutureBuilder<bool>(
+          future: service.isAleAdmin(),
+          builder: (context, snapshot) {
+            final bool isAdmin = snapshot.data ?? false;
+            return PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert),
+              onSelected: (value) => _handleMenuAction(context, value, monthYearLabel),
+              itemBuilder: (context) => _buildMenuItems(isAdmin),
+            );
+          }
         ),
         const SizedBox(width: 4),
       ],
@@ -91,129 +72,41 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
   void _showDistribution(BuildContext context) {
     service.getTransactions(month: viewingDate.month, year: viewingDate.year).first.then((txs) {
       service.getCategories(type: 'EXPENSE').first.then((cats) {
-        showDialog(
-          context: context,
-          builder: (context) => CategoryDistributionDialog(
-            transactions: txs,
-            categories: cats,
-            uyuFormat: uyuFormat,
-            usdFormat: usdFormat,
-          ),
-        );
+        showDialog(context: context, builder: (context) => CategoryDistributionDialog(transactions: txs, categories: cats, uyuFormat: _uyuFormat, usdFormat: _usdFormat));
       });
     });
   }
 
-  List<PopupMenuEntry<String>> _buildMenuItems() {
+  // --- TRADUCCIÓN DE FORMATOS ---
+  NumberFormat get _uyuFormat => uyuFormat;
+  NumberFormat get _usdFormat => usdFormat;
+
+  List<PopupMenuEntry<String>> _buildMenuItems(bool isAdmin) {
     return [
-      const PopupMenuItem(
-        value: 'setup',
-        child: Row(
-          children: [
-            Icon(Icons.settings, size: 20),
-            SizedBox(width: 12),
-            Text('Panel de Control'),
-          ],
-        ),
-      ),
+      const PopupMenuItem(value: 'setup', child: Row(children: [Icon(Icons.settings, size: 20), SizedBox(width: 12), Text('Panel de Control')])),
       const PopupMenuDivider(),
-      const PopupMenuItem(
-        value: 'ai_advisor',
-        child: Row(
-          children: [
-            Icon(Icons.auto_awesome, size: 20, color: Colors.purpleAccent),
-            SizedBox(width: 12),
-            Text('Asesor Financiero IA'),
-          ],
-        ),
-      ),
-      const PopupMenuItem(
-        value: 'ai_history',
-        child: Row(
-          children: [
-            Icon(Icons.history_edu, size: 20, color: Colors.indigoAccent),
-            SizedBox(width: 12),
-            Text('Historial de Asesoría'),
-          ],
-        ),
-      ),
-      const PopupMenuItem(
-        value: 'maintenance',
-        child: Row(
-          children: [
-            Icon(Icons.build_circle_outlined, size: 20, color: Colors.teal),
-            SizedBox(width: 12),
-            Text('Mantenimiento'),
-          ],
-        ),
-      ),
+      const PopupMenuItem(value: 'ai_advisor', child: Row(children: [Icon(Icons.auto_awesome, size: 20, color: Colors.purpleAccent), SizedBox(width: 12), Text('Asesor Financiero IA')])),
+      const PopupMenuItem(value: 'ai_history', child: Row(children: [Icon(Icons.history_edu, size: 20, color: Colors.indigoAccent), SizedBox(width: 12), Text('Historial de Asesoría')])),
+      
+      // BOTÓN SOLO PARA EL DUEÑO (ALE)
+      if (isAdmin)
+        const PopupMenuItem(value: 'maintenance', child: Row(children: [Icon(Icons.admin_panel_settings, size: 20, color: Colors.redAccent), SizedBox(width: 12), Text('Control Maestro', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold))])),
+      
       const PopupMenuDivider(),
-      const PopupMenuItem(
-        value: 'export',
-        child: Row(
-          children: [
-            Icon(Icons.download, size: 20, color: Colors.blue),
-            SizedBox(width: 12),
-            Text('Exportar este Mes'),
-          ],
-        ),
-      ),
-      const PopupMenuItem(
-        value: 'clear',
-        child: Row(
-          children: [
-            Icon(Icons.delete_sweep_outlined, size: 20, color: Colors.orange),
-            SizedBox(width: 12),
-            Text('Limpiar este Mes'),
-          ],
-        ),
-      ),
+      const PopupMenuItem(value: 'export', child: Row(children: [Icon(Icons.download, size: 20, color: Colors.blue), SizedBox(width: 12), Text('Exportar este Mes')])),
+      const PopupMenuItem(value: 'clear', child: Row(children: [Icon(Icons.delete_sweep_outlined, size: 20, color: Colors.orange), SizedBox(width: 12), Text('Limpiar este Mes')])),
       const PopupMenuDivider(),
-      const PopupMenuItem(
-        value: 'manual',
-        child: Row(
-          children: [
-            Icon(Icons.help_outline, size: 20),
-            SizedBox(width: 12),
-            Text('Manual de Usuario'),
-          ],
-        ),
-      ),
-      const PopupMenuItem(
-        value: 'about',
-        child: Row(
-          children: [
-            Icon(Icons.info_outline, size: 20),
-            SizedBox(width: 12),
-            Text('Acerca de...'),
-          ],
-        ),
-      ),
+      const PopupMenuItem(value: 'manual', child: Row(children: [Icon(Icons.help_outline, size: 20), SizedBox(width: 12), Text('Manual de Usuario')])),
+      const PopupMenuItem(value: 'about', child: Row(children: [Icon(Icons.info_outline, size: 20), SizedBox(width: 12), Text('Acerca de...')])),
       const PopupMenuDivider(),
-      const PopupMenuItem(
-        value: 'logout',
-        child: Row(
-          children: [
-            Icon(Icons.logout, size: 20, color: Colors.redAccent),
-            SizedBox(width: 12),
-            Text('Cerrar Sesión', style: TextStyle(color: Colors.redAccent)),
-          ],
-        ),
-      ),
+      const PopupMenuItem(value: 'logout', child: Row(children: [Icon(Icons.logout, size: 20, color: Colors.redAccent), SizedBox(width: 12), Text('Cerrar Sesión', style: TextStyle(color: Colors.redAccent))])),
     ];
   }
 
   void _handleMenuAction(BuildContext context, String value, String label) async {
     if (value == 'logout') {
-      final confirm = await _showConfirmDialog(
-        context,
-        'Cerrar Sesión',
-        '¿Estás seguro de que quieres salir?',
-        'Salir',
-      );
-      if (confirm == true) {
-        await AuthService().signOut();
-      }
+      final confirm = await _showConfirmDialog(context, 'Cerrar Sesión', '¿Estás seguro de que quieres salir?', 'Salir');
+      if (confirm == true) await AuthService().signOut();
     } else if (value == 'maintenance') {
       Navigator.pushNamed(context, '/maintenance');
     } else if (value == 'manual') {
@@ -228,45 +121,13 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
       Navigator.pushNamed(context, '/ai_history');
     } else if (value == 'export') {
       final txs = await service.getTransactions(month: viewingDate.month, year: viewingDate.year).first;
-      if (txs.isNotEmpty) {
-        await ExportUtils.exportToCSV(txs, label);
-      } else {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No hay datos para exportar')));
-        }
-      }
+      if (txs.isNotEmpty) await ExportUtils.exportToCSV(txs, label);
     } else if (value == 'clear') {
-      if (await DialogUtils.confirmDeletion(context, 'Todos los movimientos de $label')) {
-        await service.clearMonth(viewingDate.month, viewingDate.year);
-      }
+      if (await DialogUtils.confirmDeletion(context, 'Todos los movimientos de $label')) await service.clearMonth(viewingDate.month, viewingDate.year);
     }
   }
 
-  Future<bool?> _showConfirmDialog(
-    BuildContext context,
-    String title,
-    String content,
-    String actionLabel, {
-    bool isDestructive = false,
-  }) {
-    return showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(title),
-        content: Text(content),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
-          isDestructive
-              ? TextButton(
-                  onPressed: () => Navigator.pop(ctx, true),
-                  child: Text(actionLabel, style: const TextStyle(color: Colors.red)),
-                )
-              : FilledButton(
-                  onPressed: () => Navigator.pop(ctx, true),
-                  child: Text(actionLabel),
-                ),
-        ],
-      ),
-    );
+  Future<bool?> _showConfirmDialog(BuildContext context, String title, String content, String actionLabel) {
+    return showDialog<bool>(context: context, builder: (ctx) => AlertDialog(title: Text(title), content: Text(content), actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')), FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(actionLabel))]));
   }
 }

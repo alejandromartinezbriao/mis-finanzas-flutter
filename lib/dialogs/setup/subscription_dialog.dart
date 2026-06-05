@@ -101,7 +101,7 @@ class _SubscriptionDialogState extends State<SubscriptionDialog> {
                 ),
                 const SizedBox(height: 15),
                 DropdownButtonFormField<String>(
-                  value: selectedCategoryId,
+                  initialValue: selectedCategoryId,
                   hint: const Text('Categoría'),
                   decoration: const InputDecoration(labelText: 'Categoría', border: OutlineInputBorder()),
                   items: categories
@@ -131,7 +131,7 @@ class _SubscriptionDialogState extends State<SubscriptionDialog> {
                     builder: (context, snapshot) {
                       final cards = snapshot.data?.where((t) => t['isCreditCard'] == true || t['isCreditCard'] == 1).toList() ?? [];
                       return DropdownButtonFormField<String>(
-                        value: linkId,
+                        initialValue: linkId,
                         hint: const Text('Seleccionar Tarjeta de Crédito'),
                         decoration: const InputDecoration(labelText: 'Vincular a Crédito:', border: OutlineInputBorder()),
                         items: cards
@@ -147,7 +147,7 @@ class _SubscriptionDialogState extends State<SubscriptionDialog> {
                     builder: (context, snapshot) {
                       final accounts = snapshot.data?.where((a) => a['currency'] == currency).toList() ?? [];
                       return DropdownButtonFormField<String>(
-                        value: linkId,
+                        initialValue: linkId,
                         hint: const Text('¿Desde qué cuenta se debita? (Opcional)'),
                         decoration: const InputDecoration(labelText: 'Vincular a Débito:', border: OutlineInputBorder()),
                         items: [

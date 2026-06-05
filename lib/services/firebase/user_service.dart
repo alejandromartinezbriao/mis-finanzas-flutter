@@ -100,6 +100,18 @@ mixin UserService on FirebaseBase {
     return res.isNotEmpty;
   }
 
+  Future<String?> getUidByEmail(String email) async {
+    try {
+      final snap = await db.collection('users').where('email', isEqualTo: email.trim().toLowerCase()).limit(1).get();
+      if (snap.docs.isNotEmpty) {
+        return snap.docs.first.id;
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
   // --- USUARIOS / PERFIL ---
 
   Stream<Map<String, dynamic>?> getUserProfile() {

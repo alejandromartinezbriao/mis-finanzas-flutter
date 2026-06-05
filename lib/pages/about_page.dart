@@ -57,7 +57,7 @@ class _AboutPageState extends State<AboutPage> {
                           ),
                         ),
                         Text(
-                          'Versión 3.7.0 "Reloj Suizo"',
+                          'Versión 3.7.8',
                           style: TextStyle(
                             fontSize: 16,
                             color: secondaryTextColor,
@@ -99,7 +99,7 @@ class _AboutPageState extends State<AboutPage> {
                   
                   Center(
                     child: Text(
-                      'La precisión de un reloj suizo con la potencia de la nube.',
+                      'Máxima precisión con la potencia de la nube.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 15,

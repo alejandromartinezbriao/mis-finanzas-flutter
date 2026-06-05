@@ -47,8 +47,9 @@ class _TemplateEditDialogState extends State<TemplateEditDialog> {
     
     final dynamic rawAmount = widget.template?['defaultAmount'];
     double amount = 0.0;
-    if (rawAmount is num) amount = rawAmount.toDouble();
-    else if (rawAmount is String) amount = double.tryParse(rawAmount) ?? 0.0;
+    if (rawAmount is num) {
+      amount = rawAmount.toDouble();
+    } else if (rawAmount is String) amount = double.tryParse(rawAmount) ?? 0.0;
     
     defaultAmountController = TextEditingController(
         text: amount > 0 ? CurrencyUtils.formatForInput(amount) : '');
@@ -122,7 +123,7 @@ class _TemplateEditDialogState extends State<TemplateEditDialog> {
                 ),
                 const SizedBox(height: 20),
                 DropdownButtonFormField<String>(
-                  value: selectedCategoryId,
+                  initialValue: selectedCategoryId,
                   hint: const Text('Seleccionar Categoría'),
                   decoration: const InputDecoration(labelText: 'Categoría', border: OutlineInputBorder()),
                   items: categories.map((c) => DropdownMenuItem(
@@ -143,7 +144,7 @@ class _TemplateEditDialogState extends State<TemplateEditDialog> {
                     children: [
                       Expanded(
                           child: DropdownButtonFormField<String>(
-                              value: selectedCurrency,
+                              initialValue: selectedCurrency,
                               items: ['UYU', 'USD'].map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
                               onChanged: (v) => setState(() => selectedCurrency = v!),
                               decoration: const InputDecoration(labelText: 'Moneda'))),
@@ -226,7 +227,9 @@ class _TemplateEditDialogState extends State<TemplateEditDialog> {
       if (confirm == true) createNew = true;
     } else {
       final result = await showDialog<Map<String, dynamic>>(context: context, builder: (c) => AlertDialog(title: const Text('Vincular Tarjeta Gemela'), content: SizedBox(width: double.maxFinite, child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [Text('He encontrado tarjetas que podrían ser la contraparte en $otherCurrency de "$cleanBaseName":', style: const TextStyle(fontSize: 13)), const SizedBox(height: 15), Flexible(child: ListView.builder(shrinkWrap: true, itemCount: candidates.length, itemBuilder: (ctx, index) { final cand = candidates[index]; final bool isHighMatch = (cand['matchScore'] ?? 0) >= 100; return ListTile(contentPadding: const EdgeInsets.symmetric(horizontal: 8), leading: BrandIcon(name: cand['title'], manualLogo: cand['brandLogo'], size: 32), title: Text(cand['title'], style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)), subtitle: Text(isHighMatch ? 'Sugerencia recomendada (mismo banco)' : 'Posible coincidencia', style: TextStyle(fontSize: 11, color: isHighMatch ? Colors.green : Colors.grey)), trailing: isHighMatch ? const Icon(Icons.star, color: Colors.amber, size: 16) : const Icon(Icons.chevron_right, size: 16), tileColor: isHighMatch ? Colors.green.withOpacity(0.05) : null, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)), onTap: () => Navigator.pop(c, {'id': cand['id'], 'title': cand['title']})); }))]))));
-      if (result != null) { if (result['create'] == true) createNew = true; else { selectedGemelaId = result['id']; selectedGemelaTitle = result['title']; } }
+      if (result != null) { if (result['create'] == true) {
+        createNew = true;
+      } else { selectedGemelaId = result['id']; selectedGemelaTitle = result['title']; } }
     }
     if (createNew || selectedGemelaId != null) { await service.upgradeTemplateToBimonetary(originalId: originalId, oldTitle: oldTitle, data: {...data, 'title': cleanBaseName}, existingGemelaId: selectedGemelaId, oldGemelaTitle: selectedGemelaTitle); }
   }
