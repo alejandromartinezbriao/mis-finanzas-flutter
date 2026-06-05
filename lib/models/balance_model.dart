@@ -12,6 +12,7 @@ class BalanceModel {
   final String? baseName;
   final bool includeInCoverage;
   final int orderIndex;
+  final String? familyId; // NUEVO: Soporte familiar
   final bool isDeleted;
   final String syncStatus;
 
@@ -19,8 +20,8 @@ class BalanceModel {
     required this.id, required this.accountName, required this.amount,
     this.currency = 'UYU', required this.updatedAt, this.brandLogo,
     this.accountType = 'BANK', this.isBimonetaryPart = false, this.baseName,
-    this.includeInCoverage = true, this.orderIndex = 0, this.isDeleted = false,
-    this.syncStatus = 'synced',
+    this.includeInCoverage = true, this.orderIndex = 0, this.familyId,
+    this.isDeleted = false, this.syncStatus = 'synced',
   });
 
   factory BalanceModel.fromMap(Map<String, dynamic> data, String id) {
@@ -47,6 +48,7 @@ class BalanceModel {
       baseName: data['baseName']?.toString(),
       includeInCoverage: parseBool(data['includeInCoverage'] ?? true),
       orderIndex: data['orderIndex'] is num ? (data['orderIndex'] as num).toInt() : 0,
+      familyId: data['familyId']?.toString(),
       isDeleted: parseBool(data['isDeleted']),
       syncStatus: data['syncStatus']?.toString() ?? 'synced',
     );
@@ -58,7 +60,8 @@ class BalanceModel {
       'updatedAt': Timestamp.fromDate(updatedAt), 'brandLogo': brandLogo,
       'accountType': accountType, 'isBimonetaryPart': isBimonetaryPart,
       'baseName': baseName, 'includeInCoverage': includeInCoverage,
-      'orderIndex': orderIndex, 'isDeleted': isDeleted, 'syncStatus': syncStatus,
+      'orderIndex': orderIndex, 'familyId': familyId, 'isDeleted': isDeleted,
+      'syncStatus': syncStatus,
     };
   }
 
@@ -68,11 +71,12 @@ class BalanceModel {
       'updatedAt': updatedAt.toIso8601String(), 'brandLogo': brandLogo,
       'accountType': accountType, 'isBimonetaryPart': isBimonetaryPart ? 1 : 0,
       'baseName': baseName, 'includeInCoverage': includeInCoverage ? 1 : 0,
-      'orderIndex': orderIndex, 'isDeleted': isDeleted ? 1 : 0, 'syncStatus': syncStatus,
+      'orderIndex': orderIndex, 'familyId': familyId, 'isDeleted': isDeleted ? 1 : 0,
+      'syncStatus': syncStatus,
     };
   }
 
-  BalanceModel copyWith({String? accountName, double? amount, String? currency, DateTime? updatedAt, String? brandLogo, String? accountType, bool? isBimonetaryPart, String? baseName, bool? includeInCoverage, int? orderIndex, bool? isDeleted, String? syncStatus}) {
-    return BalanceModel(id: id, accountName: accountName ?? this.accountName, amount: amount ?? this.amount, currency: currency ?? this.currency, updatedAt: updatedAt ?? this.updatedAt, brandLogo: brandLogo ?? this.brandLogo, accountType: accountType ?? this.accountType, isBimonetaryPart: isBimonetaryPart ?? this.isBimonetaryPart, baseName: baseName ?? this.baseName, includeInCoverage: includeInCoverage ?? this.includeInCoverage, orderIndex: orderIndex ?? this.orderIndex, isDeleted: isDeleted ?? this.isDeleted, syncStatus: syncStatus ?? this.syncStatus);
+  BalanceModel copyWith({String? accountName, double? amount, String? currency, DateTime? updatedAt, String? brandLogo, String? accountType, bool? isBimonetaryPart, String? baseName, bool? includeInCoverage, int? orderIndex, String? familyId, bool? isDeleted, String? syncStatus}) {
+    return BalanceModel(id: id, accountName: accountName ?? this.accountName, amount: amount ?? this.amount, currency: currency ?? this.currency, updatedAt: updatedAt ?? this.updatedAt, brandLogo: brandLogo ?? this.brandLogo, accountType: accountType ?? this.accountType, isBimonetaryPart: isBimonetaryPart ?? this.isBimonetaryPart, baseName: baseName ?? this.baseName, includeInCoverage: includeInCoverage ?? this.includeInCoverage, orderIndex: orderIndex ?? this.orderIndex, familyId: familyId ?? this.familyId, isDeleted: isDeleted ?? this.isDeleted, syncStatus: syncStatus ?? this.syncStatus);
   }
 }

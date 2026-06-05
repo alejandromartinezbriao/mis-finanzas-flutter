@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import '../local_db_service.dart';
 import 'firebase_base.dart';
@@ -45,13 +46,38 @@ mixin TemplateService on FirebaseBase {
   }
 
   Stream<List<Map<String, dynamic>>> getTemplates({String? type}) {
+    final String currentUid = auth.currentUser?.uid ?? '';
+
     if (kIsWeb) {
       final ref = templatesRef; if (ref == null) return Stream.value([]);
-      // REPARACIÓN WEB: Pedimos todo ordenado y filtramos en Dart para evitar la necesidad de índices compuestos
-      return ref.orderBy('orderIndex').snapshots().map((snap) {
+      final myStream = ref.orderBy('orderIndex').snapshots().map((snap) {
         final all = snap.docs.map((doc) => {...doc.data() as Map<String, dynamic>, 'id': doc.id}).toList();
         if (type == null) return all;
         return all.where((t) => t['type'] == type).toList();
+      });
+
+      return db.collection('users').doc(currentUid).snapshots().asyncExpand((userDoc) {
+        final userData = userDoc.data() as Map<String, dynamic>? ?? {};
+        final String? familyId = userData['familyId'];
+
+        if (familyId == null) return myStream;
+
+        Query sharedQuery = db.collectionGroup('templates')
+            .where('familyId', isEqualTo: familyId)
+            .where('isDeleted', isEqualTo: false);
+        
+        return sharedQuery.snapshots().map((sharedSnap) {
+          final sharedItems = sharedSnap.docs
+              .where((d) => d.reference.parent.parent?.id != currentUid)
+              .map((doc) => {...doc.data() as Map<String, dynamic>, 'id': doc.id})
+              .toList();
+
+          return myStream.map((myItems) {
+            final combined = [...myItems, ...sharedItems];
+            if (type == null) return combined;
+            return combined.where((t) => t['type'] == type).toList();
+          });
+        }).asyncExpand((s) => s);
       });
     }
 
@@ -80,7 +106,7 @@ mixin TemplateService on FirebaseBase {
         if (!kIsWeb) await _local.insert('templates', {...data, 'id': tid, 'syncStatus': 'synced'});
         final premium = await checkPremium();
         if (kIsWeb || premium) {
-          final docRef = await templatesRef?.add(data);
+          final docRef = await templatesRef?.add({...data, 'updatedAt': FieldValue.serverTimestamp()});
           if (!kIsWeb && docRef != null) {
             await _local.delete('templates', tid);
             await _local.insert('templates', {...data, 'id': docRef.id, 'syncStatus': 'synced'});
@@ -120,7 +146,7 @@ mixin TemplateService on FirebaseBase {
       final String sid = id.toString();
       if (!kIsWeb) await _local.update('templates', data, sid);
       final premium = await checkPremium();
-      if ((kIsWeb || premium) && templatesRef != null) await templatesRef!.doc(sid).update(data);
+      if ((kIsWeb || premium) && templatesRef != null) await templatesRef!.doc(sid).update({...data, 'updatedAt': FieldValue.serverTimestamp()});
     } catch (e) {}
   }
 
@@ -135,7 +161,17 @@ mixin TemplateService on FirebaseBase {
 
   Future<void> createTemplateFromTransaction(TransactionModel t) async {
     try {
-      final data = {'title': t.title, 'currency': t.currency, 'dueDay': t.dueDate?.day ?? t.date.day, 'type': t.type, 'category': t.category == 'Extra' ? (t.type == 'EXPENSE' ? 'Fijo' : 'Ingreso') : t.category, 'isCreditCard': 0, 'defaultAmount': t.amount, 'brandLogo': t.brandLogo};
+      final data = {
+        'title': t.title, 
+        'currency': t.currency, 
+        'dueDay': t.dueDate?.day ?? t.date.day, 
+        'type': t.type, 
+        'category': t.category == 'Extra' ? (t.type == 'EXPENSE' ? 'Fijo' : 'Ingreso') : t.category, 
+        'isCreditCard': 0, 
+        'defaultAmount': t.amount, 
+        'brandLogo': t.brandLogo,
+        'familyId': t.familyId
+      };
       await addTemplate(data);
     } catch (e) {}
   }

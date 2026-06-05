@@ -25,23 +25,33 @@ class _SubscriptionDialogState extends State<SubscriptionDialog> {
   String? linkId;
   String? initialCategoryName;
   String? selectedCategoryId;
+  bool shareWithFamily = false;
+  String? familyId;
   bool isEdit = false;
 
   @override
   void initState() {
     super.initState();
     isEdit = widget.sub != null;
-    nameCtrl = TextEditingController(text: widget.sub?['name'] ?? '');
+    nameCtrl = TextEditingController(text: widget.sub?['name']?.toString() ?? '');
     
     final double amount = (widget.sub?['amount'] ?? 0.0).toDouble();
     amountCtrl = TextEditingController(
         text: amount > 0 ? CurrencyUtils.formatForInput(amount) : '');
         
     dayCtrl = TextEditingController(text: widget.sub?['dueDay']?.toString() ?? '');
-    currency = widget.sub?['currency'] ?? 'UYU';
-    linkType = widget.sub?['linkType'] ?? 'CARD';
-    linkId = widget.sub?['linkId'];
-    initialCategoryName = widget.sub?['category']; 
+    currency = widget.sub?['currency']?.toString() ?? 'UYU';
+    linkType = widget.sub?['linkType']?.toString() ?? 'CARD';
+    linkId = widget.sub?['linkId']?.toString();
+    initialCategoryName = widget.sub?['category']?.toString(); 
+    shareWithFamily = widget.sub?['familyId'] != null;
+
+    _loadFamilyInfo();
+  }
+
+  Future<void> _loadFamilyInfo() async {
+    final fid = await widget.service.getMyFamilyId();
+    if (mounted) setState(() => familyId = fid);
   }
 
   @override
@@ -59,12 +69,9 @@ class _SubscriptionDialogState extends State<SubscriptionDialog> {
       builder: (context, catSnapshot) {
         final categories = catSnapshot.data ?? [];
         
-        // Sincronizar ID de categoría basándose en el nombre guardado (legacy/cloud)
         if (selectedCategoryId == null && initialCategoryName != null && categories.isNotEmpty) {
           final match = categories.where((c) => c['name'] == initialCategoryName).firstOrNull;
-          if (match != null) {
-            selectedCategoryId = match['id'];
-          }
+          if (match != null) selectedCategoryId = match['id'];
         }
 
         return AlertDialog(
@@ -73,17 +80,26 @@ class _SubscriptionDialogState extends State<SubscriptionDialog> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                if (familyId != null)
+                  SwitchListTile(
+                    title: const Text('Compartir con Familia', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                    subtitle: const Text('Visible para todos los miembros', style: TextStyle(fontSize: 11)),
+                    value: shareWithFamily,
+                    secondary: const Icon(Icons.family_restroom, color: Colors.teal),
+                    onChanged: (v) => setState(() => shareWithFamily = v),
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                const SizedBox(height: 10),
                 TextField(
                   controller: nameCtrl,
-                  decoration:
-                      const InputDecoration(labelText: 'Nombre (ej: Netflix, Gym)', border: OutlineInputBorder()),
+                  decoration: const InputDecoration(labelText: 'Nombre (ej: Netflix, Gym)', border: OutlineInputBorder()),
                 ),
                 const SizedBox(height: 15),
                 Row(
                   children: [
                     Expanded(
                         child: DropdownButtonFormField<String>(
-                            initialValue: currency,
+                            value: currency,
                             items: ['UYU', 'USD'].map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
                             onChanged: (v) => setState(() {
                                   currency = v!;
@@ -101,15 +117,10 @@ class _SubscriptionDialogState extends State<SubscriptionDialog> {
                 ),
                 const SizedBox(height: 15),
                 DropdownButtonFormField<String>(
-                  initialValue: selectedCategoryId,
+                  value: selectedCategoryId,
                   hint: const Text('Categoría'),
                   decoration: const InputDecoration(labelText: 'Categoría', border: OutlineInputBorder()),
-                  items: categories
-                      .map((c) => DropdownMenuItem(
-                            value: c['id'] as String,
-                            child: Text(c['name']),
-                          ))
-                      .toList(),
+                  items: categories.map((c) => DropdownMenuItem(value: c['id'] as String, child: Text(c['name']?.toString() ?? ''))).toList(),
                   onChanged: (v) => setState(() => selectedCategoryId = v),
                 ),
                 const SizedBox(height: 15),
@@ -131,12 +142,10 @@ class _SubscriptionDialogState extends State<SubscriptionDialog> {
                     builder: (context, snapshot) {
                       final cards = snapshot.data?.where((t) => t['isCreditCard'] == true || t['isCreditCard'] == 1).toList() ?? [];
                       return DropdownButtonFormField<String>(
-                        initialValue: linkId,
+                        value: linkId,
                         hint: const Text('Seleccionar Tarjeta de Crédito'),
                         decoration: const InputDecoration(labelText: 'Vincular a Crédito:', border: OutlineInputBorder()),
-                        items: cards
-                            .map((c) => DropdownMenuItem(value: c['id'] as String, child: Text(c['title'])))
-                            .toList(),
+                        items: cards.map((c) => DropdownMenuItem(value: c['id'] as String, child: Text(c['title']?.toString() ?? ''))).toList(),
                         onChanged: (v) => setState(() => linkId = v),
                       );
                     },
@@ -147,13 +156,12 @@ class _SubscriptionDialogState extends State<SubscriptionDialog> {
                     builder: (context, snapshot) {
                       final accounts = snapshot.data?.where((a) => a['currency'] == currency).toList() ?? [];
                       return DropdownButtonFormField<String>(
-                        initialValue: linkId,
+                        value: linkId,
                         hint: const Text('¿Desde qué cuenta se debita? (Opcional)'),
                         decoration: const InputDecoration(labelText: 'Vincular a Débito:', border: OutlineInputBorder()),
                         items: [
                           const DropdownMenuItem<String>(value: null, child: Text('Manual / Efectivo (Sin vínculo)')),
-                          ...accounts.map((a) =>
-                              DropdownMenuItem(value: a['id'] as String, child: Text(a['accountName']))),
+                          ...accounts.map((a) => DropdownMenuItem(value: a['id'] as String, child: Text(a['accountName']?.toString() ?? ''))),
                         ],
                         onChanged: (v) => setState(() => linkId = v),
                       );
@@ -163,8 +171,7 @@ class _SubscriptionDialogState extends State<SubscriptionDialog> {
                 TextField(
                   controller: dayCtrl,
                   keyboardType: TextInputType.number,
-                  decoration:
-                      const InputDecoration(labelText: 'Día de vencimiento (aprox)', border: OutlineInputBorder()),
+                  decoration: const InputDecoration(labelText: 'Día de vencimiento (aprox)', border: OutlineInputBorder()),
                 ),
               ],
             ),
@@ -174,10 +181,8 @@ class _SubscriptionDialogState extends State<SubscriptionDialog> {
             FilledButton(
               onPressed: () {
                 if (nameCtrl.text.isNotEmpty && amountCtrl.text.isNotEmpty) {
-                  final categoryName =
-                      categories.where((c) => c['id'] == selectedCategoryId).firstOrNull?['name'] ?? 'Suscripción';
-
-                  final data = {
+                  final categoryName = categories.where((c) => c['id'] == selectedCategoryId).firstOrNull?['name'] ?? 'Suscripción';
+                  final Map<String, dynamic> data = {
                     'name': nameCtrl.text,
                     'amount': widget.service.parseAmount(amountCtrl.text),
                     'currency': currency,
@@ -185,9 +190,10 @@ class _SubscriptionDialogState extends State<SubscriptionDialog> {
                     'linkId': linkId,
                     'dueDay': int.tryParse(dayCtrl.text),
                     'category': categoryName,
+                    'familyId': shareWithFamily ? familyId : null,
                   };
                   if (isEdit) {
-                    widget.service.updateSubscription(widget.sub!['id'], data);
+                    widget.service.updateSubscription(widget.sub!['id'].toString(), data);
                   } else {
                     widget.service.addSubscription(data);
                   }

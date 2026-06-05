@@ -21,6 +21,7 @@ class TransactionModel {
   final String? templateId;
   final String? subscriptionId;
   final int orderIndex;
+  final String? familyId; // NUEVO: Soporte familiar
   final DateTime updatedAt;
   final bool isDeleted;
   final String syncStatus;
@@ -31,7 +32,7 @@ class TransactionModel {
     this.currency = 'UYU', this.isCompleted = false, this.isPaid = false,
     this.type = 'EXPENSE', this.brandLogo, this.categoryColor, this.includedInCard = false,
     this.paidFromAccountId, this.templateId, this.subscriptionId, this.orderIndex = 999,
-    DateTime? updatedAt, this.isDeleted = false, this.syncStatus = 'synced',
+    this.familyId, DateTime? updatedAt, this.isDeleted = false, this.syncStatus = 'synced',
   }) : updatedAt = updatedAt ?? DateTime.now();
 
   Color? get colorValue => categoryColor != null ? Color(categoryColor!) : null;
@@ -77,6 +78,7 @@ class TransactionModel {
       templateId: data['templateId']?.toString(),
       subscriptionId: data['subscriptionId']?.toString(),
       orderIndex: parseInt(data['orderIndex']) ?? 999,
+      familyId: data['familyId']?.toString(),
       updatedAt: parseTime(data['updatedAt'] ?? data['date']),
       isDeleted: parseBool(data['isDeleted']),
       syncStatus: data['syncStatus']?.toString() ?? 'synced',
@@ -90,8 +92,8 @@ class TransactionModel {
       'category': category, 'currency': currency, 'isCompleted': isCompleted, 'isPaid': isPaid,
       'type': type, 'brandLogo': brandLogo, 'categoryColor': categoryColor, 'includedInCard': includedInCard,
       'paidFromAccountId': paidFromAccountId, 'templateId': templateId, 'subscriptionId': subscriptionId,
-      'orderIndex': orderIndex, 'updatedAt': Timestamp.fromDate(updatedAt), 'isDeleted': isDeleted,
-      'syncStatus': syncStatus,
+      'orderIndex': orderIndex, 'familyId': familyId, 'updatedAt': Timestamp.fromDate(updatedAt),
+      'isDeleted': isDeleted, 'syncStatus': syncStatus,
     };
   }
 
@@ -108,7 +110,7 @@ class TransactionModel {
     return map;
   }
 
-  TransactionModel copyWith({String? id, String? title, String? description, double? amount, double? minimumAmount, DateTime? date, DateTime? dueDate, String? category, String? currency, bool? isCompleted, bool? isPaid, String? type, String? brandLogo, int? categoryColor, bool? includedInCard, String? paidFromAccountId, String? templateId, String? subscriptionId, int? orderIndex, DateTime? updatedAt, bool? isDeleted, String? syncStatus}) {
-    return TransactionModel(id: id ?? this.id, title: title ?? this.title, description: description ?? this.description, amount: amount ?? this.amount, minimumAmount: minimumAmount ?? this.minimumAmount, date: date ?? this.date, dueDate: dueDate ?? this.dueDate, category: category ?? this.category, currency: currency ?? this.currency, isCompleted: isCompleted ?? this.isCompleted, isPaid: isPaid ?? this.isPaid, type: type ?? this.type, brandLogo: brandLogo ?? this.brandLogo, categoryColor: categoryColor ?? this.categoryColor, includedInCard: includedInCard ?? this.includedInCard, paidFromAccountId: paidFromAccountId ?? this.paidFromAccountId, templateId: templateId ?? this.templateId, subscriptionId: subscriptionId ?? this.subscriptionId, orderIndex: orderIndex ?? this.orderIndex, updatedAt: updatedAt ?? this.updatedAt, isDeleted: isDeleted ?? this.isDeleted, syncStatus: syncStatus ?? this.syncStatus);
+  TransactionModel copyWith({String? id, String? title, String? description, double? amount, double? minimumAmount, DateTime? date, DateTime? dueDate, String? category, String? currency, bool? isCompleted, bool? isPaid, String? type, String? brandLogo, int? categoryColor, bool? includedInCard, String? paidFromAccountId, String? templateId, String? subscriptionId, int? orderIndex, String? familyId, DateTime? updatedAt, bool? isDeleted, String? syncStatus}) {
+    return TransactionModel(id: id ?? this.id, title: title ?? this.title, description: description ?? this.description, amount: amount ?? this.amount, minimumAmount: minimumAmount ?? this.minimumAmount, date: date ?? this.date, dueDate: dueDate ?? this.dueDate, category: category ?? this.category, currency: currency ?? this.currency, isCompleted: isCompleted ?? this.isCompleted, isPaid: isPaid ?? this.isPaid, type: type ?? this.type, brandLogo: brandLogo ?? this.brandLogo, categoryColor: categoryColor ?? this.categoryColor, includedInCard: includedInCard ?? this.includedInCard, paidFromAccountId: paidFromAccountId ?? this.paidFromAccountId, templateId: templateId ?? this.templateId, subscriptionId: subscriptionId ?? this.subscriptionId, orderIndex: orderIndex ?? this.orderIndex, familyId: familyId ?? this.familyId, updatedAt: updatedAt ?? this.updatedAt, isDeleted: isDeleted ?? this.isDeleted, syncStatus: syncStatus ?? this.syncStatus);
   }
 }

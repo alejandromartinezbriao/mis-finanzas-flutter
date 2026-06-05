@@ -26,12 +26,30 @@ mixin BalanceService on FirebaseBase {
   // --- BALANCES (OPERACIONES) ---
 
   Stream<List<Map<String, dynamic>>> getBalances() {
+    final String currentUid = auth.currentUser?.uid ?? '';
+
     if (kIsWeb) {
       final ref = balancesRef; if (ref == null) return Stream.value([]);
-      // REPARACIÓN ORDEN WEB: Forzamos el orden por índice
-      return ref.orderBy('orderIndex').snapshots().map((snap) => 
-        snap.docs.map((doc) => {...doc.data() as Map<String, dynamic>, 'id': doc.id}).toList()
-      );
+      final myStream = ref.orderBy('orderIndex').snapshots().map((snap) => snap.docs.map((doc) => {...doc.data() as Map<String, dynamic>, 'id': doc.id}).toList());
+
+      // Soporte familiar: Cuentas propias + Cuentas compartidas por la familia
+      return db.collection('users').doc(currentUid).snapshots().asyncExpand((userDoc) {
+        final userData = userDoc.data() as Map<String, dynamic>? ?? {};
+        final String? familyId = userData['familyId'];
+
+        if (familyId == null) return myStream;
+
+        Query sharedQuery = db.collectionGroup('balances').where('familyId', isEqualTo: familyId);
+        
+        return sharedQuery.snapshots().map((sharedSnap) {
+          final sharedItems = sharedSnap.docs
+              .where((d) => d.reference.parent.parent?.id != currentUid)
+              .map((doc) => {...doc.data() as Map<String, dynamic>, 'id': doc.id})
+              .toList();
+
+          return myStream.map((myItems) => [...myItems, ...sharedItems]);
+        }).asyncExpand((s) => s);
+      });
     }
 
     final controller = StreamController<List<Map<String, dynamic>>>();
@@ -58,7 +76,7 @@ mixin BalanceService on FirebaseBase {
     } catch (e) {}
   }
 
-  Future<void> addBalanceAccount(String name, String currency, {String? logo, String type = 'BANK', bool isBimonetary = false, bool includeInCoverage = true}) async {
+  Future<void> addBalanceAccount(String name, String currency, {String? logo, String type = 'BANK', bool isBimonetary = false, bool includeInCoverage = true, String? familyId}) async {
     try {
       final ref = balancesRef; if (ref == null) return;
       int nextIndex = 0;
@@ -78,11 +96,19 @@ mixin BalanceService on FirebaseBase {
         }
       }
 
+      final Map<String, dynamic> baseData = {
+        'accountType': type, 
+        'brandLogo': logo, 
+        'includeInCoverage': includeInCoverage ? 1 : 0,
+        'familyId': familyId,
+        'updatedAt': FieldValue.serverTimestamp()
+      };
+
       if (isBimonetary) {
-        await create({'accountName': '$name (UYU)', 'amount': 0.0, 'currency': 'UYU', 'accountType': type, 'brandLogo': logo, 'orderIndex': nextIndex, 'isBimonetaryPart': 1, 'baseName': name, 'includeInCoverage': includeInCoverage ? 1 : 0});
-        await create({'accountName': '$name (USD)', 'amount': 0.0, 'currency': 'USD', 'accountType': type, 'brandLogo': logo, 'orderIndex': nextIndex + 1, 'isBimonetaryPart': 1, 'baseName': name, 'includeInCoverage': includeInCoverage ? 1 : 0});
+        await create({...baseData, 'accountName': '$name (UYU)', 'amount': 0.0, 'currency': 'UYU', 'orderIndex': nextIndex, 'isBimonetaryPart': 1, 'baseName': name});
+        await create({...baseData, 'accountName': '$name (USD)', 'amount': 0.0, 'currency': 'USD', 'orderIndex': nextIndex + 1, 'isBimonetaryPart': 1, 'baseName': name});
       } else {
-        await create({'accountName': name, 'amount': 0.0, 'currency': currency, 'accountType': type, 'brandLogo': logo, 'orderIndex': nextIndex, 'includeInCoverage': includeInCoverage ? 1 : 0});
+        await create({...baseData, 'accountName': name, 'amount': 0.0, 'currency': currency, 'orderIndex': nextIndex});
       }
     } catch (e) {}
   }

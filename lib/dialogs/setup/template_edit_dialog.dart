@@ -34,6 +34,8 @@ class _TemplateEditDialogState extends State<TemplateEditDialog> {
   late String? selectedLogo;
   late List<Map<String, dynamic>> subscriptions;
   late bool isBimonetary;
+  bool shareWithFamily = false;
+  String? familyId;
   bool isEdit = false;
 
   @override
@@ -47,9 +49,8 @@ class _TemplateEditDialogState extends State<TemplateEditDialog> {
     
     final dynamic rawAmount = widget.template?['defaultAmount'];
     double amount = 0.0;
-    if (rawAmount is num) {
-      amount = rawAmount.toDouble();
-    } else if (rawAmount is String) amount = double.tryParse(rawAmount) ?? 0.0;
+    if (rawAmount is num) amount = rawAmount.toDouble();
+    else if (rawAmount is String) amount = double.tryParse(rawAmount) ?? 0.0;
     
     defaultAmountController = TextEditingController(
         text: amount > 0 ? CurrencyUtils.formatForInput(amount) : '');
@@ -59,6 +60,7 @@ class _TemplateEditDialogState extends State<TemplateEditDialog> {
     includedInCard = widget.template?['includedInCard'] == true || widget.template?['includedInCard'] == 1;
     isBimonetary = widget.template?['isBimonetaryPart'] == true || widget.template?['isBimonetaryPart'] == 1;
     selectedLogo = widget.template?['brandLogo']?.toString();
+    shareWithFamily = widget.template?['familyId'] != null;
     
     final rawSubs = widget.template?['subscriptions'];
     if (rawSubs is List) {
@@ -66,6 +68,13 @@ class _TemplateEditDialogState extends State<TemplateEditDialog> {
     } else if (rawSubs is String && rawSubs.isNotEmpty) {
       try { subscriptions = List<Map<String, dynamic>>.from(jsonDecode(rawSubs)); } catch (_) { subscriptions = []; }
     } else { subscriptions = []; }
+
+    _loadFamilyInfo();
+  }
+
+  Future<void> _loadFamilyInfo() async {
+    final fid = await widget.service.getMyFamilyId();
+    if (mounted) setState(() => familyId = fid);
   }
 
   @override
@@ -110,6 +119,16 @@ class _TemplateEditDialogState extends State<TemplateEditDialog> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                if (familyId != null)
+                  SwitchListTile(
+                    title: const Text('Compartir con Familia', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                    subtitle: const Text('Visible para todos los miembros', style: TextStyle(fontSize: 11)),
+                    value: shareWithFamily,
+                    secondary: const Icon(Icons.family_restroom, color: Colors.teal),
+                    onChanged: (v) => setState(() => shareWithFamily = v),
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                const SizedBox(height: 10),
                 TextField(
                   controller: titleController,
                   decoration: const InputDecoration(labelText: 'Concepto', border: OutlineInputBorder()),
@@ -123,7 +142,7 @@ class _TemplateEditDialogState extends State<TemplateEditDialog> {
                 ),
                 const SizedBox(height: 20),
                 DropdownButtonFormField<String>(
-                  initialValue: selectedCategoryId,
+                  value: selectedCategoryId,
                   hint: const Text('Seleccionar Categoría'),
                   decoration: const InputDecoration(labelText: 'Categoría', border: OutlineInputBorder()),
                   items: categories.map((c) => DropdownMenuItem(
@@ -144,7 +163,7 @@ class _TemplateEditDialogState extends State<TemplateEditDialog> {
                     children: [
                       Expanded(
                           child: DropdownButtonFormField<String>(
-                              initialValue: selectedCurrency,
+                              value: selectedCurrency,
                               items: ['UYU', 'USD'].map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
                               onChanged: (v) => setState(() => selectedCurrency = v!),
                               decoration: const InputDecoration(labelText: 'Moneda'))),
@@ -190,12 +209,14 @@ class _TemplateEditDialogState extends State<TemplateEditDialog> {
                     'title': titleController.text, 'baseName': isBimonetary ? titleController.text : null, 'currency': selectedCurrency, 'dueDay': int.tryParse(dayController.text),
                     'defaultAmount': widget.service.parseAmount(defaultAmountController.text), 'type': widget.type, 'category': catName,
                     'isCreditCard': isCreditCard ? 1 : 0, 'includedInCard': includedInCard ? 1 : 0, 'brandLogo': selectedLogo, 'subscriptions': isCreditCard ? subscriptions : [], 'isBimonetaryPart': isBimonetary ? 1 : 0,
+                    'familyId': shareWithFamily ? familyId : null, // NUEVO
                   };
                   if (isEdit) {
+                    final String id = widget.template!['id'].toString();
                     if (isBimonetary && (widget.template!['isBimonetaryPart'] != true && widget.template!['isBimonetaryPart'] != 1)) {
                       await _showTemplateBimonetaryUpgradeDialog(context, widget.service, widget.template!, data, selectedLogo);
                     } else {
-                      await widget.service.updateTemplate(widget.template!['id'].toString(), data);
+                      await widget.service.updateTemplate(id, data);
                     }
                   } else {
                     await widget.service.addTemplate(data, isBimonetary: isBimonetary);
@@ -227,9 +248,7 @@ class _TemplateEditDialogState extends State<TemplateEditDialog> {
       if (confirm == true) createNew = true;
     } else {
       final result = await showDialog<Map<String, dynamic>>(context: context, builder: (c) => AlertDialog(title: const Text('Vincular Tarjeta Gemela'), content: SizedBox(width: double.maxFinite, child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [Text('He encontrado tarjetas que podrían ser la contraparte en $otherCurrency de "$cleanBaseName":', style: const TextStyle(fontSize: 13)), const SizedBox(height: 15), Flexible(child: ListView.builder(shrinkWrap: true, itemCount: candidates.length, itemBuilder: (ctx, index) { final cand = candidates[index]; final bool isHighMatch = (cand['matchScore'] ?? 0) >= 100; return ListTile(contentPadding: const EdgeInsets.symmetric(horizontal: 8), leading: BrandIcon(name: cand['title'], manualLogo: cand['brandLogo'], size: 32), title: Text(cand['title'], style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)), subtitle: Text(isHighMatch ? 'Sugerencia recomendada (mismo banco)' : 'Posible coincidencia', style: TextStyle(fontSize: 11, color: isHighMatch ? Colors.green : Colors.grey)), trailing: isHighMatch ? const Icon(Icons.star, color: Colors.amber, size: 16) : const Icon(Icons.chevron_right, size: 16), tileColor: isHighMatch ? Colors.green.withOpacity(0.05) : null, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)), onTap: () => Navigator.pop(c, {'id': cand['id'], 'title': cand['title']})); }))]))));
-      if (result != null) { if (result['create'] == true) {
-        createNew = true;
-      } else { selectedGemelaId = result['id']; selectedGemelaTitle = result['title']; } }
+      if (result != null) { if (result['create'] == true) createNew = true; else { selectedGemelaId = result['id']; selectedGemelaTitle = result['title']; } }
     }
     if (createNew || selectedGemelaId != null) { await service.upgradeTemplateToBimonetary(originalId: originalId, oldTitle: oldTitle, data: {...data, 'title': cleanBaseName}, existingGemelaId: selectedGemelaId, oldGemelaTitle: selectedGemelaTitle); }
   }

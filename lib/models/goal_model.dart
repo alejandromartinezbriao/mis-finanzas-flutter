@@ -8,6 +8,7 @@ class GoalModel {
   final String currency;
   final String icon;
   final String? linkedAccountId;
+  final String? familyId; // NUEVO: Soporte familiar
   final DateTime createdAt;
   final DateTime updatedAt;
   final bool isDeleted;
@@ -21,6 +22,7 @@ class GoalModel {
     required this.currency,
     required this.icon,
     this.linkedAccountId,
+    this.familyId,
     required this.createdAt,
     required this.updatedAt,
     this.isDeleted = false,
@@ -42,6 +44,7 @@ class GoalModel {
       currency: data['currency']?.toString() ?? 'UYU',
       icon: data['icon']?.toString() ?? 'flag',
       linkedAccountId: data['linkedAccountId']?.toString(),
+      familyId: data['familyId']?.toString(),
       createdAt: parseTime(data['createdAt']),
       updatedAt: parseTime(data['updatedAt'] ?? data['createdAt']),
       isDeleted: data['isDeleted'] == true || data['isDeleted'] == 1,
@@ -57,6 +60,7 @@ class GoalModel {
       'currency': currency,
       'icon': icon,
       'linkedAccountId': linkedAccountId,
+      'familyId': familyId,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
       'isDeleted': isDeleted,
@@ -73,6 +77,7 @@ class GoalModel {
       'currency': currency,
       'icon': icon,
       'linkedAccountId': linkedAccountId,
+      'familyId': familyId,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
       'isDeleted': isDeleted ? 1 : 0,

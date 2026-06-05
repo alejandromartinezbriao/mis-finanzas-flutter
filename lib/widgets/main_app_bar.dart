@@ -11,6 +11,8 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
   final DateTime viewingDate;
   final NumberFormat uyuFormat;
   final NumberFormat usdFormat;
+  final bool isFamilyMode; // NUEVO
+  final Function(bool) onModeChanged; // NUEVO
 
   const MainAppBar({
     super.key,
@@ -18,6 +20,8 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
     required this.viewingDate,
     required this.uyuFormat,
     required this.usdFormat,
+    this.isFamilyMode = false,
+    required this.onModeChanged,
   });
 
   @override
@@ -36,23 +40,36 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.account_balance_wallet_rounded, color: Theme.of(context).colorScheme.primary, size: 22),
+            Icon(Icons.account_balance_wallet_rounded, color: isFamilyMode ? Colors.tealAccent : Theme.of(context).colorScheme.primary, size: 22),
             const SizedBox(width: 8),
-            const Text('Mis Finanzas', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16, letterSpacing: 0.2)),
+            const Text('MF', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 20, letterSpacing: 1.5)), // TÍTULO REDUCIDO
           ],
         ),
       ),
       centerTitle: false,
       elevation: 0,
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      foregroundColor: Theme.of(context).colorScheme.onSurface,
+      backgroundColor: isFamilyMode ? Colors.teal.shade900 : Theme.of(context).colorScheme.surface, // COLOR DIFERENCIADO
+      foregroundColor: isFamilyMode ? Colors.white : Theme.of(context).colorScheme.onSurface,
       actions: [
+        // BOTÓN DE CAMBIO DE MODO (Solo si tiene familia)
+        FutureBuilder<String?>(
+          future: service.getMyFamilyId(),
+          builder: (context, snapshot) {
+            if (snapshot.hasData && snapshot.data != null) {
+              return IconButton(
+                icon: Icon(isFamilyMode ? Icons.person_outline : Icons.family_restroom, color: isFamilyMode ? Colors.tealAccent : null),
+                tooltip: isFamilyMode ? 'Ver Mis Finanzas' : 'Ver Círculo Familiar',
+                onPressed: () => onModeChanged(!isFamilyMode),
+              );
+            }
+            return const SizedBox.shrink();
+          },
+        ),
         IconButton(icon: const Icon(Icons.pie_chart_outline, size: 22), tooltip: 'Distribución', onPressed: () => _showDistribution(context)),
         IconButton(icon: const Icon(Icons.query_stats, size: 22), tooltip: 'Estadísticas', onPressed: () => Navigator.pushNamed(context, '/statistics')),
         IconButton(icon: const Icon(Icons.savings_outlined, size: 22), tooltip: 'Metas', onPressed: () => Navigator.pushNamed(context, '/goals')),
         IconButton(icon: const Icon(Icons.bar_chart_outlined, size: 22), tooltip: 'Presupuestos', onPressed: () => Navigator.pushNamed(context, '/budgets')),
         
-        // MENÚ DINÁMICO
         FutureBuilder<bool>(
           future: service.isAleAdmin(),
           builder: (context, snapshot) {
@@ -72,14 +89,10 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
   void _showDistribution(BuildContext context) {
     service.getTransactions(month: viewingDate.month, year: viewingDate.year).first.then((txs) {
       service.getCategories(type: 'EXPENSE').first.then((cats) {
-        showDialog(context: context, builder: (context) => CategoryDistributionDialog(transactions: txs, categories: cats, uyuFormat: _uyuFormat, usdFormat: _usdFormat));
+        showDialog(context: context, builder: (context) => CategoryDistributionDialog(transactions: txs, categories: cats, uyuFormat: uyuFormat, usdFormat: usdFormat));
       });
     });
   }
-
-  // --- TRADUCCIÓN DE FORMATOS ---
-  NumberFormat get _uyuFormat => uyuFormat;
-  NumberFormat get _usdFormat => usdFormat;
 
   List<PopupMenuEntry<String>> _buildMenuItems(bool isAdmin) {
     return [
@@ -87,11 +100,8 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
       const PopupMenuDivider(),
       const PopupMenuItem(value: 'ai_advisor', child: Row(children: [Icon(Icons.auto_awesome, size: 20, color: Colors.purpleAccent), SizedBox(width: 12), Text('Asesor Financiero IA')])),
       const PopupMenuItem(value: 'ai_history', child: Row(children: [Icon(Icons.history_edu, size: 20, color: Colors.indigoAccent), SizedBox(width: 12), Text('Historial de Asesoría')])),
-      
-      // BOTÓN SOLO PARA EL DUEÑO (ALE)
       if (isAdmin)
         const PopupMenuItem(value: 'maintenance', child: Row(children: [Icon(Icons.admin_panel_settings, size: 20, color: Colors.redAccent), SizedBox(width: 12), Text('Control Maestro', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold))])),
-      
       const PopupMenuDivider(),
       const PopupMenuItem(value: 'export', child: Row(children: [Icon(Icons.download, size: 20, color: Colors.blue), SizedBox(width: 12), Text('Exportar este Mes')])),
       const PopupMenuItem(value: 'clear', child: Row(children: [Icon(Icons.delete_sweep_outlined, size: 20, color: Colors.orange), SizedBox(width: 12), Text('Limpiar este Mes')])),

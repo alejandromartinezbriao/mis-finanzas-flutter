@@ -112,6 +112,66 @@ mixin UserService on FirebaseBase {
     }
   }
 
+  // --- GESTIÓN FAMILIAR ---
+
+  Stream<Map<String, dynamic>?> getPendingInvitation() {
+    final email = auth.currentUser?.email;
+    if (email == null) return Stream.value(null);
+    return db.collection('invitations')
+        .doc(email.trim().toLowerCase())
+        .snapshots()
+        .map((doc) => doc.exists ? {...doc.data() as Map<String, dynamic>, 'id': doc.id} : null);
+  }
+
+  Future<void> acceptFamilyInvitation(Map<String, dynamic> invitation) async {
+    final uid = auth.currentUser?.uid;
+    if (uid == null) return;
+
+    final batch = db.batch();
+    
+    // 1. Vincular al usuario con su nuevo familyId (el UID del Admin)
+    batch.update(db.collection('users').doc(uid), {
+      'familyId': invitation['fromUid'],
+      'joinedFamilyAt': FieldValue.serverTimestamp(),
+    });
+
+    // 2. Borrar la invitación (Higiene Atómica)
+    batch.delete(db.collection('invitations').doc(invitation['toEmail']));
+
+    await batch.commit();
+  }
+
+  Future<void> rejectFamilyInvitation(String email) async {
+    await db.collection('invitations').doc(email.trim().toLowerCase()).delete();
+  }
+
+  Future<void> sendFamilyInvitation(String targetEmail) async {
+    final uid = auth.currentUser?.uid;
+    if (uid == null) return;
+
+    final userDoc = await db.collection('users').doc(uid).get();
+    final String senderName = userDoc.data()?['displayName'] ?? 'Un usuario';
+
+    // Creamos la invitación en la colección global
+    // El ID del documento es el email para evitar duplicados
+    await db.collection('invitations').doc(targetEmail.trim().toLowerCase()).set({
+      'fromUid': uid,
+      'fromName': senderName,
+      'toEmail': targetEmail.trim().toLowerCase(),
+      'status': 'pending',
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Stream<List<Map<String, dynamic>>> getSentInvitations() {
+    final uid = auth.currentUser?.uid;
+    if (uid == null) return Stream.value([]);
+    return db.collection('invitations')
+        .where('fromUid', isEqualTo: uid)
+        .snapshots()
+        .map((snap) => snap.docs.map((doc) => {...doc.data(), 'id': doc.id}).toList());
+  }
+
   // --- USUARIOS / PERFIL ---
 
   Stream<Map<String, dynamic>?> getUserProfile() {

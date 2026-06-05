@@ -4,10 +4,11 @@ class CategoryModel {
   final String id;
   final String name;
   final String icon;
-  final int color; // Vuelve a ser int
+  final int color; 
   final String type;
   final double budgetAmount;
   final String budgetCurrency;
+  final String? familyId; // NUEVO: Soporte familiar
   final DateTime updatedAt;
   final bool isDeleted;
   final String syncStatus;
@@ -15,7 +16,7 @@ class CategoryModel {
   CategoryModel({
     required this.id, required this.name, required this.icon, required this.color,
     required this.type, this.budgetAmount = 0.0, this.budgetCurrency = 'UYU',
-    DateTime? updatedAt, this.isDeleted = false, this.syncStatus = 'synced',
+    this.familyId, DateTime? updatedAt, this.isDeleted = false, this.syncStatus = 'synced',
   }) : updatedAt = updatedAt ?? DateTime.now();
 
   Color get colorValue => Color(color);
@@ -43,6 +44,7 @@ class CategoryModel {
       type: data['type']?.toString() ?? 'EXPENSE',
       budgetAmount: (data['budgetAmount'] ?? 0.0).toDouble(),
       budgetCurrency: data['budgetCurrency']?.toString() ?? 'UYU',
+      familyId: data['familyId']?.toString(),
       updatedAt: data['updatedAt'] != null ? DateTime.tryParse(data['updatedAt'].toString()) ?? DateTime.now() : DateTime.now(),
       isDeleted: parseBool(data['isDeleted']),
       syncStatus: data['syncStatus']?.toString() ?? 'synced',
@@ -53,6 +55,7 @@ class CategoryModel {
     return {
       'name': name, 'icon': icon, 'color': color, 'type': type,
       'budgetAmount': budgetAmount, 'budgetCurrency': budgetCurrency,
+      'familyId': familyId,
       'updatedAt': updatedAt.toIso8601String(), 'isDeleted': isDeleted, 'syncStatus': syncStatus,
     };
   }

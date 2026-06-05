@@ -16,7 +16,8 @@ class RecurringModel {
   final bool isBimonetaryPart;
   final String? baseName;
   final int orderIndex;
-  final int? categoryColor; // Vuelve a ser int
+  final int? categoryColor; 
+  final String? familyId; // NUEVO: Soporte familiar
   final DateTime updatedAt;
   final bool isDeleted;
   final String syncStatus;
@@ -27,7 +28,7 @@ class RecurringModel {
     this.type = 'EXPENSE', this.isCreditCard = false, this.includedInCard = false,
     this.brandLogo, this.subscriptions = const [], this.isBimonetaryPart = false,
     this.baseName, this.orderIndex = 999, this.categoryColor,
-    DateTime? updatedAt, this.isDeleted = false, this.syncStatus = 'synced',
+    this.familyId, DateTime? updatedAt, this.isDeleted = false, this.syncStatus = 'synced',
   }) : updatedAt = updatedAt ?? DateTime.now();
 
   Color? get colorValue => categoryColor != null ? Color(categoryColor!) : null;
@@ -69,6 +70,7 @@ class RecurringModel {
       baseName: data['baseName']?.toString(),
       orderIndex: parseInt(data['orderIndex']) ?? 999,
       categoryColor: parseInt(data['categoryColor']),
+      familyId: data['familyId']?.toString(),
       updatedAt: data['updatedAt'] != null ? DateTime.tryParse(data['updatedAt'].toString()) ?? DateTime.now() : DateTime.now(),
       isDeleted: parseBool(data['isDeleted']),
       syncStatus: data['syncStatus']?.toString() ?? 'synced',
@@ -80,7 +82,8 @@ class RecurringModel {
       'title': title, 'category': category, 'currency': currency, 'dueDay': dueDay,
       'defaultAmount': defaultAmount, 'type': type, 'isCreditCard': isCreditCard,
       'includedInCard': includedInCard, 'brandLogo': brandLogo, 'subscriptions': subscriptions,
-      'isBimonetaryPart': isBimonetaryPart, 'baseName': baseName, 'orderIndex': orderIndex, 'categoryColor': categoryColor,
+      'isBimonetaryPart': isBimonetaryPart, 'baseName': baseName, 'orderIndex': orderIndex, 
+      'categoryColor': categoryColor, 'familyId': familyId,
       'updatedAt': updatedAt.toIso8601String(), 'isDeleted': isDeleted, 'syncStatus': syncStatus,
     };
   }

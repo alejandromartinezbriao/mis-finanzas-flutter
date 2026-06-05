@@ -101,6 +101,8 @@ mixin TransactionService on FirebaseBase {
   }
 
   Stream<List<TransactionModel>> getTransactions({int? month, int? year}) {
+    final String currentUid = auth.currentUser?.uid ?? '';
+
     if (kIsWeb) {
       final ref = transactionsRef; if (ref == null) return Stream.value([]);
       Query query = ref;
@@ -109,7 +111,34 @@ mixin TransactionService on FirebaseBase {
         DateTime end = DateTime(year, month + 1, 1).subtract(const Duration(milliseconds: 1));
         query = query.where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(start)).where('date', isLessThanOrEqualTo: Timestamp.fromDate(end));
       }
-      return query.snapshots().map((snap) => snap.docs.map((doc) => TransactionModel.fromMap(doc.data() as Map<String, dynamic>, doc.id)).toList());
+
+      final myStream = query.snapshots().map((snap) => snap.docs.map((doc) => TransactionModel.fromMap(doc.data() as Map<String, dynamic>, doc.id)).toList());
+
+      return db.collection('users').doc(currentUid).snapshots().asyncExpand((userDoc) {
+        final userData = userDoc.data() as Map<String, dynamic>? ?? {};
+        final String? familyId = userData['familyId'];
+
+        if (familyId == null) return myStream;
+
+        Query sharedQuery = db.collectionGroup('expenses')
+            .where('familyId', isEqualTo: familyId)
+            .where('isDeleted', isEqualTo: false);
+        
+        if (month != null && year != null) {
+          DateTime start = DateTime(year, month, 1);
+          DateTime end = DateTime(year, month + 1, 1).subtract(const Duration(milliseconds: 1));
+          sharedQuery = sharedQuery.where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(start)).where('date', isLessThanOrEqualTo: Timestamp.fromDate(end));
+        }
+
+        return sharedQuery.snapshots().map((sharedSnap) {
+          final sharedTxs = sharedSnap.docs
+              .where((d) => d.reference.parent.parent?.id != currentUid)
+              .map((doc) => TransactionModel.fromMap(doc.data() as Map<String, dynamic>, doc.id))
+              .toList();
+
+          return myStream.map((myTxs) => [...myTxs, ...sharedTxs]);
+        }).asyncExpand((s) => s);
+      });
     }
 
     final controller = StreamController<List<TransactionModel>>();
@@ -176,7 +205,8 @@ mixin TransactionService on FirebaseBase {
           date: DateTime(year, month, 1, 12, 0, 0), category: t['category'] ?? 'Fijo',
           currency: t['currency'] ?? 'UYU', type: t['type'] ?? 'EXPENSE',
           isCompleted: false, brandLogo: t['brandLogo'], categoryColor: t['categoryColor'] is num ? t['categoryColor'] : null,
-          templateId: templateId, orderIndex: t['orderIndex'] ?? 999
+          templateId: templateId, orderIndex: t['orderIndex'] ?? 999,
+          familyId: t['familyId'] 
         );
         await addTransaction(tx, silent: silent);
       }
@@ -186,18 +216,16 @@ mixin TransactionService on FirebaseBase {
     }
   }
 
-  // --- COMPRAS CON TARJETA (GROUPING BLINDADO) ---
+  // --- COMPRAS CON TARJETA ---
 
   Future<void> addCreditCardExpense({
     required String cardName, required double totalAmount, required int installments, required String currency,
     required DateTime startDate, String? concept, String? category, String? categoryLogo, int? categoryColor,
-    int initialInstallment = 1
+    int initialInstallment = 1, String? familyId 
   }) async {
     try {
-      // 1. Limpiar el nombre de la tarjeta para evitar el error "(UYU) (UYU)"
       final String cleanCardName = cardName.replaceAll(RegExp(r' \((UYU|USD)\)$', caseSensitive: false), '').trim();
       final String targetTitle = "$cleanCardName ($currency)";
-      
       final double amountPerInstallment = round(totalAmount / installments);
 
       for (int i = 0; i < (installments - initialInstallment + 1); i++) {
@@ -206,28 +234,91 @@ mixin TransactionService on FirebaseBase {
         final String desc = "${concept ?? 'Compra'} ($currentInst/$installments) - ${formatAmount(amountPerInstallment, currency)}";
         final String monthPrefix = "${targetDate.year}-${targetDate.month.toString().padLeft(2, '0')}%";
 
-        // Buscar el registro exacto de la tarjeta en el mes objetivo
         final existing = await _local.query('transactions', where: "date LIKE ? AND title = ? AND currency = ?", whereArgs: [monthPrefix, targetTitle, currency]);
 
         if (existing.isNotEmpty) {
-          // UNIR AL GASTO DE TARJETA EXISTENTE
           final old = TransactionModel.fromMap(existing.first, existing.first['id']);
           await updateTransaction(old.copyWith(
             amount: old.amount + amountPerInstallment, 
-            description: (old.description?.isEmpty ?? true) ? desc : "${old.description}, $desc"
+            description: (old.description?.isEmpty ?? true) ? desc : "${old.description}, $desc",
+            familyId: familyId 
           ));
         } else {
-          // CREAR NUEVO REGISTRO DE TARJETA
           final tx = TransactionModel(
             id: '', title: targetTitle, amount: amountPerInstallment, date: targetDate,
             category: 'Tarjeta', currency: currency, type: 'EXPENSE',
             isCompleted: false, description: desc, brandLogo: categoryLogo ?? 'cabal.png',
-            categoryColor: categoryColor, orderIndex: 11
+            categoryColor: categoryColor, orderIndex: 11,
+            familyId: familyId 
           );
           await addTransaction(tx);
         }
       }
     } catch (e) { print("Error addCreditCardExpense: $e"); }
+  }
+
+  // --- RESTAURACIÓN: FUNCIONES DE MANTENIMIENTO ---
+
+  Future<void> removeCreditCardExpense({required String cardName, required String fullItemText, required DateTime startDate}) async {
+    try {
+      final String cleanCardName = cardName.replaceAll(RegExp(r' \((UYU|USD)\)$', caseSensitive: false), '').trim();
+      final String monthPrefix = "${startDate.year}-${startDate.month.toString().padLeft(2, '0')}%";
+      
+      final results = await _local.query('transactions', where: "date LIKE ? AND title LIKE ?", whereArgs: [monthPrefix, "$cleanCardName%"]);
+      
+      if (results.isNotEmpty) {
+        final data = results.first;
+        final tx = TransactionModel.fromMap(data, data['id']);
+        final List<String> items = (tx.description ?? '').split(', ').where((s) => s.trim().isNotEmpty).toList();
+        
+        if (items.contains(fullItemText)) {
+          items.remove(fullItemText);
+          final String newDesc = items.join(', ');
+          
+          RegExp amountRegex = RegExp(r'(UYU|U\$S)\s?([\d,.]+)');
+          final match = amountRegex.firstMatch(fullItemText);
+          double amountToRemove = 0.0;
+          if (match != null) {
+            String valStr = match.group(2)!.replaceAll(',', '');
+            amountToRemove = double.tryParse(valStr) ?? 0.0;
+          }
+
+          await updateTransaction(tx.copyWith(
+            amount: (tx.amount - amountToRemove).clamp(0, double.infinity),
+            description: newDesc
+          ));
+        }
+      }
+    } catch (e) { print("Error removeCreditCardExpense: $e"); }
+  }
+
+  Future<void> unifyTransactions(List<TransactionModel> transactions, String baseName) async {
+    if (transactions.isEmpty) return;
+    try {
+      final double total = transactions.fold(0.0, (sum, t) => sum + t.amount);
+      final List<String> descriptions = transactions.map((t) => t.description ?? '').where((s) => s.isNotEmpty).toList();
+      final mainTx = transactions.first;
+      
+      await updateTransaction(mainTx.copyWith(
+        title: baseName,
+        amount: total,
+        description: descriptions.join(', ')
+      ));
+
+      for (int i = 1; i < transactions.length; i++) {
+        await deleteTransaction(transactions[i].id);
+      }
+    } catch (e) { print("Error unifyTransactions: $e"); }
+  }
+
+  Future<void> clearMonth(int month, int year) async {
+    try {
+      final String monthPrefix = "$year-${month.toString().padLeft(2, '0')}%";
+      final txs = await _local.query('transactions', where: "date LIKE ?", whereArgs: [monthPrefix]);
+      for (var t in txs) {
+        await deleteTransaction(t['id']);
+      }
+    } catch (e) { print("Error clearMonth: $e"); }
   }
 
   Future<void> completeTransactionWithBalanceUpdate({required TransactionModel transaction, required String accountId, required bool isUndoing}) async {
@@ -245,8 +336,4 @@ mixin TransactionService on FirebaseBase {
       }
     } catch (e) {}
   }
-
-  Future<void> removeCreditCardExpense({required String cardName, required String fullItemText, required DateTime startDate}) async {}
-  Future<void> unifyTransactions(List<TransactionModel> transactions, String baseName) async {}
-  Future<void> clearMonth(int month, int year) async {}
 }

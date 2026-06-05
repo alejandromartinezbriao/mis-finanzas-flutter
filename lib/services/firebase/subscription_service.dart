@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import '../local_db_service.dart';
 import 'firebase_base.dart';
@@ -28,9 +29,31 @@ mixin SubscriptionService on FirebaseBase {
   // --- SUSCRIPCIONES (OPERACIONES) ---
 
   Stream<List<Map<String, dynamic>>> getSubscriptions() {
+    final String currentUid = auth.currentUser?.uid ?? '';
+
     if (kIsWeb) {
       final ref = subscriptionsRef; if (ref == null) return Stream.value([]);
-      return ref.snapshots().map((snap) => snap.docs.map((doc) => {...doc.data() as Map<String, dynamic>, 'id': doc.id}).toList());
+      final myStream = ref.snapshots().map((snap) => snap.docs.map((doc) => {...doc.data() as Map<String, dynamic>, 'id': doc.id}).toList());
+
+      return db.collection('users').doc(currentUid).snapshots().asyncExpand((userDoc) {
+        final userData = userDoc.data() as Map<String, dynamic>? ?? {};
+        final String? familyId = userData['familyId'];
+
+        if (familyId == null) return myStream;
+
+        Query sharedQuery = db.collectionGroup('subscriptions')
+            .where('familyId', isEqualTo: familyId)
+            .where('isDeleted', isEqualTo: false);
+        
+        return sharedQuery.snapshots().map((sharedSnap) {
+          final sharedItems = sharedSnap.docs
+              .where((d) => d.reference.parent.parent?.id != currentUid)
+              .map((doc) => {...doc.data() as Map<String, dynamic>, 'id': doc.id})
+              .toList();
+
+          return myStream.map((myItems) => [...myItems, ...sharedItems]);
+        }).asyncExpand((s) => s);
+      });
     }
 
     final controller = StreamController<List<Map<String, dynamic>>>();
@@ -52,7 +75,7 @@ mixin SubscriptionService on FirebaseBase {
       if (!kIsWeb) await _local.insert('subscriptions', {...data, 'id': tid, 'syncStatus': 'synced'});
       final premium = await checkPremium();
       if (kIsWeb || premium) {
-        final doc = await subscriptionsRef?.add(data);
+        final doc = await subscriptionsRef?.add({...data, 'updatedAt': FieldValue.serverTimestamp()});
         if (!kIsWeb && doc != null) {
           await _local.delete('subscriptions', tid);
           await _local.insert('subscriptions', {...data, 'id': doc.id, 'syncStatus': 'synced'});
@@ -63,17 +86,19 @@ mixin SubscriptionService on FirebaseBase {
 
   Future<void> updateSubscription(String id, Map<String, dynamic> data) async {
     try {
-      if (!kIsWeb) await _local.update('subscriptions', data, id);
+      final String sid = id.toString();
+      if (!kIsWeb) await _local.update('subscriptions', data, sid);
       final premium = await checkPremium();
-      if ((kIsWeb || premium) && subscriptionsRef != null) await subscriptionsRef!.doc(id).update(data);
+      if ((kIsWeb || premium) && subscriptionsRef != null) await subscriptionsRef!.doc(sid).update({...data, 'updatedAt': FieldValue.serverTimestamp()});
     } catch (e) {}
   }
 
   Future<void> deleteSubscription(String id) async {
     try {
-      if (!kIsWeb) await _local.update('subscriptions', {'isDeleted': 1}, id);
+      final String sid = id.toString();
+      if (!kIsWeb) await _local.update('subscriptions', {'isDeleted': 1}, sid);
       final premium = await checkPremium();
-      if ((kIsWeb || premium) && subscriptionsRef != null) await subscriptionsRef!.doc(id).delete();
+      if ((kIsWeb || premium) && subscriptionsRef != null) await subscriptionsRef!.doc(sid).delete();
     } catch (e) {}
   }
 }

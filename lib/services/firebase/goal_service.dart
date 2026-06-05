@@ -28,9 +28,31 @@ mixin GoalService on FirebaseBase {
   // --- METAS (OPERACIONES) ---
 
   Stream<List<Map<String, dynamic>>> getGoals() {
+    final String currentUid = auth.currentUser?.uid ?? '';
+
     if (kIsWeb) {
       final ref = goalsRef; if (ref == null) return Stream.value([]);
-      return ref.snapshots().map((snap) => snap.docs.map((doc) => {...doc.data() as Map<String, dynamic>, 'id': doc.id}).toList());
+      final myStream = ref.snapshots().map((snap) => snap.docs.map((doc) => {...doc.data() as Map<String, dynamic>, 'id': doc.id}).toList());
+
+      return db.collection('users').doc(currentUid).snapshots().asyncExpand((userDoc) {
+        final userData = userDoc.data() as Map<String, dynamic>? ?? {};
+        final String? familyId = userData['familyId'];
+
+        if (familyId == null) return myStream;
+
+        Query sharedQuery = db.collectionGroup('goals')
+            .where('familyId', isEqualTo: familyId)
+            .where('isDeleted', isEqualTo: false);
+        
+        return sharedQuery.snapshots().map((sharedSnap) {
+          final sharedItems = sharedSnap.docs
+              .where((d) => d.reference.parent.parent?.id != currentUid)
+              .map((doc) => {...doc.data() as Map<String, dynamic>, 'id': doc.id})
+              .toList();
+
+          return myStream.map((myItems) => [...myItems, ...sharedItems]);
+        }).asyncExpand((s) => s);
+      });
     }
 
     final controller = StreamController<List<Map<String, dynamic>>>();
@@ -80,15 +102,16 @@ mixin GoalService on FirebaseBase {
 
   Future<void> updateGoal(String id, Map<String, dynamic> data) async {
     try {
+      final String sid = id.toString();
       final updateData = {
         ...data,
         'updatedAt': DateTime.now().toIso8601String(),
       };
-      if (!kIsWeb) await _local.update('goals', updateData, id);
+      if (!kIsWeb) await _local.update('goals', updateData, sid);
       
       final premium = await checkPremium();
       if ((kIsWeb || premium) && goalsRef != null) {
-        await goalsRef!.doc(id).update({
+        await goalsRef!.doc(sid).update({
           ...data,
           'updatedAt': FieldValue.serverTimestamp(),
         });
@@ -98,9 +121,10 @@ mixin GoalService on FirebaseBase {
 
   Future<void> deleteGoal(String id) async {
     try {
-      if (!kIsWeb) await _local.update('goals', {'isDeleted': 1}, id);
+      final String sid = id.toString();
+      if (!kIsWeb) await _local.update('goals', {'isDeleted': 1}, sid);
       final premium = await checkPremium();
-      if ((kIsWeb || premium) && goalsRef != null) await goalsRef!.doc(id).delete();
+      if ((kIsWeb || premium) && goalsRef != null) await goalsRef!.doc(sid).delete();
     } catch (e) { print("Error deleting goal: $e"); }
   }
 }

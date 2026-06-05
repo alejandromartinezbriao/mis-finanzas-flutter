@@ -29,6 +29,8 @@ class _SimpleTransactionDialogState extends State<SimpleTransactionDialog> {
   String type = 'EXPENSE';
   String currency = 'UYU';
   bool includedInCard = false;
+  bool shareWithFamily = false;
+  String? familyId;
   
   String? selectedCategoryId;
   String? selectedAccountId;
@@ -43,6 +45,12 @@ class _SimpleTransactionDialogState extends State<SimpleTransactionDialog> {
   void initState() {
     super.initState();
     selectedDate = widget.initialDate;
+    _loadFamilyInfo();
+  }
+
+  Future<void> _loadFamilyInfo() async {
+    final fid = await widget.service.getMyFamilyId();
+    if (mounted) setState(() => familyId = fid);
   }
 
   @override
@@ -84,6 +92,16 @@ class _SimpleTransactionDialogState extends State<SimpleTransactionDialog> {
                     }),
                   ),
                   const SizedBox(height: 20),
+
+                  if (familyId != null)
+                    SwitchListTile(
+                      title: const Text('Compartir con Familia', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                      subtitle: const Text('Visible para todos los miembros', style: TextStyle(fontSize: 11)),
+                      value: shareWithFamily,
+                      secondary: const Icon(Icons.family_restroom, size: 20, color: Colors.teal),
+                      onChanged: (v) => setState(() => shareWithFamily = v),
+                      contentPadding: EdgeInsets.zero,
+                    ),
 
                   if (type == 'EXPENSE')
                     DropdownButtonFormField<String>(
@@ -328,6 +346,7 @@ class _SimpleTransactionDialogState extends State<SimpleTransactionDialog> {
                     includedInCard: includedInCard,
                     brandLogo: categoryLogo, 
                     categoryColor: categoryColor,
+                    familyId: shareWithFamily ? familyId : null, // NUEVO
                   );
 
                   if (selectedAccountId != null && selectedAccountId != 'CASH_PAYMENT') {
@@ -375,11 +394,19 @@ class _CreditCardTransactionDialogState extends State<CreditCardTransactionDialo
   String? selectedCategoryId;
   String currency = 'UYU';
   late DateTime selectedDate;
+  bool shareWithFamily = false;
+  String? familyId;
 
   @override
   void initState() {
     super.initState();
     selectedDate = widget.initialDate;
+    _loadFamilyInfo();
+  }
+
+  Future<void> _loadFamilyInfo() async {
+    final fid = await widget.service.getMyFamilyId();
+    if (mounted) setState(() => familyId = fid);
   }
 
   @override
@@ -422,6 +449,15 @@ class _CreditCardTransactionDialogState extends State<CreditCardTransactionDialo
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    if (familyId != null)
+                      SwitchListTile(
+                        title: const Text('Compartir con Familia', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                        subtitle: const Text('Visible para todos los miembros', style: TextStyle(fontSize: 11)),
+                        value: shareWithFamily,
+                        secondary: const Icon(Icons.family_restroom, size: 20, color: Colors.teal),
+                        onChanged: (v) => setState(() => shareWithFamily = v),
+                        contentPadding: EdgeInsets.zero,
+                      ),
                     Row(
                       children: [
                         const Text("Moneda:", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
@@ -666,6 +702,7 @@ class _CreditCardTransactionDialogState extends State<CreditCardTransactionDialo
                           category: categoryName,
                           categoryLogo: categoryLogo,
                           categoryColor: categoryColor,
+                          familyId: shareWithFamily ? familyId : null, // NUEVO
                         );
                         if (context.mounted) Navigator.pop(context, true);
                       }
@@ -700,6 +737,8 @@ class _EditTransactionDialogState extends State<EditTransactionDialog> {
   late TextEditingController amountController;
   late TextEditingController titleController;
   String? selectedCategoryId;
+  bool shareWithFamily = false;
+  String? familyId;
 
   @override
   void initState() {
@@ -708,6 +747,13 @@ class _EditTransactionDialogState extends State<EditTransactionDialog> {
       text: CurrencyUtils.formatForInput(widget.transaction.amount),
     );
     titleController = TextEditingController(text: widget.transaction.title);
+    shareWithFamily = widget.transaction.familyId != null;
+    _loadFamilyInfo();
+  }
+
+  Future<void> _loadFamilyInfo() async {
+    final fid = await widget.service.getMyFamilyId();
+    if (mounted) setState(() => familyId = fid);
   }
 
   @override
@@ -882,6 +928,15 @@ class _EditTransactionDialogState extends State<EditTransactionDialog> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              if (familyId != null)
+                SwitchListTile(
+                  title: const Text('Compartir con Familia', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                  subtitle: const Text('Visible para todos los miembros', style: TextStyle(fontSize: 11)),
+                  value: shareWithFamily,
+                  secondary: const Icon(Icons.family_restroom, size: 20, color: Colors.teal),
+                  onChanged: (v) => setState(() => shareWithFamily = v),
+                  contentPadding: EdgeInsets.zero,
+                ),
               if (items.isNotEmpty) ...[
                 Align(
                   alignment: Alignment.centerLeft,
@@ -1035,6 +1090,7 @@ class _EditTransactionDialogState extends State<EditTransactionDialog> {
                 title: titleController.text,
                 amount: val,
                 category: newCategory,
+                familyId: shareWithFamily ? familyId : null, // NUEVO
               ));
               if (context.mounted) Navigator.pop(context);
             }

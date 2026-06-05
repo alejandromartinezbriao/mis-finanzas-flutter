@@ -14,14 +14,14 @@ class LocalDbService {
   final _changeController = StreamController<String>.broadcast();
   Stream<String> get onTableChanged => _changeController.stream;
 
-  // Esquema Maestro v21 - ADN Nativo ARGB (integers)
+  // Esquema Maestro v22 - Soporte Familiar
   final Map<String, String> _tables = {
-    'transactions': 'id TEXT PRIMARY KEY, templateId TEXT, subscriptionId TEXT, title TEXT, amount REAL, minimumAmount REAL, description TEXT, date TEXT, dueDate TEXT, category TEXT, currency TEXT, isCompleted INTEGER DEFAULT 0, isPaid INTEGER DEFAULT 0, type TEXT, brandLogo TEXT, generatedBy TEXT, orderIndex INTEGER DEFAULT 999, paidFromAccountId TEXT, includedInCard INTEGER DEFAULT 0, categoryColor INTEGER, updatedAt TEXT, isDeleted INTEGER DEFAULT 0, syncStatus TEXT DEFAULT "synced"',
-    'categories': 'id TEXT PRIMARY KEY, name TEXT, type TEXT, color INTEGER, icon TEXT, budgetAmount REAL, budgetCurrency TEXT, updatedAt TEXT, isDeleted INTEGER DEFAULT 0, syncStatus TEXT DEFAULT "synced"',
-    'balances': 'id TEXT PRIMARY KEY, accountName TEXT, amount REAL, currency TEXT, accountType TEXT, brandLogo TEXT, isBimonetaryPart INTEGER DEFAULT 0, baseName TEXT, includeInCoverage INTEGER DEFAULT 1, orderIndex INTEGER DEFAULT 0, updatedAt TEXT, isDeleted INTEGER DEFAULT 0, syncStatus TEXT DEFAULT "synced"',
-    'goals': 'id TEXT PRIMARY KEY, title TEXT, targetAmount REAL, currentAmount REAL, currency TEXT, icon TEXT, linkedAccountId TEXT, createdAt TEXT, updatedAt TEXT, isDeleted INTEGER DEFAULT 0, syncStatus TEXT DEFAULT "synced"',
-    'subscriptions': 'id TEXT PRIMARY KEY, name TEXT, amount REAL, currency TEXT, category TEXT, linkType TEXT, linkId TEXT, dueDay INTEGER, updatedAt TEXT, isDeleted INTEGER DEFAULT 0, syncStatus TEXT DEFAULT "synced"',
-    'templates': 'id TEXT PRIMARY KEY, title TEXT, currency TEXT, dueDay INTEGER, defaultAmount REAL, type TEXT, category TEXT, isCreditCard INTEGER DEFAULT 0, includedInCard INTEGER DEFAULT 0, brandLogo TEXT, subscriptions TEXT, isBimonetaryPart INTEGER DEFAULT 0, baseName TEXT, orderIndex INTEGER DEFAULT 999, categoryColor INTEGER, updatedAt TEXT, isDeleted INTEGER DEFAULT 0, syncStatus TEXT DEFAULT "synced"',
+    'transactions': 'id TEXT PRIMARY KEY, templateId TEXT, subscriptionId TEXT, title TEXT, amount REAL, minimumAmount REAL, description TEXT, date TEXT, dueDate TEXT, category TEXT, currency TEXT, isCompleted INTEGER DEFAULT 0, isPaid INTEGER DEFAULT 0, type TEXT, brandLogo TEXT, generatedBy TEXT, orderIndex INTEGER DEFAULT 999, paidFromAccountId TEXT, includedInCard INTEGER DEFAULT 0, categoryColor INTEGER, familyId TEXT, updatedAt TEXT, isDeleted INTEGER DEFAULT 0, syncStatus TEXT DEFAULT "synced"',
+    'categories': 'id TEXT PRIMARY KEY, name TEXT, type TEXT, color INTEGER, icon TEXT, budgetAmount REAL, budgetCurrency TEXT, familyId TEXT, updatedAt TEXT, isDeleted INTEGER DEFAULT 0, syncStatus TEXT DEFAULT "synced"',
+    'balances': 'id TEXT PRIMARY KEY, accountName TEXT, amount REAL, currency TEXT, accountType TEXT, brandLogo TEXT, isBimonetaryPart INTEGER DEFAULT 0, baseName TEXT, includeInCoverage INTEGER DEFAULT 1, orderIndex INTEGER DEFAULT 0, familyId TEXT, updatedAt TEXT, isDeleted INTEGER DEFAULT 0, syncStatus TEXT DEFAULT "synced"',
+    'goals': 'id TEXT PRIMARY KEY, title TEXT, targetAmount REAL, currentAmount REAL, currency TEXT, icon TEXT, linkedAccountId TEXT, createdAt TEXT, familyId TEXT, updatedAt TEXT, isDeleted INTEGER DEFAULT 0, syncStatus TEXT DEFAULT "synced"',
+    'subscriptions': 'id TEXT PRIMARY KEY, name TEXT, amount REAL, currency TEXT, category TEXT, linkType TEXT, linkId TEXT, dueDay INTEGER, familyId TEXT, updatedAt TEXT, isDeleted INTEGER DEFAULT 0, syncStatus TEXT DEFAULT "synced"',
+    'templates': 'id TEXT PRIMARY KEY, title TEXT, currency TEXT, dueDay INTEGER, defaultAmount REAL, type TEXT, category TEXT, isCreditCard INTEGER DEFAULT 0, includedInCard INTEGER DEFAULT 0, brandLogo TEXT, subscriptions TEXT, isBimonetaryPart INTEGER DEFAULT 0, baseName TEXT, orderIndex INTEGER DEFAULT 999, categoryColor INTEGER, familyId TEXT, updatedAt TEXT, isDeleted INTEGER DEFAULT 0, syncStatus TEXT DEFAULT "synced"',
     'settings': 'id TEXT PRIMARY KEY, value TEXT',
   };
 
@@ -33,7 +33,7 @@ class LocalDbService {
   }
 
   Future<Database> _initDb() async {
-    final String path = join(await getDatabasesPath(), 'misfinanzas_v21.db'); 
+    final String path = join(await getDatabasesPath(), 'misfinanzas_v22.db'); // BUMP v22
     return await openDatabase(path, version: 1, onCreate: (db, version) async {
       for (var entry in _tables.entries) {
         await db.execute('CREATE TABLE ${entry.key} (${entry.value})');

@@ -24,6 +24,8 @@ class _GoalDialogState extends State<GoalDialog> {
   late String currency;
   late String selectedIcon;
   String? linkedAccountId;
+  bool shareWithFamily = false;
+  String? familyId;
   bool isEdit = false;
 
   @override
@@ -43,6 +45,14 @@ class _GoalDialogState extends State<GoalDialog> {
     currency = widget.goal?['currency'] ?? 'UYU';
     selectedIcon = widget.goal?['icon'] ?? 'savings';
     linkedAccountId = widget.goal?['linkedAccountId'];
+    shareWithFamily = widget.goal?['familyId'] != null;
+
+    _loadFamilyInfo();
+  }
+
+  Future<void> _loadFamilyInfo() async {
+    final fid = await widget.service.getMyFamilyId();
+    if (mounted) setState(() => familyId = fid);
   }
 
   @override
@@ -66,6 +76,16 @@ class _GoalDialogState extends State<GoalDialog> {
               return Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  if (familyId != null)
+                    SwitchListTile(
+                      title: const Text('Compartir con Familia', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                      subtitle: const Text('Visible para todos los miembros', style: TextStyle(fontSize: 11)),
+                      value: shareWithFamily,
+                      secondary: const Icon(Icons.family_restroom, color: Colors.teal),
+                      onChanged: (v) => setState(() => shareWithFamily = v),
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  const SizedBox(height: 10),
                   TextField(
                     controller: titleCtrl,
                     decoration:
@@ -76,7 +96,7 @@ class _GoalDialogState extends State<GoalDialog> {
                     children: [
                       Expanded(
                         child: DropdownButtonFormField<String>(
-                          initialValue: currency,
+                          value: currency,
                           items: ['UYU', 'USD'].map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
                           onChanged: (v) => setState(() {
                             currency = v!;
@@ -105,7 +125,7 @@ class _GoalDialogState extends State<GoalDialog> {
                   ),
                   const SizedBox(height: 15),
                   DropdownButtonFormField<String>(
-                    initialValue: linkedAccountId,
+                    value: linkedAccountId,
                     hint: const Text('¿Dónde guardas este ahorro?'),
                     decoration: const InputDecoration(labelText: 'Cuenta vinculada', border: OutlineInputBorder()),
                     items: [
@@ -167,9 +187,10 @@ class _GoalDialogState extends State<GoalDialog> {
                 'currency': currency,
                 'icon': selectedIcon,
                 'linkedAccountId': linkedAccountId,
+                'familyId': shareWithFamily ? familyId : null, // NUEVO
               };
               if (isEdit) {
-                widget.service.updateGoal(widget.goal!['id'], data);
+                widget.service.updateGoal(widget.goal!['id'].toString(), data);
               } else {
                 widget.service.addGoal(data);
               }

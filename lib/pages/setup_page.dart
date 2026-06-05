@@ -6,6 +6,7 @@ import '../widgets/setup/accounts_list_tab.dart';
 import '../widgets/setup/categories_list_tab.dart';
 import '../widgets/setup/goals_list_tab.dart';
 import '../widgets/setup/subscriptions_list_tab.dart';
+import '../widgets/setup/family_circle_tab.dart';
 
 import '../dialogs/setup/balance_dialog.dart';
 import '../dialogs/setup/template_edit_dialog.dart';
@@ -30,9 +31,9 @@ class _SetupPageState extends State<SetupPage> with SingleTickerProviderStateMix
   void initState() {
     super.initState();
     _tabController = TabController(
-      length: 6,
+      length: 7, // Aumentado a 7 para incluir Familia
       vsync: this, 
-      initialIndex: widget.initialIndex >= 6 ? 5 : widget.initialIndex
+      initialIndex: widget.initialIndex >= 7 ? 6 : widget.initialIndex
     );
     _tabController.addListener(() {
       if (mounted) setState(() {});
@@ -51,7 +52,6 @@ class _SetupPageState extends State<SetupPage> with SingleTickerProviderStateMix
     super.dispose();
   }
 
-  // Métodos de apertura de diálogos directos y limpios
   void _showTemplate(Map<String, dynamic>? t, String type) {
     showDialog(
       context: context,
@@ -125,6 +125,7 @@ class _SetupPageState extends State<SetupPage> with SingleTickerProviderStateMix
           labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
           isScrollable: true,
           tabs: const [
+            Tab(icon: Icon(Icons.family_restroom), text: 'Familia'), // NUEVA PESTAÑA
             Tab(icon: Icon(Icons.money_off), text: 'Gastos'),
             Tab(icon: Icon(Icons.attach_money), text: 'Ingresos'),
             Tab(icon: Icon(Icons.account_balance), text: 'Cuentas'),
@@ -137,6 +138,7 @@ class _SetupPageState extends State<SetupPage> with SingleTickerProviderStateMix
       body: TabBarView(
         controller: _tabController,
         children: [
+          FamilyCircleTab(service: _service), // NUEVO CONTENIDO
           TemplateListTab(type: 'EXPENSE', service: _service, onEdit: (t, type) => _showTemplate(t, type)),
           TemplateListTab(type: 'INCOME', service: _service, onEdit: (t, type) => _showTemplate(t, type)),
           AccountsListTab(service: _service, onEdit: (a) => _showBalance(a)),
@@ -145,7 +147,7 @@ class _SetupPageState extends State<SetupPage> with SingleTickerProviderStateMix
           GoalsListTab(service: _service, onEdit: (g) => _showGoal(g)),
         ],
       ),
-      bottomNavigationBar: SafeArea(
+      bottomNavigationBar: _tabController.index == 0 ? null : SafeArea( // Ocultar botón flotante en pestaña Familia
         child: Padding(
           padding: const EdgeInsets.all(12.0),
           child: SizedBox(
@@ -154,12 +156,12 @@ class _SetupPageState extends State<SetupPage> with SingleTickerProviderStateMix
             child: FilledButton.icon(
               onPressed: () {
                 switch (_tabController.index) {
-                  case 0: _showTemplate(null, 'EXPENSE'); break;
-                  case 1: _showTemplate(null, 'INCOME'); break;
-                  case 2: _showBalance(null); break;
-                  case 3: _showCategory(null); break;
-                  case 4: _showSubscription(null); break;
-                  case 5: _showGoal(null); break;
+                  case 1: _showTemplate(null, 'EXPENSE'); break;
+                  case 2: _showTemplate(null, 'INCOME'); break;
+                  case 3: _showBalance(null); break;
+                  case 4: _showCategory(null); break;
+                  case 5: _showSubscription(null); break;
+                  case 6: _showGoal(null); break;
                 }
               },
               icon: const Icon(Icons.add),
@@ -173,12 +175,12 @@ class _SetupPageState extends State<SetupPage> with SingleTickerProviderStateMix
 
   String _getButtonLabel() {
     switch (_tabController.index) {
-      case 0: return 'NUEVO GASTO / TARJETA';
-      case 1: return 'NUEVO INGRESO FIJO';
-      case 2: return 'NUEVA CUENTA';
-      case 3: return 'NUEVA CATEGORÍA';
-      case 4: return 'NUEVA SUSCRIPCIÓN';
-      case 5: return 'NUEVA META';
+      case 1: return 'NUEVO GASTO / TARJETA';
+      case 2: return 'NUEVO INGRESO FIJO';
+      case 3: return 'NUEVA CUENTA';
+      case 4: return 'NUEVA CATEGORÍA';
+      case 5: return 'NUEVA SUSCRIPCIÓN';
+      case 6: return 'NUEVA META';
       default: return 'AÑADIR';
     }
   }
