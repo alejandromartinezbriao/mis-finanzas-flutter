@@ -60,7 +60,6 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  // --- COMPROBACIÓN DE INTERNET ---
   Future<bool> _hasInternet() async {
     if (kIsWeb) return true;
     try {
@@ -141,7 +140,7 @@ class _HomePageState extends State<HomePage> {
         service: _service, viewingDate: _viewingDate, 
         uyuFormat: _uyuFormat, usdFormat: _usdFormat,
         isFamilyMode: _isFamilyMode,
-        onModeChanged: _toggleMode, // USAR LA NUEVA FUNCIÓN CON FILTRO
+        onModeChanged: _toggleMode,
       ),
       body: LayoutBuilder(
         builder: (context, constraints) {
@@ -258,13 +257,41 @@ class _HomePageState extends State<HomePage> {
                   String? icon; Color? color;
                   if (userCategories.containsKey(catKey)) { icon = userCategories[catKey]!.icon; color = userCategories[catKey]!.colorValue; }
                   else if (_systemCategories.containsKey(catKey)) { icon = _systemCategories[catKey]!['icon']; color = Color(_systemCategories[catKey]!['color']); }
-                  return TransactionItemTile(transaction: tx, uyuFormat: _uyuFormat, usdFormat: _usdFormat, categoryIcon: (tx.brandLogo != null && tx.brandLogo!.endsWith('.png')) ? tx.brandLogo : (icon ?? tx.brandLogo), categoryColor: color ?? tx.colorValue, onTap: () => showDialog(context: context, builder: (context) => EditTransactionDialog(transaction: tx, service: _service)), onDeleteConfirmed: () => _service.deleteTransaction(tx.id));
+                  return TransactionItemTile(
+                    transaction: tx, 
+                    uyuFormat: _uyuFormat, 
+                    usdFormat: _usdFormat, 
+                    categoryIcon: (tx.brandLogo != null && tx.brandLogo!.endsWith('.png')) ? tx.brandLogo : (icon ?? tx.brandLogo), 
+                    categoryColor: color ?? tx.colorValue, 
+                    onTap: () => showDialog(context: context, builder: (context) => EditTransactionDialog(transaction: tx, service: _service)), 
+                    onDeleteConfirmed: (refund) => _service.deleteTransaction(tx.id, refundBalance: refund) // ACTUALIZADO
+                  );
                 },
               ),
             );
           },
         );
       }
+    );
+  }
+
+  Widget _buildError(String title, dynamic error) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, color: Colors.red, size: 40),
+            const SizedBox(height: 16),
+            Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const SizedBox(height: 8),
+            Text(error.toString(), textAlign: TextAlign.center, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+            const SizedBox(height: 16),
+            ElevatedButton(onPressed: _refreshFullSync, child: const Text('Reintentar')),
+          ],
+        ),
+      ),
     );
   }
 

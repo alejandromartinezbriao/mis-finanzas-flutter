@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/transaction_model.dart';
@@ -346,7 +347,7 @@ class _SimpleTransactionDialogState extends State<SimpleTransactionDialog> {
                     includedInCard: includedInCard,
                     brandLogo: categoryLogo, 
                     categoryColor: categoryColor,
-                    familyId: shareWithFamily ? familyId : null, // NUEVO
+                    familyId: shareWithFamily ? familyId : null,
                   );
 
                   if (selectedAccountId != null && selectedAccountId != 'CASH_PAYMENT') {
@@ -702,7 +703,7 @@ class _CreditCardTransactionDialogState extends State<CreditCardTransactionDialo
                           category: categoryName,
                           categoryLogo: categoryLogo,
                           categoryColor: categoryColor,
-                          familyId: shareWithFamily ? familyId : null, // NUEVO
+                          familyId: shareWithFamily ? familyId : null,
                         );
                         if (context.mounted) Navigator.pop(context, true);
                       }
@@ -915,7 +916,18 @@ class _EditTransactionDialogState extends State<EditTransactionDialog> {
   Widget build(BuildContext context) {
     final t = widget.transaction;
     final String rawDesc = t.description ?? '';
-    final List<String> items = rawDesc.isEmpty ? [] : rawDesc.split(', ').where((s) => s.trim().isNotEmpty).toList();
+    
+    List<dynamic> items = [];
+    bool isStructured = false;
+    try {
+      final decoded = jsonDecode(rawDesc);
+      if (decoded is List) {
+        items = decoded;
+        isStructured = true;
+      }
+    } catch (_) {
+      items = rawDesc.isEmpty ? [] : rawDesc.split(', ').where((s) => s.trim().isNotEmpty).toList();
+    }
 
     return AlertDialog(
       title: Text(t.title),
@@ -941,7 +953,7 @@ class _EditTransactionDialogState extends State<EditTransactionDialog> {
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
-                    'Consumos (clic para borrar cuotas):',
+                    'Consumos (clic para borrar compra completa):',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
@@ -950,24 +962,105 @@ class _EditTransactionDialogState extends State<EditTransactionDialog> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                ...items.map((item) => ListTile(
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(item, style: const TextStyle(fontSize: 12)),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
-                    onPressed: () async {
-                      if (await DialogUtils.confirmDeletion(context, item)) {
-                        await widget.service.removeCreditCardExpense(
-                          cardName: t.title,
-                          fullItemText: item,
-                          startDate: t.date,
-                        );
-                        if (context.mounted) Navigator.pop(context);
-                      }
-                    },
-                  ),
-                )),
+                ...items.map((item) {
+                  String label = "";
+                  String? purchaseId;
+                  String purchaseConcept = "";
+                  int totalInstallments = 0;
+                  String purchaseDateStr = "";
+                  
+                  if (isStructured && item is Map) {
+                    label = "${item['c']} (${item['i']}/${item['t']}) - ${item['a']}";
+                    purchaseId = item['pid'];
+                    purchaseConcept = item['c'] ?? "Compra";
+                    totalInstallments = item['t'] ?? 0;
+                    if (item['pd'] != null) {
+                      final dt = DateTime.tryParse(item['pd']);
+                      if (dt != null) purchaseDateStr = DateFormat('dd/MM/yyyy').format(dt);
+                    }
+                  } else {
+                    label = item.toString();
+                  }
+
+                  return ListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(label, style: const TextStyle(fontSize: 12)),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                      onPressed: () async {
+                        // --- DIÁLOGO DE CONFIRMACIÓN DETALLADO v4.0 ---
+                        final bool confirmChain = await showDialog<bool>(
+                          context: context,
+                          builder: (ctx) => AlertDialog(
+                            title: const Row(
+                              children: [
+                                Icon(Icons.warning_amber_rounded, color: Colors.red),
+                                SizedBox(width: 10),
+                                Text('Confirmar Borrado'),
+                              ],
+                            ),
+                            content: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('¿Estás seguro de que quieres eliminar esta compra completa?'),
+                                const SizedBox(height: 16),
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red.withOpacity(0.05),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: Colors.red.withOpacity(0.2)),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text('Concepto: $purchaseConcept', style: const TextStyle(fontWeight: FontWeight.bold)),
+                                      Text('Cuotas: $totalInstallments'),
+                                      Text('Tarjeta: ${t.title}'),
+                                      if (purchaseDateStr.isNotEmpty) Text('Registrada el: $purchaseDateStr'),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                const Text(
+                                  'Se borrarán todas las cuotas asociadas en todos los meses (pasados, presentes y futuros) para que tu historial quede limpio.',
+                                  style: TextStyle(fontSize: 12, color: Colors.blueGrey),
+                                ),
+                              ],
+                            ),
+                            actions: [
+                              TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
+                              FilledButton(
+                                style: FilledButton.styleFrom(backgroundColor: Colors.red),
+                                onPressed: () => Navigator.pop(ctx, true), 
+                                child: const Text('Eliminar Todo')
+                              ),
+                            ],
+                          ),
+                        ) ?? false;
+
+                        if (confirmChain && mounted) {
+                          if (isStructured && purchaseId != null) {
+                            await widget.service.removeCreditCardExpense(
+                              cardName: t.title,
+                              purchaseId: purchaseId,
+                              startDate: t.date,
+                            );
+                          } else {
+                            await widget.service.removeCreditCardExpense(
+                              cardName: t.title,
+                              purchaseId: 'legacy_mode_fallback',
+                              startDate: t.date,
+                            );
+                          }
+                          if (mounted) Navigator.pop(context);
+                        }
+                      },
+                    ),
+                  );
+                }),
                 const Divider(),
               ],
               const SizedBox(height: 10),
@@ -1030,7 +1123,22 @@ class _EditTransactionDialogState extends State<EditTransactionDialog> {
         TextButton(
           onPressed: () async {
             if (await DialogUtils.confirmDeletion(context, t.title)) {
-              widget.service.deleteTransaction(t.id);
+              bool refund = false;
+              if (t.isPaid && t.paidFromAccountId != null) {
+                refund = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('Devolver Dinero'),
+                    content: const Text('Este gasto ya fue pagado. ¿Deseas devolver el monto a la cuenta original al eliminarlo?'),
+                    actions: [
+                      TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Solo Eliminar')),
+                      FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Devolver y Eliminar')),
+                    ],
+                  ),
+                ) ?? false;
+              }
+
+              await widget.service.deleteTransaction(t.id, refundBalance: refund);
               if (context.mounted) Navigator.pop(context);
             }
           },
@@ -1070,8 +1178,25 @@ class _EditTransactionDialogState extends State<EditTransactionDialog> {
         FilledButton(
           onPressed: () async {
             if (_formKey.currentState!.validate()) {
-              final double val = widget.service.parseAmount(amountController.text);
+              final double newVal = widget.service.parseAmount(amountController.text);
               
+              bool adjust = false;
+              if (t.isPaid && t.paidFromAccountId != null && t.amount != newVal) {
+                final diff = (newVal - t.amount).abs();
+                final action = newVal > t.amount ? 'descontar' : 'devolver';
+                adjust = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('Ajustar Saldo'),
+                    content: Text('Has cambiado el monto. ¿Deseas $action la diferencia ($diff) en la cuenta vinculada?'),
+                    actions: [
+                      TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('No ajustar')),
+                      FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Confirmar Ajuste')),
+                    ],
+                  ),
+                ) ?? false;
+              }
+
               String newCategory = t.category;
               if (selectedCategoryId != null) {
                 if (selectedCategoryId == 'income_cat') {
@@ -1086,12 +1211,11 @@ class _EditTransactionDialogState extends State<EditTransactionDialog> {
                 }
               }
 
-              widget.service.updateTransaction(t.copyWith(
-                title: titleController.text,
-                amount: val,
-                category: newCategory,
-                familyId: shareWithFamily ? familyId : null, // NUEVO
-              ));
+              await widget.service.updateTransaction(
+                t.copyWith(title: titleController.text, amount: newVal, category: newCategory, familyId: shareWithFamily ? familyId : null),
+                adjustBalance: adjust
+              );
+
               if (context.mounted) Navigator.pop(context);
             }
           },

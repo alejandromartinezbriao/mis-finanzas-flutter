@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'firebase_base.dart';
@@ -54,7 +55,7 @@ mixin TransactionService on FirebaseBase {
   Future<void> addTransactionWithBalanceUpdate({required TransactionModel transaction, String? accountId}) async {
     try {
       final id = transactionsRef?.doc().id ?? DateTime.now().millisecondsSinceEpoch.toString();
-      final tx = transaction.copyWith(id: id);
+      final tx = transaction.copyWith(id: id, isPaid: accountId != null && accountId != 'CASH_PAYMENT', paidFromAccountId: accountId == 'CASH_PAYMENT' ? null : accountId);
 
       if (!kIsWeb) {
         await _local.insert('transactions', tx.copyWith(syncStatus: 'synced').toLocalMap());
@@ -71,7 +72,7 @@ mixin TransactionService on FirebaseBase {
       final premium = await checkPremium();
       if (kIsWeb || premium) {
         final batch = db.batch();
-        batch.set(transactionsRef!.doc(id), {...tx.toMap(), 'paidFromAccountId': accountId});
+        batch.set(transactionsRef!.doc(id), tx.toMap());
         if (accountId != null && accountId != 'CASH_PAYMENT') {
           batch.update(balancesRef!.doc(accountId), {'amount': FieldValue.increment(tx.type == 'INCOME' ? tx.amount : -tx.amount), 'updatedAt': FieldValue.serverTimestamp()});
         }
@@ -80,24 +81,69 @@ mixin TransactionService on FirebaseBase {
     } catch (e) { rethrow; }
   }
 
-  Future<void> updateTransaction(TransactionModel t) async {
+  Future<void> updateTransaction(TransactionModel t, {bool adjustBalance = false}) async {
     try {
-      if (!kIsWeb) await _local.update('transactions', t.toLocalMap(), t.id);
+      if (!kIsWeb) {
+        if (adjustBalance) {
+          final existing = await _local.query('transactions', where: 'id = ?', whereArgs: [t.id]);
+          if (existing.isNotEmpty) {
+            final old = TransactionModel.fromMap(existing.first, t.id);
+            if (old.isPaid && old.paidFromAccountId != null && old.amount != t.amount) {
+              final double diff = t.amount - old.amount;
+              final acc = await _local.query('balances', where: 'id = ?', whereArgs: [old.paidFromAccountId]);
+              if (acc.isNotEmpty) {
+                double current = (acc.first['amount'] ?? 0.0).toDouble();
+                double next = t.type == 'INCOME' ? current + diff : current - diff;
+                await _local.update('balances', {'amount': next}, old.paidFromAccountId!);
+                
+                final premium = await checkPremium();
+                if (kIsWeb || premium) {
+                  await balancesRef?.doc(old.paidFromAccountId).update({'amount': next, 'updatedAt': FieldValue.serverTimestamp()});
+                }
+              }
+            }
+          }
+        }
+        await _local.update('transactions', t.toLocalMap(), t.id);
+      }
+      
       final premium = await checkPremium();
       if ((kIsWeb || premium) && transactionsRef != null) {
         await transactionsRef!.doc(t.id).update(t.toMap());
       }
-    } catch (e) {}
+    } catch (e) { print("Error updateTransaction: $e"); }
   }
 
-  Future<void> deleteTransaction(String id) async {
+  Future<void> deleteTransaction(String id, {bool refundBalance = false}) async {
     try {
-      if (!kIsWeb) await _local.delete('transactions', id);
+      if (!kIsWeb) {
+        if (refundBalance) {
+          final existing = await _local.query('transactions', where: 'id = ?', whereArgs: [id]);
+          if (existing.isNotEmpty) {
+            final tx = TransactionModel.fromMap(existing.first, id);
+            if (tx.isPaid && tx.paidFromAccountId != null) {
+              final acc = await _local.query('balances', where: 'id = ?', whereArgs: [tx.paidFromAccountId]);
+              if (acc.isNotEmpty) {
+                double current = (acc.first['amount'] ?? 0.0).toDouble();
+                double next = tx.type == 'EXPENSE' ? current + tx.amount : current - tx.amount;
+                await _local.update('balances', {'amount': next}, tx.paidFromAccountId!);
+                
+                final premium = await checkPremium();
+                if (kIsWeb || premium) {
+                  await balancesRef?.doc(tx.paidFromAccountId).update({'amount': next, 'updatedAt': FieldValue.serverTimestamp()});
+                }
+              }
+            }
+          }
+        }
+        await _local.delete('transactions', id);
+      }
+
       final premium = await checkPremium();
       if ((kIsWeb || premium) && transactionsRef != null) {
         await transactionsRef!.doc(id).delete();
       }
-    } catch (e) {}
+    } catch (e) { print("Error deleteTransaction: $e"); }
   }
 
   Stream<List<TransactionModel>> getTransactions({int? month, int? year}) {
@@ -216,7 +262,7 @@ mixin TransactionService on FirebaseBase {
     }
   }
 
-  // --- COMPRAS CON TARJETA ---
+  // --- COMPRAS CON TARJETA (ESTRUCTURADO v4.0) ---
 
   Future<void> addCreditCardExpense({
     required String cardName, required double totalAmount, required int installments, required String currency,
@@ -227,27 +273,47 @@ mixin TransactionService on FirebaseBase {
       final String cleanCardName = cardName.replaceAll(RegExp(r' \((UYU|USD)\)$', caseSensitive: false), '').trim();
       final String targetTitle = "$cleanCardName ($currency)";
       final double amountPerInstallment = round(totalAmount / installments);
+      
+        // LLAVE MAESTRA ÚNICA PARA TODA LA SERIE DE CUOTAS
+        final String purchaseId = "pid_${DateTime.now().millisecondsSinceEpoch}";
+        final String purchaseDate = startDate.toIso8601String(); // GUARDAMOS FECHA ORIGINAL
 
-      for (int i = 0; i < (installments - initialInstallment + 1); i++) {
-        final int currentInst = initialInstallment + i;
-        final DateTime targetDate = DateTime(startDate.year, startDate.month + i, 1, 12, 0, 0);
-        final String desc = "${concept ?? 'Compra'} ($currentInst/$installments) - ${formatAmount(amountPerInstallment, currency)}";
-        final String monthPrefix = "${targetDate.year}-${targetDate.month.toString().padLeft(2, '0')}%";
+        for (int i = 0; i < (installments - initialInstallment + 1); i++) {
+          final int currentInst = initialInstallment + i;
+          final DateTime targetDate = DateTime(startDate.year, startDate.month + i, 1, 12, 0, 0);
+          final String monthPrefix = "${targetDate.year}-${targetDate.month.toString().padLeft(2, '0')}%";
+
+          // Creamos el ítem estructurado en JSON
+          final Map<String, dynamic> item = {
+            'pid': purchaseId,
+            'c': concept ?? 'Compra',
+            'i': currentInst,
+            't': installments,
+            'a': amountPerInstallment,
+            'pd': purchaseDate // NUEVO: Purchase Date
+          };
 
         final existing = await _local.query('transactions', where: "date LIKE ? AND title = ? AND currency = ?", whereArgs: [monthPrefix, targetTitle, currency]);
 
         if (existing.isNotEmpty) {
           final old = TransactionModel.fromMap(existing.first, existing.first['id']);
+          List<dynamic> items = [];
+          try { items = jsonDecode(old.description ?? '[]'); } catch (_) { 
+            // Migración: Si no es JSON, convertimos lo viejo a una entrada genérica (sin pid)
+            if (old.description != null && old.description!.isNotEmpty) items = [{'c': old.description, 'a': old.amount}];
+          }
+          items.add(item);
+          
           await updateTransaction(old.copyWith(
             amount: old.amount + amountPerInstallment, 
-            description: (old.description?.isEmpty ?? true) ? desc : "${old.description}, $desc",
+            description: jsonEncode(items),
             familyId: familyId 
           ));
         } else {
           final tx = TransactionModel(
             id: '', title: targetTitle, amount: amountPerInstallment, date: targetDate,
             category: 'Tarjeta', currency: currency, type: 'EXPENSE',
-            isCompleted: false, description: desc, brandLogo: categoryLogo ?? 'cabal.png',
+            isCompleted: false, description: jsonEncode([item]), brandLogo: categoryLogo ?? 'cabal.png',
             categoryColor: categoryColor, orderIndex: 11,
             familyId: familyId 
           );
@@ -257,39 +323,39 @@ mixin TransactionService on FirebaseBase {
     } catch (e) { print("Error addCreditCardExpense: $e"); }
   }
 
-  // --- RESTAURACIÓN: FUNCIONES DE MANTENIMIENTO ---
+  // --- BORRADO ATÓMICO POR PURCHASE ID (pid) ---
 
-  Future<void> removeCreditCardExpense({required String cardName, required String fullItemText, required DateTime startDate}) async {
+  Future<void> removeCreditCardExpense({required String cardName, required String purchaseId, required DateTime startDate}) async {
     try {
       final String cleanCardName = cardName.replaceAll(RegExp(r' \((UYU|USD)\)$', caseSensitive: false), '').trim();
-      final String monthPrefix = "${startDate.year}-${startDate.month.toString().padLeft(2, '0')}%";
       
-      final results = await _local.query('transactions', where: "date LIKE ? AND title LIKE ?", whereArgs: [monthPrefix, "$cleanCardName%"]);
+      // Búsqueda GLOBAL por Purchase ID exacto (pid)
+      // Buscamos en todas las transacciones de esta tarjeta que tengan JSON en la descripción
+      final allResults = await _local.query('transactions', where: "title LIKE ?", whereArgs: ["$cleanCardName%"]);
       
-      if (results.isNotEmpty) {
-        final data = results.first;
+      for (var data in allResults) {
         final tx = TransactionModel.fromMap(data, data['id']);
-        final List<String> items = (tx.description ?? '').split(', ').where((s) => s.trim().isNotEmpty).toList();
+        List<dynamic> items = [];
+        try { items = jsonDecode(tx.description ?? '[]'); } catch (_) { continue; }
         
-        if (items.contains(fullItemText)) {
-          items.remove(fullItemText);
-          final String newDesc = items.join(', ');
-          
-          RegExp amountRegex = RegExp(r'(UYU|U\$S)\s?([\d,.]+)');
-          final match = amountRegex.firstMatch(fullItemText);
-          double amountToRemove = 0.0;
-          if (match != null) {
-            String valStr = match.group(2)!.replaceAll(',', '');
-            amountToRemove = double.tryParse(valStr) ?? 0.0;
-          }
+        // Buscamos si este mes tiene un ítem con el PID buscado
+        final int index = items.indexWhere((it) => it['pid'] == purchaseId);
+        
+        if (index != -1) {
+          final double amountToRemove = (items[index]['a'] ?? 0.0).toDouble();
+          items.removeAt(index);
 
-          await updateTransaction(tx.copyWith(
-            amount: (tx.amount - amountToRemove).clamp(0, double.infinity),
-            description: newDesc
-          ));
+          if (items.isEmpty) {
+            await deleteTransaction(tx.id);
+          } else {
+            await updateTransaction(tx.copyWith(
+              amount: (tx.amount - amountToRemove).clamp(0, double.infinity),
+              description: jsonEncode(items)
+            ));
+          }
         }
       }
-    } catch (e) { print("Error removeCreditCardExpense: $e"); }
+    } catch (e) { print("Error removeCreditCardExpenseByPID: $e"); }
   }
 
   Future<void> unifyTransactions(List<TransactionModel> transactions, String baseName) async {

@@ -9,7 +9,7 @@ class TransactionItemTile extends StatelessWidget {
   final NumberFormat uyuFormat;
   final NumberFormat usdFormat;
   final VoidCallback onTap;
-  final VoidCallback onDeleteConfirmed;
+  final Function(bool refund) onDeleteConfirmed; // CAMBIADO
   final String? categoryIcon;
   final Color? categoryColor;
 
@@ -39,9 +39,35 @@ class TransactionItemTile extends StatelessWidget {
         child: const Icon(Icons.delete_sweep, color: Colors.white),
       ),
       confirmDismiss: (direction) async {
-        return await DialogUtils.confirmDeletion(context, transaction.title);
+        final bool confirmDelete = await DialogUtils.confirmDeletion(context, transaction.title);
+        if (!confirmDelete) return false;
+
+        // Si el gasto ya fue pagado, preguntamos por la devolución de saldo
+        if (transaction.isPaid && transaction.paidFromAccountId != null) {
+          final bool? refund = await showDialog<bool>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text('Devolver Dinero'),
+              content: const Text('Este movimiento ya fue pagado/cobrado. ¿Deseas devolver el dinero a la cuenta original al eliminarlo?'),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Solo Eliminar')),
+                FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Devolver y Eliminar')),
+              ],
+            ),
+          );
+          
+          // Si el usuario cancela el diálogo de devolución (ej: tocando afuera), abortamos el borrado
+          if (refund == null) return false;
+          
+          // Guardamos la decisión para pasarla al callback onDismissed
+          _lastRefundDecision = refund;
+        } else {
+          _lastRefundDecision = false;
+        }
+
+        return true;
       },
-      onDismissed: (_) => onDeleteConfirmed(),
+      onDismissed: (_) => onDeleteConfirmed(_lastRefundDecision),
       child: ListTile(
         dense: true,
         leading: BrandIcon(
@@ -106,3 +132,6 @@ class TransactionItemTile extends StatelessWidget {
     );
   }
 }
+
+// Variable temporal para capturar la decisión del diálogo confirmDismiss
+bool _lastRefundDecision = false;
