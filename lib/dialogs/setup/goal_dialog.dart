@@ -96,7 +96,7 @@ class _GoalDialogState extends State<GoalDialog> {
                     children: [
                       Expanded(
                         child: DropdownButtonFormField<String>(
-                          value: currency,
+                          initialValue: currency,
                           items: ['UYU', 'USD'].map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
                           onChanged: (v) => setState(() {
                             currency = v!;
@@ -125,7 +125,7 @@ class _GoalDialogState extends State<GoalDialog> {
                   ),
                   const SizedBox(height: 15),
                   DropdownButtonFormField<String>(
-                    value: linkedAccountId,
+                    initialValue: linkedAccountId,
                     hint: const Text('¿Dónde guardas este ahorro?'),
                     decoration: const InputDecoration(labelText: 'Cuenta vinculada', border: OutlineInputBorder()),
                     items: [

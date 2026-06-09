@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../services/firebase_service.dart';
-import '../dialogs/maintenance/recover_installments_dialog.dart';
 import '../dialogs/maintenance/global_unify_dialog.dart';
 import '../dialogs/maintenance/decimal_repair_dialog.dart';
 import '../dialogs/maintenance/template_reconnect_dialog.dart';

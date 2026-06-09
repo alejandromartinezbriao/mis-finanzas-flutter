@@ -57,7 +57,7 @@ mixin TemplateService on FirebaseBase {
       });
 
       return db.collection('users').doc(currentUid).snapshots().asyncExpand((userDoc) {
-        final userData = userDoc.data() as Map<String, dynamic>? ?? {};
+        final userData = userDoc.data() ?? {};
         final String? familyId = userData['familyId'];
 
         if (familyId == null) return myStream;

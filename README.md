@@ -1,39 +1,28 @@
-# MF (Antes Mis Finanzas) - El Reloj Suizo de las Finanzas Familiares
+# MF (Evolución de Mis Finanzas) - El Reloj Suizo Polimórfico
 
-MF es una aplicación de gestión financiera de alto rendimiento, diseñada bajo el paradigma **Offline-First** (Soberanía Local) y extendida con capacidades de **Colaboración Familiar** en tiempo real.
+MF es una plataforma de gestión financiera de precisión diseñada bajo el concepto de **Arquitectura Unificada**. Un solo código que se adapta dinámicamente tanto para el uso **Individual Premium** como para el **Círculo Familiar Colaborativo**.
 
-## 🏛️ Arquitectura del Sistema
+## 🚀 Hito v4.0: El Motor Unificado (Universal Engine)
 
-### 1. Motor Local (Reloj Suizo)
-- **Tecnología**: SQLite v22.
-- **Soberanía**: El teléfono es la fuente de verdad primaria. La App es totalmente funcional sin internet (Modo Avión).
-- **ADN Nativo**: Uso de Integers ARGB para colores y gestión exacta de decimales para evitar errores aritméticos.
+A partir de la versión 4.0.0, MF implementa una infraestructura de sincronización de grado industrial que resuelve los problemas clásicos de pérdida de datos en entornos móviles.
 
-### 2. Círculo Familiar (v4.0 Ready)
-- **Ecosistema**: Permite unir a múltiples usuarios bajo un mismo paraguas económico.
-- **Privacidad**: Cada usuario decide, elemento por elemento (gastos, cuentas, metas), qué desea compartir con su familia y qué desea mantener privado.
-- **Online-Only**: Mientras los datos personales son locales, la vista familiar es una ventana directa a la nube, garantizando que todos los miembros vean exactamente lo mismo al mismo tiempo.
+### 🛡️ Pilares de Integridad
+1. **Soberanía Local (Offline-First)**: El dispositivo del usuario es la fuente de verdad primaria. MF protege los datos locales y prohíbe que la nube los sobreescriba si el dato local es más reciente (`Integridad por Timestamps`).
+2. **Latencia Cero**: Gracias al cacheo inteligente del perfil de usuario, las escrituras en la nube son instantáneas, eliminando el lag que suele causar desincronización entre dispositivos y Web.
+3. **Ruteo Inteligente**: Un sistema de GPS de datos interno (`getDocRef`) detecta automáticamente si el usuario está operando en su carpeta privada o en el círculo compartido, garantizando que el dinero siempre se descuente de la cuenta correcta.
+4. **ADN Estructurado**: Las tarjetas de crédito ahora utilizan objetos JSON internos para manejar cuotas con IDs únicos (`PID`), permitiendo borrados en cadena infalibles sin colisión de nombres.
 
-### 3. Centro de Inteligencia (Finanz-IA)
-- Auditoría de gastos y proyecciones estratégicas a 6 meses.
-- Sincronización transparente entre Web, PC y Móvil.
+## 🏛️ Arquitectura Técnica
+- **Frontend**: Flutter (Material 3).
+- **Base de Datos Local**: SQLite v22 (Esquema Protegido).
+- **Backend**: Firebase Firestore con ruteo polimórfico.
+- **Sincronización**: Protocolo de comparación temporal y estados de protección `pending`/`synced`.
 
-## 🚀 Guía para Desarrolladores / Agentes
+## 🛠️ Guía para el Desarrollador
+El código está diseñado para ser **agnóstico al tipo de usuario**. No se deben crear versiones ad-hoc. Cualquier mejora en la lógica de datos beneficia tanto al usuario solitario como a la familia.
 
-### Estado de la Sincronización
-- **Pull-to-refresh**: En el Dashboard, este gesto actualiza Movimientos, Balances, Metas y Categorías simultáneamente.
-- **Granularidad**: Cada sección del Panel de Control tiene su propio botón de "Sincronizar Nube".
-
-### Administración Remota
-La App incluye una **Suite de Control Maestro** accesible únicamente para el UID de administración (`M8DdrH5YCtS8lVzaUh93Fx1DoF63`). Desde aquí se puede:
-- Resolver correos electrónicos a UID.
-- Ejecutar limpiezas de datos remotos sobre cualquier cuenta de usuario.
-
-### Próximos pasos técnicos
-El foco actual es la validación del flujo de **Círculo Familiar**:
-1. Envío de invitación (Colección `invitations`).
-2. Aceptación de vínculo (Campo `familyId` en `users`).
-3. Filtrado dinámico en `HomePage` basado en `_isFamilyMode`.
+### Administración
+La Suite de **Control Maestro** (UID: `M8DdrH5YCtS8lVzaUh93Fx1DoF63`) permite el soporte remoto y la auditoría de integridad para resolver incidencias de usuarios Premium de forma transparente.
 
 ---
-*Desarrollado para transformar la economía doméstica mediante ingeniería de software de precisión.*
+*MF v4.0.0 - Ingeniería de software aplicada a la libertad financiera.*

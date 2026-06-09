@@ -202,7 +202,7 @@ class _FamilyCircleTabState extends State<FamilyCircleTab> {
         content: const Text('Dejarás de compartir tus datos y ya no verás los del resto de la familia. Tus datos personales se mantienen seguros en tu cuenta.'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Confirmar Salida'), style: FilledButton.styleFrom(backgroundColor: Colors.red)),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), style: FilledButton.styleFrom(backgroundColor: Colors.red), child: const Text('Confirmar Salida')),
         ],
       ),
     );

@@ -7,55 +7,61 @@ import 'firebase_base.dart';
 mixin SubscriptionService on FirebaseBase {
   final LocalDbService _local = LocalDbService();
 
-  // --- SUSCRIPCIONES (PULL SYNC) ---
+  // --- SUSCRIPCIONES (SMARTER PULL v4.1.1) ---
 
   Future<void> syncSubscriptionsFromCloud() async {
     try {
-      final ref = subscriptionsRef;
-      if (ref == null || kIsWeb) return;
+      if (kIsWeb) return;
+      final String uid = currentUid;
+      if (uid.isEmpty) return;
 
-      final snap = await ref.get();
-      if (snap.docs.isNotEmpty) {
-        final items = snap.docs.map((doc) => {
-          ...doc.data() as Map<String, dynamic>,
-          'id': doc.id,
-          'syncStatus': 'synced'
-        }).toList();
-        await _local.insertBatch('subscriptions', items);
+      List<Map<String, dynamic>> cloudItems = [];
+      final myRef = subscriptionsRef;
+      if (myRef != null) {
+        final mySnap = await myRef.get();
+        cloudItems.addAll(mySnap.docs.map((doc) => {...doc.data() as Map<String, dynamic>, 'id': doc.id, 'syncStatus': 'synced'}));
       }
+      final String? fid = await getMyFamilyId();
+      if (fid != null && fid != uid) {
+        final famRef = db.collection('users').doc(fid).collection('subscriptions');
+        final famSnap = await famRef.where('familyId', isEqualTo: fid).get();
+        cloudItems.addAll(famSnap.docs.map((doc) => {...doc.data() as Map<String, dynamic>, 'id': doc.id, 'syncStatus': 'synced'}));
+      }
+
+      for (var cloud in cloudItems) {
+        final localData = await _local.query('subscriptions', where: 'id = ?', whereArgs: [cloud['id']]);
+        if (localData.isNotEmpty) {
+          final String localStatus = localData.first['syncStatus'] ?? 'synced';
+          final DateTime localUpd = DateTime.tryParse(localData.first['updatedAt'] ?? '') ?? DateTime(2000);
+          final dynamic cloudUpdRaw = cloud['updatedAt'];
+          final DateTime cloudUpd = cloudUpdRaw is Timestamp ? cloudUpdRaw.toDate() : (DateTime.tryParse(cloudUpdRaw?.toString() ?? '') ?? DateTime(2000));
+          if (localStatus == 'pending') continue;
+          if (localUpd.isAfter(cloudUpd)) continue;
+        }
+        await _local.insert('subscriptions', cloud, silent: true);
+      }
+      _local.notify('subscriptions');
     } catch (e) { print("Error syncing subscriptions: $e"); }
   }
 
   // --- SUSCRIPCIONES (OPERACIONES) ---
 
   Stream<List<Map<String, dynamic>>> getSubscriptions() {
-    final String currentUid = auth.currentUser?.uid ?? '';
-
+    final String uid = currentUid;
     if (kIsWeb) {
       final ref = subscriptionsRef; if (ref == null) return Stream.value([]);
       final myStream = ref.snapshots().map((snap) => snap.docs.map((doc) => {...doc.data() as Map<String, dynamic>, 'id': doc.id}).toList());
-
-      return db.collection('users').doc(currentUid).snapshots().asyncExpand((userDoc) {
+      return db.collection('users').doc(uid).snapshots().asyncExpand((userDoc) {
         final userData = userDoc.data() as Map<String, dynamic>? ?? {};
         final String? familyId = userData['familyId'];
-
         if (familyId == null) return myStream;
-
-        Query sharedQuery = db.collectionGroup('subscriptions')
-            .where('familyId', isEqualTo: familyId)
-            .where('isDeleted', isEqualTo: false);
-        
+        Query sharedQuery = db.collectionGroup('subscriptions').where('familyId', isEqualTo: familyId).where('isDeleted', isEqualTo: false);
         return sharedQuery.snapshots().map((sharedSnap) {
-          final sharedItems = sharedSnap.docs
-              .where((d) => d.reference.parent.parent?.id != currentUid)
-              .map((doc) => {...doc.data() as Map<String, dynamic>, 'id': doc.id})
-              .toList();
-
+          final sharedItems = sharedSnap.docs.where((d) => d.reference.parent.parent?.id != uid).map((doc) => {...doc.data() as Map<String, dynamic>, 'id': doc.id}).toList();
           return myStream.map((myItems) => [...myItems, ...sharedItems]);
         }).asyncExpand((s) => s);
       });
     }
-
     final controller = StreamController<List<Map<String, dynamic>>>();
     void load() async {
       try {
@@ -72,13 +78,16 @@ mixin SubscriptionService on FirebaseBase {
   Future<void> addSubscription(Map<String, dynamic> data) async {
     try {
       final String tid = DateTime.now().millisecondsSinceEpoch.toString();
-      if (!kIsWeb) await _local.insert('subscriptions', {...data, 'id': tid, 'syncStatus': 'synced'});
+      final DateTime now = DateTime.now();
+      final String? fId = data['familyId'];
+      if (!kIsWeb) await _local.insert('subscriptions', {...data, 'id': tid, 'syncStatus': 'pending', 'updatedAt': now.toIso8601String()});
       final premium = await checkPremium();
       if (kIsWeb || premium) {
-        final doc = await subscriptionsRef?.add({...data, 'updatedAt': FieldValue.serverTimestamp()});
+        final targetRef = (fId != null && fId.isNotEmpty) ? db.collection('users').doc(fId).collection('subscriptions') : subscriptionsRef;
+        final doc = await targetRef?.add({...data, 'updatedAt': FieldValue.serverTimestamp()});
         if (!kIsWeb && doc != null) {
           await _local.delete('subscriptions', tid);
-          await _local.insert('subscriptions', {...data, 'id': doc.id, 'syncStatus': 'synced'});
+          await _local.insert('subscriptions', {...data, 'id': doc.id, 'syncStatus': 'synced', 'updatedAt': now.toIso8601String()});
         }
       }
     } catch (e) {}
@@ -87,18 +96,32 @@ mixin SubscriptionService on FirebaseBase {
   Future<void> updateSubscription(String id, Map<String, dynamic> data) async {
     try {
       final String sid = id.toString();
-      if (!kIsWeb) await _local.update('subscriptions', data, sid);
+      final DateTime now = DateTime.now();
+      String? fId = data['familyId'];
+      if (!kIsWeb) {
+        final localData = await _local.query('subscriptions', where: 'id = ?', whereArgs: [sid]);
+        if (localData.isNotEmpty) fId = localData.first['familyId'];
+        await _local.update('subscriptions', {...data, 'updatedAt': now.toIso8601String(), 'syncStatus': 'pending'}, sid);
+      }
       final premium = await checkPremium();
-      if ((kIsWeb || premium) && subscriptionsRef != null) await subscriptionsRef!.doc(sid).update({...data, 'updatedAt': FieldValue.serverTimestamp()});
+      if (kIsWeb || premium) {
+        await getDocRef('subscriptions', sid, familyId: fId)?.update({...data, 'updatedAt': FieldValue.serverTimestamp()});
+        if (!kIsWeb) await _local.update('subscriptions', {'syncStatus': 'synced'}, sid, silent: true);
+      }
     } catch (e) {}
   }
 
   Future<void> deleteSubscription(String id) async {
     try {
       final String sid = id.toString();
-      if (!kIsWeb) await _local.update('subscriptions', {'isDeleted': 1}, sid);
+      String? fId;
+      if (!kIsWeb) {
+        final localData = await _local.query('subscriptions', where: 'id = ?', whereArgs: [sid]);
+        if (localData.isNotEmpty) fId = localData.first['familyId'];
+        await _local.update('subscriptions', {'isDeleted': 1}, sid);
+      }
       final premium = await checkPremium();
-      if ((kIsWeb || premium) && subscriptionsRef != null) await subscriptionsRef!.doc(sid).delete();
+      if (kIsWeb || premium) await getDocRef('subscriptions', sid, familyId: fId)?.delete();
     } catch (e) {}
   }
 }

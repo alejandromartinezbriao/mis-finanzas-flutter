@@ -100,7 +100,7 @@ class _BalanceDialogState extends State<BalanceDialog> {
             if (!isBimonetary) ...[
               const SizedBox(height: 10),
               DropdownButtonFormField<String>(
-                value: currency,
+                initialValue: currency,
                 items: ['UYU', 'USD'].map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
                 onChanged: (v) => setState(() => currency = v!),
                 decoration: const InputDecoration(labelText: 'Moneda'),

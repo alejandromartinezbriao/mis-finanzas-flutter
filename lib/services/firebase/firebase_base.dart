@@ -1,9 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../auth_service.dart';
 
 abstract class FirebaseBase {
   final FirebaseFirestore db = FirebaseFirestore.instance;
   final FirebaseAuth auth = FirebaseAuth.instance;
+  final AuthService _authService = AuthService(); // Acceso al cache
   
   String? _overrideUid;
   void setOverrideUid(String? uid) => _overrideUid = uid;
@@ -25,40 +27,33 @@ abstract class FirebaseBase {
     return db.collection('users').doc(currentUid).collection(collection);
   }
 
-  // --- LÓGICA DE VISIBILIDAD FAMILIAR (Contextual) ---
-
-  Future<String?> getMyFamilyId() async {
-    final uid = auth.currentUser?.uid;
-    if (uid == null) return null;
-    
-    final doc = await db.collection('users').doc(uid).get();
-    final data = doc.data();
-    
-    // 1. Si soy miembro (tengo un familyId de otro), lo devuelvo.
-    if (data?['familyId'] != null) return data!['familyId'];
-
-    // 2. Si soy Admin, solo muestro el switch si tengo invitaciones o miembros activos.
-    // Esto evita que un usuario Premium solo vea el switch sin tener a nadie con quien compartir.
-    if (data?['isPremium'] == true) {
-      // Ver si tengo invitaciones enviadas
-      final invSnap = await db.collection('invitations').where('fromUid', isEqualTo: uid).limit(1).get();
-      if (invSnap.docs.isNotEmpty) return uid;
-
-      // Ver si tengo miembros que ya aceptaron
-      final memSnap = await db.collection('users').where('familyId', isEqualTo: uid).limit(1).get();
-      if (memSnap.docs.isNotEmpty) return uid;
+  // EL GPS MAESTRO: Unificado para uso individual y familiar
+  DocumentReference? getDocRef(String collection, String docId, {String? familyId}) {
+    // Si el dato tiene un ID familiar (está compartido), apunta a la carpeta del Admin
+    if (familyId != null && familyId.isNotEmpty) {
+      return db.collection('users').doc(familyId).collection(collection).doc(docId);
     }
-
-    return null;
+    // Si no, apunta a la carpeta privada del usuario
+    return _ref(collection)?.doc(docId);
   }
 
-  // --- UTILIDADES ---
+  // --- IDENTIDAD (ZERO LATENCY) ---
 
+  // Obtiene el ID de familia si existe, de lo contrario devuelve null (Uso individual)
+  Future<String?> getMyFamilyId() async {
+    return _authService.familyId;
+  }
+
+  // REPARACIÓN CRÍTICA: checkPremium ahora es instantáneo gracias al cache
   Future<bool> checkPremium() async {
-    final uid = auth.currentUser?.uid;
-    if (uid == null) return false;
-    final doc = await db.collection('users').doc(uid).get();
-    return doc.data()?['isPremium'] ?? false;
+    // Si el usuario es premium propio o pertenece a un círculo premium, habilitamos la nube
+    if (_authService.isPremium) return true;
+    
+    // Cascada de seguridad: si no hay cache, intentamos una lectura rápida (fallback)
+    final uid = currentUid;
+    if (uid.isEmpty) return false;
+    final doc = await db.collection('users').doc(uid).get(const GetOptions(source: Source.cache));
+    return doc.data()?['isPremium'] == true;
   }
 
   Future<bool> isAleAdmin() async {
